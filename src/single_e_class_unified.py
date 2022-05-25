@@ -59,10 +59,15 @@ class single_electron:
 
         self.other_values=other_values
         self.optim_list=self.simulation_options["optim_list"]
-        self.harmonic_range=other_values["harmonic_range"]
+        if not other_values:
+            self.harmonic_range=list(range(0, 10))
+            self.filter_val=0.5
+            self.bounds_val=200
+        else:
+            self.harmonic_range=other_values["harmonic_range"]
+            self.filter_val=other_values["filter_val"]
+            self.bounds_val=other_values["bounds_val"]
         self.num_harmonics=len(self.harmonic_range)
-        self.filter_val=other_values["filter_val"]
-        self.bounds_val=other_values["bounds_val"]
         self.nd_param=params(dim_parameter_dictionary)
         self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
         self.def_optim_list(self.simulation_options["optim_list"])
@@ -106,7 +111,7 @@ class single_electron:
                     time_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
                     desired_idx=tuple((range(self.simulation_options["no_transient"],time_idx[0][-1])))
                     self.time_idx=time_idx[:-1]
-                else:                
+                else:
                     time_idx=tuple(np.where((self.other_values["experiment_time"]<=time_end) & (self.other_values["experiment_time"]>self.simulation_options["no_transient"])))
                     desired_idx=time_idx
                     self.time_idx=time_idx[:-1]
@@ -835,6 +840,8 @@ class single_electron:
             simulation_options["label"]="MCMC"
         if "adaptive_ru" not in simulation_options:
             simulation_options["adaptive_ru"]=False
+        if "optim_list" not in simulation_options:
+            simulation_options["optim_list"]=[]
         if "GH_quadrature" not in simulation_options:
             simulation_options["GH_quadrature"]=False
         if "hanning" not in simulation_options:

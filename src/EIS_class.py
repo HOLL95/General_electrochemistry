@@ -3,16 +3,23 @@ import matplotlib.pyplot as plt
 import copy
 import time
 import collections
+import math
 import random
 import warnings
 from collections import deque
-
+from uuid import uuid4
 
 #TODO->paralell in series+ gerischer
 class EIS:
     def __init__(self,  **kwargs):
         self.options={}
         self.options_checker(**kwargs)
+        self.all_nodes=["paralell", "series",]#"element"]
+        self.all_elems=[ "R", "C", "W_inf", "CPE"]
+        self.num_nodes=len(self.all_nodes)-1
+        self.num_elems=len(self.all_elems)-1
+        if len(kwargs.keys())==0:
+            return
         if self.options["fitting"]==True:
             if kwargs["parameter_bounds"] is None:
                 raise ValueError("Need to define parameter bounds when fitting")
@@ -23,14 +30,38 @@ class EIS:
                     self.param_names=self.param_bounds.keys()
                 else:
                     self.param_names=kwargs["parameter_names"]
+        elif "parameter_names" not in kwargs:
+            warnings.warn("Trying to extract parameter names from provided circuit - behaviour will be more consistent if these names are manually inputted")
+            self.param_names=[]
+            circuit=copy.deepcopy(kwargs["circuit"])
+            self.construct_circuit(circuit, func=self.get_param_names_from_dict)
 
         if self.options["integrated_circuit"]==True:
             circuit=copy.deepcopy(kwargs["circuit"])
             self.circuit=self.construct_circuit(circuit, func=self.define_z_func)
-        self.all_nodes=["paralell", "series",]#"element"]
-        self.all_elems=[ "R", "C", "W_inf", "W_fin", "CPE"]
-        self.num_nodes=len(self.all_nodes)-1
-        self.num_elems=len(self.all_elems)-1
+        if self.options["construct_netlist"]==True:
+            self.netlist_dict=dict(zip(self.param_names, [{"left":None, "right":None} for x in range(0, len(self.param_names))]))
+            self.node_counter=1
+            circuit=copy.deepcopy(kwargs["circuit"])
+            self.identifier_list={}
+            self.uuid=None
+            prev_elem_is_dict=False
+            for key in circuit.keys():
+                if prev_elem_is_dict==True:
+                    self.node_counter=self.identifier_list[prev_key]
+                z=self.construct_netlist(circuit[key], self.node_counter, key)
+                self.identifier_list[key]=self.node_counter+1
+                prev_key=key
+                if isinstance(circuit[key], dict):
+                    prev_elem_is_dict=True
+                else:
+                    prev_elem_is_dict=False
+            #print(self.netlist_dict)
+            identity_keys=self.identifier_list.keys()
+            for key in self.netlist_dict.keys():
+                if self.netlist_dict[key]["right"] in identity_keys:
+                    self.netlist_dict[key]["right"]=self.identifier_list[self.netlist_dict[key]["right"]]
+
 
     def construct_circuit(self, circuit, func):
 
@@ -60,6 +91,76 @@ class EIS:
                         else:
                             circuit[key]=func(circuit[key],"series")
         return circuit
+    def construct_netlist(self, circuit, previous_node, current_z_key):
+        print(self.node_counter, previous_node, circuit)
+        if isinstance(circuit, dict):
+            in_root=True
+            for key in circuit.keys():
+                if isinstance(circuit[key], dict):
+                    self.construct_netlist(circuit[key], previous_node, current_z_key)
+                elif isinstance(circuit[key], list):
+                    self.construct_netlist(circuit[key], previous_node, current_z_key)
+                elif isinstance(circuit[key], str):
+                    self.netlist_dict[circuit[key]]["left"]=previous_node
+                    self.netlist_dict[circuit[key]]["right"]=current_z_key
+                elif isinstance(circuit[key], tuple):
+                    self.netlist_dict[circuit[key][0]]["left"]=previous_node
+                    self.netlist_dict[circuit[key][0]]["right"]=current_z_key
+        elif isinstance(circuit, list):
+            circuit_list=self.list_flatten(circuit)
+            series_len=len(circuit_list)
+            previous_elem_is_dict=False
+            for i in range(0, series_len):
+                if previous_elem_is_dict==True:
+                    print(identifier)
+                    print(circuit_list[i])
+                    self.identifier_list[identifier]=self.node_counter
+                    previous_node=self.node_counter
+                element = circuit_list[i]
+                if isinstance(element, str) or isinstance(element, tuple):
+
+                    if isinstance(element, tuple):
+                        element=element[0]
+                    print("here", element, previous_node)
+                    self.netlist_dict[element]["left"]=previous_node
+
+                    if i!=series_len-1:
+                        self.netlist_dict[element]["right"]=self.node_counter+1
+                        self.node_counter+=1
+
+                    else:
+                        self.netlist_dict[element]["right"]=current_z_key
+                    previous_node=self.node_counter
+                    previous_elem_is_dict=False
+                if isinstance(element, dict):
+                    if i!=series_len-1:
+
+                        identifier=str(uuid4())
+                        print(self.node_counter, previous_node, "#")
+                        self.identifier_list[identifier]=identifier
+                        self.construct_netlist(element, previous_node, identifier)
+                        self.node_counter+=1
+                        previous_node+=1
+                        previous_elem_is_dict=True
+                    else:
+                        print(self.node_counter, previous_node, "~")
+                        identifier=current_z_key
+                        self.construct_netlist(element, previous_node, identifier)
+                        previous_node+=1
+
+
+        elif isinstance(circuit, str):
+            self.netlist_dict[circuit]["left"]=previous_node
+            self.netlist_dict[circuit]["right"]=self.node_counter+1
+            self.node_counter+=1
+            previous_node+=1
+        elif isinstance(circuit, tuple):
+            circuit=circuit[0]
+            self.netlist_dict[circuit]["left"]=previous_node
+            self.netlist_dict[circuit]["right"]=self.node_counter+1
+            self.node_counter+=1
+            previous_node+=1
+
     def flatten(self, d, parent_key='', sep='-'):
         items = []
         for k, v in d.items():
@@ -99,7 +200,6 @@ class EIS:
                 items.append((new_key, v))
         return dict(items)
     def define_z_func(self, param, flag="paralell"):
-        #print(param, flag)
         if  isinstance(param, list):
             fun_list=[]
             paralell=False
@@ -156,6 +256,24 @@ class EIS:
             elif "W" in param:
                 F=self.z_functions("warburg_inf", param, paralell=paralell)
         return F
+    def get_param_names_from_dict(self, param, flag="paralell"):
+        if  isinstance(param, list):
+            fun_list=[]
+            paralell=False
+            param=self.list_flatten(param)
+            for parameter in param:
+                if isinstance(parameter, dict):
+                    func_dict=self.construct_circuit(parameter, self.get_param_names_from_dict)
+                elif isinstance(parameter, tuple):
+                    for i in range(0, len(parameter)):
+                        self.param_names.append(parameter[i])
+                elif isinstance(parameter, str):
+                    self.param_names.append(parameter)
+        elif isinstance(param, tuple):
+            for i in range(0, len(param)):
+                self.param_names.append(param[i])
+        elif isinstance(param, str):
+            self.param_names.append(param)
     def z_functions(self, circuit_type,param, paralell):
         if circuit_type=="capacitor":
             if paralell==False:
@@ -201,6 +319,8 @@ class EIS:
                     return 1/(kwargs[param[0]]*np.power(kwargs["omega"]*1j, kwargs[param[1]]))
             else:
                 def F(**kwargs):
+                    #print(param[0], param[1], kwargs["omega"], np.float64(kwargs["omega"])*1j)
+                    #print(kwargs[param[0]], kwargs[param[1]], np.power(kwargs["omega"]*1j, kwargs[param[1]]))
                     return  (kwargs[param[0]]*np.power(kwargs["omega"]*1j, kwargs[param[1]]))
 
         return F
@@ -278,16 +398,14 @@ class EIS:
                 normed_params=[self.un_normalise(param_list[x], self.param_bounds[self.param_names[x]]) for x in range(0, len(self.param_names))]
         return normed_params
     def simulate(self, parameters, frequencies):
-        #print(parameters, self.param_names)
         sim_params=dict(zip(self.param_names, parameters))
         if self.options["normalise"]==True:
             normed_params=self.change_norm_group(sim_params, "un_norm")
         else:
             normed_params=sim_params
-        #print(normed_params)
+
         spectra=np.zeros(len(frequencies), dtype="complex")
         for i in range(0, len(frequencies)):
-
             normed_params["omega"]=frequencies[i]
             spectra[i]=self.freq_simulate(**normed_params)
         if self.options["test"]==True:
@@ -295,6 +413,46 @@ class EIS:
             plt.show()
 
         return np.column_stack((np.real(spectra), np.imag(spectra)))
+    def nyquist(self, spectra, **kwargs):
+        if "ax" not in kwargs:
+            _,kwargs["ax"]=plt.subplots(1,1)
+        if "scatter" not in kwargs:
+            kwargs["scatter"]=0
+        if "label" not in kwargs:
+            kwargs["label"]=None
+        ax=kwargs["ax"]
+        ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"])
+        ax.set_xlabel("$Z_{Re}$ ($\\Omega$)")
+        ax.set_ylabel("$-Z_{Im}$ ($\\Omega$)")
+        if kwargs["scatter"]!=0:
+            ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]])
+    def bode(self, spectra,frequency, **kwargs):
+        if "ax" not in kwargs:
+            _,kwargs["ax"]=plt.subplots(1,1)
+        if "label" not in kwargs:
+            kwargs["label"]=None
+        if "type" not in kwargs:
+            kwargs["type"]="both"
+        ax=kwargs["ax"]
+        phase=np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
+        print(np.divide(spectra[:,1], spectra[:,0]))
+        magnitude=np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
+        ax.set_xlabel("$\\log_{10}(Frequency)$")
+        x_freqs=np.log10(frequency)
+        if kwargs["type"]=="both":
+            ax.plot(x_freqs, phase)
+            ax.set_ylabel("Phase")
+            twinx=ax.twinx()
+            twinx.plot(x_freqs, magnitude, color="red")
+            twinx.set_ylabel("Magnitude")
+        elif kwargs["type"]=="phase":
+            ax.set_ylabel("Phase")
+            ax.plot(x_freqs, phase)
+        elif kwargs["type"]=="magnitude":
+            twinx=ax
+            twinx.plot(x_freqs, magnitude)
+            twinx.set_ylabel("Magnitude")
+
 
     def test_vals(self, parameters, frequencies):
         normalise=self.options["normalise"]
@@ -303,7 +461,6 @@ class EIS:
             list_params=parameters
         elif isinstance(parameters, dict):
             list_params=[parameters[x] for x in self.param_names]
-        print(list_params)
         results=self.simulate(list_params, frequencies)
         self.options["normalise"]=normalise
         return results
@@ -483,3 +640,7 @@ class EIS:
             self.options["test"]=kwargs["test"]
         else:
             self.options["test"]=False
+        if "construct_netlist" in kwargs:
+            self.options["construct_netlist"]=kwargs["construct_netlist"]
+        else:
+            self.options["construct_netlist"]=False

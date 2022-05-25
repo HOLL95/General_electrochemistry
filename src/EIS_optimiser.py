@@ -183,11 +183,13 @@ class EIS_genetics:
                 return MLI_term_1*MLI_term_2, return_params, sim_data
             else:
                 return MLI_term_1*MLI_term_2, return_params
-        elif methods["score_func"]=="BIC" or methods["score_func"]=="AIC":
+        elif methods["score_func"]=="BIC" or methods["score_func"]=="AIC" or methods["score_func"]=="None":
             if methods["score_func"]=="BIC":
                 sub=len(parameter_list)*np.log(len(data[:,0])*2)
-            else:
+            elif methods["score_func"]=="AIC":
                 sub=2*len(parameter_list)
+            else:
+                sub=0
             return_val=found_value-sub#*len(parameter_list)#-BIC
             if self.options["generation_test"]==True:
                 return return_val, return_params, sim_data
@@ -251,7 +253,7 @@ class EIS_genetics:
                         self.plot_generation(scores[windex][0], scores[loser][0], generation_score, sim_array, generation,data, ax, plot_count)
                         plot_count+=2
 
-        elif method=="BIC" or method=="AIC":
+        elif method=="BIC" or method=="AIC" or method=="None":
             rank=np.argsort(generation_score)
             winners=np.flip(rank[int(self.options["generation_size"])//2:])
             losers=np.flip(rank[:int(self.options["generation_size"])//2])

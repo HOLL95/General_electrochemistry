@@ -29,7 +29,7 @@ bounds={
 "R2":[0, 1000],
 "W1":[1, 200]
 }
-true_params={"R1":10, "Q1":0.001, "alpha1":0.5}
+true_params={"R1":10, "Q1":1e-3, "alpha1":0.5}
 param_names=["R1", "Q1", "alpha1"]
 sim=EIS_genetics()
 fig, ax=plt.subplots()
