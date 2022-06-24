@@ -10,7 +10,7 @@ from pybamm_solve import pybamm_solver
 from dispersion_class import dispersion
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
-from sklearn import linear_model, datasets
+#from sklearn import linear_model, datasets
 from decimal import Decimal
 from scipy.optimize import curve_fit
 from scipy_solver_class import scipy_funcs
@@ -38,7 +38,6 @@ class single_electron:
         else:
             self.file_init=False
         simulation_options=self.options_checker(simulation_options)
-
         #required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
         #                    "E_reverse", "d_E"])
         #param_set=set(dim_parameter_dictionary.keys())
@@ -134,7 +133,7 @@ class single_electron:
                 self.times()
         else:
             if self.simulation_options["method"]=="sinusoidal":
-                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["original_omega"])#DIMENSIONAL
             else:
                 self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
             self.times()
