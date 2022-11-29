@@ -28,7 +28,15 @@ class EIS_optimiser(EIS):
             circuit_as_dict=dict_constructor.translate_tree(circuit)
         else:
             circuit_as_dict=circuit
-        super().__init__(parameter_bounds=self.param_bounds, parameter_names=self.params, circuit=circuit_as_dict, fitting=True, test=self.test)
+        if "data_representation" not in kwargs:
+            kwargs["data_representation"]="nyquist"
+        if "normalise" not in kwargs:
+            self.normalise=False
+        else:
+            self.normalise=kwargs["normalise"]
+        super().__init__(parameter_bounds=self.param_bounds, parameter_names=self.params,
+                        circuit=circuit_as_dict, fitting=True,
+                         test=self.test, data_representation=kwargs["data_representation"], normalise=self.normalise)
     def get_std(self, sim, data):
         std_list=[0,0]
         for i in range(0, 2):
@@ -37,23 +45,52 @@ class EIS_optimiser(EIS):
         return std_list
 
     def optimise(self, data, sigma_fac=0.001, method="minimisation"):
+        print(self.frequency_range)
         cmaes_problem=pints.MultiOutputProblem(self, self.frequency_range, data)
         if method=="likelihood":
             score = pints.GaussianLogLikelihood(cmaes_problem)
-            sigma=sigma_fac*np.sum(data)/2*len(data)
+            sigma=sigma_fac*np.abs(np.sum(data))/2*len(data)
             lower_bound=[self.param_bounds[x][0] for x in self.params]+[0.1*sigma]*2
             upper_bound=[self.param_bounds[x][1] for x in self.params]+[10*sigma]*2
             CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
             random_init=abs(np.random.rand(self.n_parameters()))
             x0=self.change_norm_group(random_init, "un_norm", "list")+[sigma]*2
             cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
-        elif method=="minimisation":
-            score = pints.SumOfSquaresError(cmaes_problem)
-            lower_bound=[self.param_bounds[x][0] for x in self.params]
-            upper_bound=[self.param_bounds[x][1] for x in self.params]
+        elif method=="multiplicative_likelihood":
+            score = pints.MultiplicativeGaussianLogLikelihood(cmaes_problem)
+            print(sigma_fac)
+            sigma=sigma_fac*np.abs(np.sum(data))/2*len(data)
+            lower_bound=[self.param_bounds[x][0] for x in self.params]+[0.1, 0.1*sigma]*2
+            upper_bound=[self.param_bounds[x][1] for x in self.params]+[1, 10*sigma]*2
             CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
             random_init=abs(np.random.rand(self.n_parameters()))
-            x0=self.change_norm_group(random_init, "un_norm", "list")
+            x0=self.change_norm_group(random_init, "un_norm", "list")+[0.5, sigma]*2
+            cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
+        elif method=="minimisation":
+            score = pints.SumOfSquaresError(cmaes_problem)
+            random_init=abs(np.random.rand(self.n_parameters()))
+            if self.normalise==True:
+                lower_bound=list(np.zeros(len(self.params)))
+                upper_bound=list(np.ones(len(self.params)))
+                x0=random_init
+            else:
+                lower_bound=[self.param_bounds[x][0] for x in self.params]
+                upper_bound=[self.param_bounds[x][1] for x in self.params]
+                x0=self.change_norm_group(random_init, "un_norm", "list")
+            CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
+            cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
+        elif method=="scaled_minimisation":
+            score = pints.ScaledSumOfSquaresError(cmaes_problem)
+            random_init=abs(np.random.rand(self.n_parameters()))
+            if self.normalise==True:
+                lower_bound=list(np.zeros(len(self.params)))
+                upper_bound=list(np.ones(len(self.params)))
+                x0=random_init
+            else:
+                lower_bound=[self.param_bounds[x][0] for x in self.params]
+                upper_bound=[self.param_bounds[x][1] for x in self.params]
+                x0=self.change_norm_group(random_init, "un_norm", "list")
+            CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
             cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
         #cmaes_fitting.set_log_to_screen(False)
@@ -64,6 +101,9 @@ class EIS_optimiser(EIS):
 
         if method=="likelihood":
             sim_params=found_parameters[:-2]
+            sim_data= self.simulate(sim_params,self.frequency_range)
+        elif method=="multiplicative_likelihood":
+            sim_params=found_parameters[:-4]
             sim_data= self.simulate(sim_params,self.frequency_range)
         else:
             found_value=-found_value
@@ -79,6 +119,8 @@ class EIS_optimiser(EIS):
             print(stds, found_value, "stds")"""
 
         #DOITDIMENSIONALLY#NORMALISE DEFAULT TO BOUND
+        if self.normalise==True:
+            self.change_norm_group(found_parameters, "un_norm", return_type="list")
         return found_parameters, found_value,cmaes_fitting._optimiser._es.sm.C,sim_data
 class EIS_genetics:
     def __init__(self,  **kwargs):
@@ -92,8 +134,12 @@ class EIS_genetics:
             kwargs["minimum_replacement_depth"]=1
         if "generation_size" not in kwargs:
             kwargs["generation_size"]=4
+        if "param_normalise" not in kwargs:
+            kwargs["normalise"]=False
         if "generation_test" not in kwargs:
             kwargs["generation_test"]=False
+        if "num_optim_runs" not in kwargs:
+            kwargs["num_optim_runs"]=2
         elif "generation_test_save" not in kwargs:
             kwargs["generation_test_save"]=False
         elif kwargs["generation_size"]%2!=0:
@@ -130,19 +176,22 @@ class EIS_genetics:
         return sim_class.simulate(param_vals, frequencies)
     def assess_score(self, circuit_dictionary, parameter_list, frequencies, data, **methods):
         if "score_func" not in methods:
-            methods["score_func"]="bayes_factors"#
+            methods["score_func"]="AIC"#
         if "get_simulator" not in methods:
             methods["get_simulator"]=False
-
+        if "data_representation" not in methods:
+            methods["data_representation"]="nyquist"
+        if "normalise" not in methods:
+            methods["normalise"]=False
         param_bounds={}
-        print(parameter_list)
+
         for param in parameter_list:
             if "R" in param:
-                param_bounds[param]=[0, 1000]
+                param_bounds[param]=[0, 10000]
             elif "C" in param:
                 param_bounds[param]=[0, 1e-2]
             elif "Q" in param:
-                param_bounds[param]=[0, 1e-2]
+                param_bounds[param]=[0, 10]
             elif "alpha" in param:
                 param_bounds[param]=[0, 1]
             elif "W" in param:
@@ -154,12 +203,15 @@ class EIS_genetics:
             elif "D" in param:
                 param_bounds[param]=[0, 2300]
 
-        optimiser=EIS_optimiser(circuit=circuit_dictionary, parameter_bounds=param_bounds, param_names=parameter_list, frequency_range=frequencies)
+        optimiser=EIS_optimiser(circuit=circuit_dictionary, parameter_bounds=param_bounds,
+                                param_names=parameter_list, frequency_range=frequencies,
+                                data_representation=methods["data_representation"],
+                                normalise=methods["normalise"])
         if methods["get_simulator"]==True:
             return optimiser
-        method="minimisation"
-        found_value=-1e9
-        for i in range(0, 2):
+        method="scaled_minimisation"
+        found_value=-1e11
+        for i in range(0, self.options["num_optim_runs"]):
             cmaes_params, cmaes_value, cov, simulation=optimiser.optimise(data, method=method)
             print(cmaes_value, found_value)
             if cmaes_value>found_value:
@@ -213,9 +265,9 @@ class EIS_genetics:
                         meaningful_circuit=True
                         generation[i]=new_try
             if self.options["generation_test"]==True:
-                generation_scores[i], params, sim_data=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection)
+                generation_scores[i], params, sim_data=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"])
             else:
-                generation_scores[i], params=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection)
+                generation_scores[i], params=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"])
             returned_params.append(params)
             if self.options["generation_test"]==True:
                 returned_data.append(sim_data)

@@ -148,6 +148,20 @@ double dcv_dEdt( double tr, double v, double t){ //
 
 	return dedt;
 }
+double sum_of_sinusoids_E(const std::vector<double> &amplitudes,const std::vector<double> &frequencies,const std::vector<double> &phases,const int num_frequencies, double t){
+  double E=0;
+  for (int i=0; i<num_frequencies;i++){
+    E+=amplitudes[i]*sin((frequencies[i]*t)+phases[i]);
+  }
+  return E;
+}
+double sum_of_sinusoids_dE(const std::vector<double> &amplitudes,const std::vector<double> &frequencies,const std::vector<double> &phases,const int num_frequencies, double t){
+  double dE=0;
+  for (int i=0; i<num_frequencies;i++){
+    dE+=-amplitudes[i]*frequencies[i]*cos((frequencies[i]*t)+phases[i]);
+  }
+  return dE;
+}
 std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, double I_minus, double I_bounds){
   cout<<"called"<<"\n";
   double interval=0.01;
@@ -181,6 +195,37 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const int digits_accuracy = std::numeric_limits<double>::digits;
     const double max_iterations = 100;
     double E, dE, cap_E;
+    int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
+    const double pi = boost::math::constants::pi<double>();
+    //cout<<method<<"\n";
+    if ((method.compare("ramped"))==0){
+      input=0;
+    }
+    else if ((method.compare("sinusoidal"))==0){
+      input =1;
+    }
+    else if ((method.compare("dcv"))==0){
+      input =2;
+    }
+    else if ((method.compare("sum_of_sinusoids"))==0){
+      input =3;
+    }
+    else{
+      throw std::runtime_error("Input voltage method not defined");
+    }
+
+    const int num_frequencies = get(params, std::string("num_frequencies"), 5);
+    const std::vector<double> freq_vector= get(params, std::string("freq_array"), std::vector<double> (5, 0));
+    const std::vector<double> amp_vector= get(params, std::string("amp_array"), std::vector<double> (5, 0));
+    const std::vector<double> phase_vector= get(params, std::string("phase_array"), std::vector<double> (5, 0));
+    const double omega = get(params,std::string("nd_omega"),2*pi);
+    const double phase = get(params,std::string("phase"),0.0);
+    const double cap_phase = get(params,std::string("cap_phase"),0.0);
+    const double delta_E = get(params,std::string("d_E"),0.1);
+    const double E_start = get(params,std::string("E_start"),-10.0);
+    const double E_reverse = get(params,std::string("E_reverse"),10.0);
+    double tr=E_reverse-E_start;
+  
     std::vector<double> Itot(t.size(), 0);
     const double k0 = get(params,std::string("k_0"),35.0);
     const double alpha = get(params,std::string("alpha"),0.5);
@@ -191,36 +236,23 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     double CdlE = get(params,std::string("CdlE1"),0.0);
     double CdlE2 = get(params,std::string("CdlE2"),0.0);
     double CdlE3 = get(params,std::string("CdlE3"),0.0);
-    const double E_start = get(params,std::string("E_start"),-10.0);
-    const double E_reverse = get(params,std::string("E_reverse"),10.0);
-    const double pi = boost::math::constants::pi<double>();
-    const double omega = get(params,std::string("nd_omega"),2*pi);
-    const double phase = get(params,std::string("phase"),0.0);
-    const double cap_phase = get(params,std::string("cap_phase"),0.0);
-    const double delta_E = get(params,std::string("d_E"),0.1);
+    
+    
+    
     const double sf= get(params,std::string("sampling_freq"),0.1);
     const double dt=  min(t[1]-t[0], sf);
     double Itot0,Itot1;
     double u1n0, theta_0;
-    int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
+   
     double t1 = 0.0;
     u1n0 = 0.0;
     double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
     Itot0 =Cdlp*dE;
 
-    double tr=E_reverse-E_start;
-    if ((method.compare("ramped"))==0){
-      input=0;
-    }
-    else if ((method.compare("sinusoidal"))==0){
-      input =1;
-    }
-    else if ((method.compare("dcv"))==0){
-      input =2;
-    }
-    else{
-      throw std::runtime_error("Input voltage method not defined");
-    }
+    
+    
+   
+    
     if (input==0){
       E = et(E_start, omega, phase,delta_E ,t1+dt);
       dE = dEdt(omega, cap_phase,delta_E , t1+0.5*dt);
@@ -232,6 +264,11 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     else if (input==2){
       E=dcv_et(E_start, E_reverse,tr,v, t1);
       dE=dcv_dEdt(tr,v, t1+0.5*dt);
+
+    }
+    else if (input==3){
+      E=sum_of_sinusoids_E(amp_vector, freq_vector, phase_vector, num_frequencies, t1);
+      dE=sum_of_sinusoids_dE(amp_vector, freq_vector, phase_vector, num_frequencies, t1);;
 
     }
     //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
@@ -257,6 +294,11 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               dE=dcv_dEdt(tr,v, t1+0.5*dt);
               cap_E=E;
             }
+            else if (input==3){
+              E=sum_of_sinusoids_E(amp_vector, freq_vector, phase_vector, num_frequencies, t1);
+              dE=sum_of_sinusoids_dE(amp_vector, freq_vector, phase_vector, num_frequencies, t1);;
+              cap_E=E;
+            }
             e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
             boost::uintmax_t max_it = max_iterations;
             //Itot1 = boost::math::tools::newton_raphson_iterate(bc, Itot0,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
@@ -275,6 +317,7 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
             theta_0=u1n0;
             u1n0 = bc.u1n1;
             t1 += dt;
+
         }
         Itot[n_out] =(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
         //Itot[n_out]=u1n0;//(u1n0-theta_0)*(t[n_out]-t1+dt)/dt + theta_0;
@@ -289,4 +332,5 @@ PYBIND11_MODULE(isolver_martin_brent, m) {
   m.def("dEdt", &dEdt, "Ramp-free potential derivative");
   m.def("dcv_et", &dcv_et, "DCV potential input");
   m.def("dcv_dEdt", &dcv_dEdt, "DCV potential derivative");
+  m.def("sum_of_sinusoids_E", &sum_of_sinusoids_E, "SoS potential");
 }

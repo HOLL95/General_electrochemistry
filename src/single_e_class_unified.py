@@ -6,7 +6,7 @@ import math
 import numpy as np
 import itertools
 from params_class import params
-from pybamm_solve import pybamm_solver
+#from pybamm_solve import pybamm_solver
 from dispersion_class import dispersion
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
@@ -38,6 +38,7 @@ class single_electron:
         else:
             self.file_init=False
         simulation_options=self.options_checker(simulation_options)
+        dim_parameter_dictionary=self.param_checker(dim_parameter_dictionary)
         #required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
         #                    "E_reverse", "d_E"])
         #param_set=set(dim_parameter_dictionary.keys())
@@ -93,7 +94,8 @@ class single_electron:
         if self.simulation_options["experimental_fitting"]==True:
             self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
             self.secret_data_time_series=other_values["experiment_current"]
-
+        if self.simulation_options["sample_times"]!=False:
+            self.simulation_options["sample_times"]=np.divide(self.simulation_options["sample_times"],self.nd_param.c_T0)
     def calculate_times(self,):
         self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
         if self.simulation_options["experimental_fitting"]==True:
@@ -149,7 +151,8 @@ class single_electron:
     def GH_setup(self):
         """
         We assume here that for n>1 normally dispersed parameters then the order of the integral
-        will be the same for both
+        will be the same for bothif self.simulation_options["sample_times"] is not False:
+            self.downsample(self.time_vec, )
         """
         try:
             disp_idx=self.simulation_options["dispersion_distributions"].index("normal")
@@ -276,15 +279,25 @@ class single_electron:
         for i in range(0, len(optim_list)):
             if optim_list[i] in keys:
                 continue
+            elif "freq_" in optim_list[i] or "amp_" in optim_list[i] or "phase_" in optim_list[i]:
+                continue
             else:
                 raise KeyError("Parameter " + optim_list[i]+" not found in model")
         self.optim_list=optim_list
         param_boundaries=np.zeros((2, self.n_parameters()))
         check_for_bounds=vars(self)
         if "param_bounds" in list(check_for_bounds.keys()):
+            param_bound_keys=self.param_bounds.keys()
             for i in range(0, self.n_parameters()):
-                    param_boundaries[0][i]=self.param_bounds[self.optim_list[i]][0]
-                    param_boundaries[1][i]=self.param_bounds[self.optim_list[i]][1]
+                    if optim_list[i] in self.param_bounds:
+                        param_boundaries[0][i]=self.param_bounds[self.optim_list[i]][0]
+                        param_boundaries[1][i]=self.param_bounds[self.optim_list[i]][1]
+                    elif "freq" in optim_list[i] or "amp" in optim_list[i] or "phase" in optim_list[i]:
+                        appropriate_key="all_{0}s".format(optim_list[i][:optim_list[i].index("_")])
+                        param_boundaries[0][i]=self.param_bounds[appropriate_key][0]
+                        param_boundaries[1][i]=self.param_bounds[appropriate_key][1]
+                    else:
+                        raise ValueError("Need to define boundaries for "+optim_list[i])
 
             self.boundaries=param_boundaries
 
@@ -341,6 +354,30 @@ class single_electron:
             self.simulation_options["dispersion"]=False
         if "phase" in optim_list and "cap_phase" not in optim_list:
             self.simulation_options["phase_only"]=True
+        if self.simulation_options["method"]=="sum_of_sinusoids":
+            if len(optim_list)==0:
+                if len(self.dim_dict["freq_array"])==0:
+                    raise ValueError("Need to define list of sinusoids either in optim_list or in param_list")
+            if "freq_1" in self.optim_list:
+                found_flag=True
+                omega_count=0
+                
+                while found_flag==True:
+                    omega_count+=1
+                    if "freq_{0}".format(omega_count) not in optim_list:
+                        found_flag=False
+                self.dim_dict["num_frequencies"]=omega_count-1
+                self.dict_of_sine_list=dict(zip(["freq_", "amp_", "phase_"],[[0]*self.dim_dict["num_frequencies"] for x in range(0, 3)]))
+                sinusoid_positions=[0]*self.dim_dict["num_frequencies"]*3
+                sinusoid_count=0
+                for i in range(0, self.dim_dict["num_frequencies"]):
+                    for key in self.dict_of_sine_list.keys():
+                            optim_position=optim_list.index(key+str(i+1))
+                            self.dict_of_sine_list[key][i]=optim_position
+                            sinusoid_positions[sinusoid_count]=optim_position
+                            sinusoid_count+=1
+
+                self.param_positions=list(set(range(0, len(optim_list)))-set(sinusoid_positions))
     def add_noise(self, series, sd):
         return np.add(series, np.random.normal(0, sd, len(series)))
     def normalise(self, norm, boundaries):
@@ -364,7 +401,8 @@ class single_electron:
             return 1
     def n_parameters(self):
         return len(self.optim_list)
-
+    
+        
     def define_voltages(self, transient=False):
         voltages=np.zeros(len(self.time_vec))
         if self.simulation_options["method"]=="sinusoidal":
@@ -386,6 +424,10 @@ class single_electron:
             for i in range(0, len(self.time_vec)):
                 voltages[i]=SWV_surface.fourier_Et(math.pi, self.nd_param.nd_param_dict["scan_increment"], self.nd_param.nd_param_dict["fourier_order"], self.nd_param.nd_param_dict["SW_amplitude"], self.nd_param.nd_param_dict["E_start"], self.time_vec[i])
             voltages=voltages/self.nd_param.sw_class.c_E0
+        elif self.simulation_options["method"]=="sum_of_sinusoids":
+            for i in range(0, len(self.time_vec)):
+                voltages[i]=isolver_martin_brent.sum_of_sinusoids_E(self.nd_param.nd_param_dict["amp_array"],self.nd_param.nd_param_dict["freq_array"],
+                                                                    self.nd_param.nd_param_dict["phase_array"],self.nd_param.nd_param_dict["num_frequencies"], self.time_vec[i])
         if transient==True:
             voltages=voltages[self.time_idx]
         return voltages
@@ -711,6 +753,9 @@ class single_electron:
             plt.show()
         else:
             return current, residual
+    def downsample(self, times, data, samples):
+        sampled_data=np.interp(samples, times, data)
+        return sampled_data
     def simulate(self,parameters, frequencies):
         start=time.time()
         if len(parameters)!= len(self.optim_list):
@@ -722,12 +767,35 @@ class single_electron:
         else:
             normed_params=copy.deepcopy(parameters)
         #print(list(normed_params), self.optim_list)
+        if self.simulation_options["method"]=="sum_of_sinusoids":
+            self.max_freq=0
+            self.min_freq=1e9
+            if len(self.optim_list)!=0:
+                for key in self.dict_of_sine_list.keys():     
+                    array_key=key+"array"
+                    self.dim_dict[array_key]=np.zeros(self.dim_dict["num_frequencies"])
+                    for i in range(0, self.dim_dict["num_frequencies"]):
+                        if key=="freq_":
+                            if normed_params[self.dict_of_sine_list[key][i]]>self.max_freq:
+                                self.max_freq=normed_params[self.dict_of_sine_list[key][i]]
+                            if normed_params[self.dict_of_sine_list[key][i]]<self.min_freq:
+                                self.min_freq=normed_params[self.dict_of_sine_list[key][i]]
+                        self.dim_dict[array_key][i]=normed_params[self.dict_of_sine_list[key][i]]
+                self.dim_dict["omega"]=self.max_freq
+                self.dim_dict["original_omega"]=self.min_freq
+                for i in range(0, len(self.param_positions)):
+                    self.dim_dict[self.optim_list[self.param_positions[i]]]=normed_params[self.param_positions[i]]
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
             self.dim_dict["cap_phase"]=self.dim_dict["phase"]
-
+       
         self.nd_param=params(self.dim_dict)
+        if self.simulation_options["method"]=="sum_of_sinusoids":
+            self.nd_param.nd_param_dict["time_end"]=5
+            self.times()
+        
+        
         if self.simulation_options["voltage_only"]==True:
             return self.define_voltages()[self.time_idx]
         if self.simulation_options["adaptive_ru"]==True:
@@ -777,14 +845,21 @@ class single_electron:
 
                         time_series=np.zeros(len(self.time_vec))#isolver_martin_brent.brent_current_solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
                 else:
+                    
+                    
+                    
                     time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
-        print(time.time()-start)
+        #print(time.time()-start)
         if self.simulation_options["numerical_method"]=="Kalman_simulate":
             self.nd_param.nd_param_dict["Cdl"]=cdl_record
             time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])
         time_series=np.array(time_series)
-        if self.simulation_options["no_transient"]!=False:
+        if self.simulation_options["sample_times"] is not False:
+            time_series=self.downsample(self.time_vec, time_series, self.simulation_options["sample_times"])
+            print(len(time_series))
+        elif self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
+        
         if self.simulation_options["method"]=="square_wave":
             if self.simulation_options["square_wave_return"]=="net":
                 _, _, net, _=self.SW_peak_extractor(time_series)
@@ -817,7 +892,7 @@ class single_electron:
                     plt.plot(self.time_vec[self.time_idx], time_series)
                     plt.plot(self.time_vec[self.time_idx], self.secret_data_time_series)
                     plt.show()
-            return (time_series)
+            return time_series
     def options_checker(self, simulation_options):
         if "no_transient" not in simulation_options:
             simulation_options["no_transient"]=False
@@ -861,7 +936,17 @@ class single_electron:
             simulation_options["multi_output"]=False
         if "dispersion_test" not in simulation_options:
             simulation_options["dispersion_test"]=False
+        if "sample_times" not in simulation_options:
+            simulation_options["sample_times"]=False
         return simulation_options
+    def param_checker(self, params):
+        for key in ["freq_array", "amp_array", "phase_array"]:
+            if key not in params:
+                params[key]=[0]
+        for key in ["num_frequencies"]:
+            if key not in params:
+                params[key]=len(params["freq_array"])
+        return params
 class paralell_class:
     def __init__(self, params, times, method, bounds, solver):
         self.params=params

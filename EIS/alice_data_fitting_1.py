@@ -62,7 +62,6 @@ for methods in ["AIC"]:
         num_generations=5
         gene_test.evolve(frequencies, noisy_data, num_generations=num_generations)
         np.save("Best_candidates/{2}/{0}/Best_candidates_dict_{1}_12_gen.npy".format(methods, i+1, exp), gene_test.best_candidates)
-        print(gene_test.best_array, value)
         scaled_score=np.divide(value, gene_test.best_array)
         results_list.append(gene_test.best_array)
         results_circuit.append(gene_test.best_circuits)

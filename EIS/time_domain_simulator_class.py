@@ -22,6 +22,8 @@ class time_domain:
                 sim_dict=dict(zip(kwargs["params"], kwargs["parameter_names"]))
         elif isinstance(kwargs["params"], dict):
             sim_dict=kwargs["params"]
+        if "potential_func" not in kwargs:
+            kwargs["potential_func"]="0.3*np.sin(math.pi*2*8*t)"
         netlist_maker=EIS()
         netlist=EIS(circuit=circuit, construct_netlist=True)
         netlist_keys=list(netlist.netlist_dict.keys())
@@ -61,7 +63,7 @@ class time_domain:
             param_dict_str+="\""+key+"\":"+str(sim_dict[key])+","
         param_dict_str+="}"
         print(param_dict_str)
-        model_creator(0.0001, "dt*1000", "0.3*np.sin(math.pi*2*8*t)", param_dict_str)
+        model_creator(0.0001, "dt*1000", kwargs["potential_func"], param_dict_str)
     def simulate(self):
         import temp_model
         current, time, potential=temp_model.external_simulate()

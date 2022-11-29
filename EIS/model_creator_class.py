@@ -596,8 +596,9 @@ class model_creator:
         parameter_area_count=-1
         dt=dt
         t_end=end
-        source_func=source_func#"0.03*np.sin(math.pi*2*8*t)"
-        params=param_dict#"{\"R1\":1, \"C1\":1e-3, \"Q1\":1, \"alpha1\":0.5}"
+        source_func=source_func
+        print(source_func)
+        params=param_dict
         for line in read_eq:
             if "self.num_cpe=0" in line:
                 line="        self.num_cpe={0}\n".format(num_cpe)

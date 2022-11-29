@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from EIS_class import EIS
 class circuit_artist(EIS):
-    def __init__(self, circuit_dictionary, ax=None):
+    def __init__(self, circuit_dictionary, **kwargs):
+        if "ax" not in kwargs:
+            fig,ax=plt.subplots()
+        else:
+            ax=kwargs["ax"]
+        self.patch_library={}
         print(circuit_dictionary)
         element_width=0.5
         element_height=0.05
@@ -11,8 +16,6 @@ class circuit_artist(EIS):
         circuit_width=0.7/2
         start=1
         increment=1
-        if ax==None:
-            fig,ax=plt.subplots()
         total_len=len(circuit_dictionary.keys())
         circuit_line=np.linspace(start-(circuit_width*2), start+(increment*total_len), 100)
         total_circuit=ax.plot(circuit_line, [0.5]*100, zorder=1)
@@ -59,14 +62,14 @@ class circuit_artist(EIS):
                                                          target_y_pos,
                                                          element_width, element_height),
                                                          element_width, element_height, zorder=2)
-            ax.add_patch(rect)
-            ax.text(target_x_pos, target_y_pos,name )
+            self.patch_library[name]=ax.add_patch(rect)
+            ax.text(target_x_pos-element_width*0.5, target_y_pos+(element_height*0.6),name )
         if isinstance(circuit_dict, dict):
             rect=patches.Rectangle(self.get_anchor_from_centre(target_x_pos,
                                                             target_y_pos,
                                                             width_sep*2, height_sep*2),
                                                             width_sep*2, height_sep*2, facecolor=(1, 1, 1, 1), edgecolor="black", zorder=2)
-            #ax.axvline(target_x_pos)
+
             ax.add_patch(rect)
             if level>2:
                 new_height=0.8*height_sep

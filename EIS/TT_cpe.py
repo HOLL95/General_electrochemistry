@@ -117,12 +117,12 @@ def V_Finder(gamma, omega, Tau):
 #=================================================================================
 #=================================================================================
 n     =  1         ;    F    =  96485        ;    R     =  8.314  ;   T     =  296        ;    D     =  1e-6
-A     =  0.1       ;    c    =  0.001        ;    nu    =  0.1    ;   alpha =  0.5        ;    kzero =  0.001
+A     =  0.1       ;    c    =  0.001        ;    nu    =  0.1    ;   alpha =  0.5        ;    kzero =  1.001
 E_i   = -0.05      ;    E_up =  0.0          ;    E_low = -0.0    ;   E_f   = -0.0        ;    E_0   =  0
-R_ohm = 10         ;    K_dl =  0.0005      ;    gamma = 0.6     ;   kp    = 1000        ;    kmp   =  0.001
+R_ohm = 10         ;    K_dl =  0.0005       ;    gamma = 0.6     ;   kp    = 1000        ;    kmp   =  0.001
 kf    = 0.001      ;    kmf  =  1000         ;    kmax  = 1e6     ;   D_f   = D           ;    D_b   =  D
 #_________________________________________________________________________________
-U_amp     = 300*1e-3#0.005          # Excitation amplitude for EIS signal
+U_amp     = 0.005          # Excitation amplitude for EIS signal
 Tau       = R_ohm*K_dl     # Time constant
 dXi       = 0.005          # Parameter for numerical resolution BE CAREFUL HERE!!!!
 #=================================================================================
@@ -141,135 +141,131 @@ plt.figure(figsize=(11,5), dpi = 100)
 plot1 = plt.subplot(121)
 plot2 = plt.subplot(122)
 
-for PPP in [500]:
-    for kk in range(len(freqs)):
-        freq      = freqs[kk]
-        omega     = 2*np.pi*freq
-        Periods   = 5
-        #PPP       = 500
-        t         = np.linspace(1e-20,(Periods/freq),PPP*Periods)
-        dt        = t[1]-t[0]
-        E         = E_i + U_amp*np.sin(omega*t)
-        Kn        = np.exp(n*F*(E-E_0)/(R*T))
-        timescale = np.logspace(-20,6,10000)
-        p         = kp + kmp
-        Kp        = kp/kmp
-        Kf        = kf/kmf
-        f         = kf + kmf
-        Preced    = np.exp(-p*t)
-        Follow    = np.exp(-f*t)
-        Xi_in     = n*F*E_i/(R*T)
-        cR_in     = c/(1 + 1/Kp + np.exp(Xi_in)*(1+Kf))
-        cO_in     = cR_in*np.exp(Xi_in)
-        print("cR_in = ", cR_in, "cO_in = ", cO_in)
-        #=================================================================================
-        #=================================================================================
-        #Define the lineary capacitive CPE-part to zero here since no ramp is driven (unlike ACCV)
-        #=================================================================================
-        Pure_Idl_t  = np.zeros(len(t))
-        #=================================================================================
-        #=================================================================================
-        def W_Lap(s):
-            return 1/(s*(1 + Tau*s**(gamma)))
-        W_timescale     = Talbot(W_Lap)(timescale)
-        W_interpol      = InterpolatedUnivariateSpline(timescale, W_timescale, k = 3)
-        W0              = W_timescale[0]
-        #=================================================================================
-        # Now, go for the oscillationg part and choose
-        #=================================================================================
-        #------------------------------------
-        # the analytical solution - no CPE
-        #------------------------------------
-        #V_t_ana      =  (np.cos(omega*t) + omega*Tau*np.sin(omega*t) - np.exp(-t/Tau))/(1+omega**2 *Tau**2)
-        #------------------------------------
-        # or the numerical solution - for CPE
-        #------------------------------------
-        V_t_num = V_Finder(gamma, omega, Tau)(t)
-        #=================================================================================
-        #=================================================================================
-        M_t   = 2*(t/np.pi)**0.5
-        M_R   = 2*(t/np.pi)**0.5
-        M_O   = 2*(t/np.pi)**0.5
-        W_t   = W_interpol(t)
-        #=================================================================================
-        #=================================================================================
-        #Solve Convolution Integrals - this is the heart of the computations
-        #=================================================================================
-        #=================================================================================
-        I_f    = np.zeros(len(E))
-        I_ges  = np.zeros(len(E))
-        I_dl   = np.zeros(len(E))
-        Iconvm = 0
-        for m in range(len(E)-1):
-            if m > 0:
-                CL_R      = np.sum(I_f[0:m-1:]*(M_R[m:1:-1] - M_R[m-1:0:-1]))
-                CL_O      = np.sum(I_f[0:m-1:]*(M_O[m:1:-1] - M_O[m-1:0:-1]))
-                KL_R      = np.sum(I_f[0:m-1:]*(M_R[m:1:-1] - M_R[m-1:0:-1])*Preced[m-1:0:-1])
-                KL_O      = np.sum(I_f[0:m-1:]*(M_O[m:1:-1] - M_O[m-1:0:-1])*Follow[m-1:0:-1])
-                if m > 1:
-                    Iconvm    = np.sum(W_t[0:m-2:]*(I_f[m-1:1:-1] - I_f[m-2:0:-1]))
-                if m == 1:
-                    def Rekur(x):
-                        fan = (kmax/(kmax + (kzero*Kn[m]**(alpha))*np.exp(-alpha*n*F*R_ohm*x/(R*T))))
-                        fca = (kmax/(kmax + kzero*Kn[m]**(-(1-alpha))*np.exp((1-alpha)*n*F*R_ohm*x/(R*T))))
-                        return (  (  (  (  fan*(n*F*A*cR_in*D_f**0.5 - (1/(1+Kp))*(Kp*CL_R +  KL_R) )
-                                    - (fca)*((1/(Kn[m]*np.exp(-n*F*R_ohm*x/(R*T)))))*(n*F*A*cO_in*D_f**0.5 + ((D_f/D_b)**0.5)*(1/(1+Kf))*(CL_O + Kf*KL_O) )  )/
-                                    ((D_f**0.5/(kzero*(Kn[m]**alpha)*np.exp(-alpha*n*F*R_ohm*x/(R*T))))
-                                    + M_R[1]*fan+ M_O[1]*fca*((D_f/D_b)**0.5)*(1/(Kn[m]*np.exp(-n*F*R_ohm*x/(R*T))))   )   )
-                                    - I_f[m-1])*W_t[1] + Pure_Idl_t[m] + omega*U_amp*K_dl*V_t_num[m] + Iconvm - x  )
-                I_ges[m]  = fsolve(Rekur, I_ges[m-1])
-                I_f[m]    = (I_ges[m] - Pure_Idl_t[m] - omega*U_amp*K_dl*V_t_num[m] - Iconvm)/W_t[1] + I_f[m-1]
-                I_dl[m]   = I_ges[m] - I_f[m]
-        #=================================================================================
-        #=================================================================================
-        #Fouriertransform the current and the potential to calculate the impedance
-        # Maybe a dircet DNFT will be better than a FFT, though FFT does the job as well.
-        #=================================================================================
-        #=================================================================================
 
-        plt.plot(E,I_ges)
-        plt.show()
-        #plt.plot(I_f)
-        #plt.show()
-        FT_E            = np.fft.fft(E[PPP*2::])
-        FT_I            = np.fft.fft(I_ges[PPP*2::])
-        Z_of_omega      = FT_E/FT_I
-        FT_Z[kk]        = Z_of_omega[3]
-        #=================================================================================
-        #=================================================================================
-        #Plot everything
-        #=================================================================================
-        #=================================================================================
-        print("ITERATION", kk+1)
-        if kk == 25:
-            print("Frequency of Plot = ", freqs[kk])
-            plot1.plot(1000*t[0:-1], 1000*I_ges[0:-1], color = 'black', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{T}}$')
-            plot1.plot(1000*t[0:-1], 1000*I_f[0:-1], color = 'blue', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{F}}$')
-            plot1.plot(1000*t[0:-1], 1000*I_dl[0:-1], color = 'red', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{DL}}$')
-            plot1.set_ylabel('Currents in mA', fontsize = 20)
-            plot1.set_xlabel('$10^{3}\,t\,/\,\mathrm{s}$', fontsize = 20)
-            plot1.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
-            plot1.set_ylim(-0.58, 0.79)
-            plot1.annotate("C)", xy = (0.05,0.9), xycoords = 'axes fraction', fontsize = 25)
-            ax2 = plot1.twinx()
-            ax2.plot(1000*t[0:-1], 1000*(E[0:-1]-E_i), color = 'magenta', linewidth = 1, linestyle = '-' , label = '$U(t)$')
-            ax2.set_ylabel(r'$U(t)$ / mV', fontsize = 20)
-            ax2.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
-            ax2.set_ylim(-5.5, 8.9)
-            plot1.legend(frameon = False, ncol = 2, fontsize = 15)
-            ax2.legend(frameon = False, fontsize = 15, loc='lower right', bbox_to_anchor=(1.027, 0.77))
+for kk in range(len(freqs)):
+    freq      = freqs[kk]
+    omega     = 2*np.pi*freq
+    Periods   = 5
+    PPP       = 500
+    t         = np.linspace(1e-20,(Periods/freq),PPP*Periods)
+    dt        = t[1]-t[0]
+    E         = E_i + U_amp*np.sin(omega*t)
+    Kn        = np.exp(n*F*(E-E_0)/(R*T))
+    timescale = np.logspace(-20,6,10000)
+    p         = kp + kmp
+    Kp        = kp/kmp
+    Kf        = kf/kmf
+    f         = kf + kmf
+    Preced    = np.exp(-p*t)
+    Follow    = np.exp(-f*t)
+    Xi_in     = n*F*E_i/(R*T)
+    cR_in     = c/(1 + 1/Kp + np.exp(Xi_in)*(1+Kf))
+    cO_in     = cR_in*np.exp(Xi_in)
+    print("cR_in = ", cR_in, "cO_in = ", cO_in, "Ein=")
+    #=================================================================================
+    #=================================================================================
+    #Define the lineary capacitive CPE-part to zero here since no ramp is driven (unlike ACCV)
+    #=================================================================================
+    Pure_Idl_t  = np.zeros(len(t))
+    #=================================================================================
+    #=================================================================================
+    def W_Lap(s):
+        return 1/(s*(1 + Tau*s**(gamma)))
+    W_timescale     = Talbot(W_Lap)(timescale)
+    W_interpol      = InterpolatedUnivariateSpline(timescale, W_timescale, k = 3)
+    W0              = W_timescale[0]
+    #=================================================================================
+    # Now, go for the oscillationg part and choose
+    #=================================================================================
+    #------------------------------------
+    # the analytical solution - no CPE
+    #------------------------------------
+    #V_t_ana      =  (np.cos(omega*t) + omega*Tau*np.sin(omega*t) - np.exp(-t/Tau))/(1+omega**2 *Tau**2)
+    #------------------------------------
+    # or the numerical solution - for CPE
+    #------------------------------------
+    V_t_num = V_Finder(gamma, omega, Tau)(t)
+    #=================================================================================
+    #=================================================================================
+    M_t   = 2*(t/np.pi)**0.5
+    M_R   = 2*(t/np.pi)**0.5
+    M_O   = 2*(t/np.pi)**0.5
+    W_t   = W_interpol(t)
+    #=================================================================================
+    #=================================================================================
+    #Solve Convolution Integrals - this is the heart of the computations
+    #=================================================================================
+    #=================================================================================
+    I_f    = np.zeros(len(E))
+    I_ges  = np.zeros(len(E))
+    I_dl   = np.zeros(len(E))
+    Iconvm = 0
+    for m in range(len(E)-1):
+        if m > 0:
+            CL_R      = np.sum(I_f[0:m-1:]*(M_R[m:1:-1] - M_R[m-1:0:-1]))
+            CL_O      = np.sum(I_f[0:m-1:]*(M_O[m:1:-1] - M_O[m-1:0:-1]))
+            KL_R      = np.sum(I_f[0:m-1:]*(M_R[m:1:-1] - M_R[m-1:0:-1])*Preced[m-1:0:-1])
+            KL_O      = np.sum(I_f[0:m-1:]*(M_O[m:1:-1] - M_O[m-1:0:-1])*Follow[m-1:0:-1])
+            if m > 1:
+                Iconvm    = np.sum(W_t[0:m-2:]*(I_f[m-1:1:-1] - I_f[m-2:0:-1]))
+            if m == 1:
+                def Rekur(x):
+                    fan = (kmax/(kmax + (kzero*Kn[m]**(alpha))*np.exp(-alpha*n*F*R_ohm*x/(R*T))))
+                    fca = (kmax/(kmax + kzero*Kn[m]**(-(1-alpha))*np.exp((1-alpha)*n*F*R_ohm*x/(R*T))))
+                    return (  (  (  (  fan*(n*F*A*cR_in*D_f**0.5 - (1/(1+Kp))*(Kp*CL_R +  KL_R) )
+                                - (fca)*((1/(Kn[m]*np.exp(-n*F*R_ohm*x/(R*T)))))*(n*F*A*cO_in*D_f**0.5 + ((D_f/D_b)**0.5)*(1/(1+Kf))*(CL_O + Kf*KL_O) )  )/
+                                ((D_f**0.5/(kzero*(Kn[m]**alpha)*np.exp(-alpha*n*F*R_ohm*x/(R*T))))
+                                + M_R[1]*fan+ M_O[1]*fca*((D_f/D_b)**0.5)*(1/(Kn[m]*np.exp(-n*F*R_ohm*x/(R*T))))   )   )
+                                - I_f[m-1])*W_t[1] + Pure_Idl_t[m] + omega*U_amp*K_dl*V_t_num[m] + Iconvm - x  )
+            I_ges[m]  = fsolve(Rekur, I_ges[m-1])
+            I_f[m]    = (I_ges[m] - Pure_Idl_t[m] - omega*U_amp*K_dl*V_t_num[m] - Iconvm)/W_t[1] + I_f[m-1]
+            I_dl[m]   = I_ges[m] - I_f[m]
+    #=================================================================================
+    #=================================================================================
+    #Fouriertransform the current and the potential to calculate the impedance
+    # Maybe a dircet DNFT will be better than a FFT, though FFT does the job as well.
+    #=================================================================================
+    #=================================================================================
+    FT_E            = np.fft.fft(E[1000::])
+    FT_I            = np.fft.fft(I_ges[1000::])
+    Z_of_omega      = FT_E/FT_I
+    FT_Z[kk]        = Z_of_omega[3]
+    #=================================================================================
+    #=================================================================================
+    #Plot everything
+    #=================================================================================
+    #=================================================================================
+    print("ITERATION", kk+1)
+    if kk == 25:
+        print("Frequency of Plot = ", freqs[kk])
+        plot1.plot(1000*t[0:-1], 1000*I_ges[0:-1], color = 'black', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{T}}$')
+        plot1.plot(1000*t[0:-1], 1000*I_f[0:-1], color = 'blue', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{F}}$')
+        plot1.plot(1000*t[0:-1], 1000*I_dl[0:-1], color = 'red', linewidth = 1, linestyle = '-' , label = '$I_{\mathrm{DL}}$')
+        plot1.set_ylabel('Currents in mA', fontsize = 20)
+        plot1.set_xlabel('$10^{3}\,t\,/\,\mathrm{s}$', fontsize = 20)
+        plot1.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
+        plot1.set_ylim(-0.58, 0.79)
+        plot1.annotate("C)", xy = (0.05,0.9), xycoords = 'axes fraction', fontsize = 25)
+        ax2 = plot1.twinx()
+        ax2.plot(1000*t[0:-1], 1000*(E[0:-1]-E_i), color = 'magenta', linewidth = 1, linestyle = '-' , label = '$U(t)$')
+        ax2.set_ylabel(r'$U(t)$ / mV', fontsize = 20)
+        ax2.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
+        ax2.set_ylim(-5.5, 8.9)
+        plot1.legend(frameon = False, ncol = 2, fontsize = 15)
+        ax2.legend(frameon = False, fontsize = 15, loc='lower right', bbox_to_anchor=(1.027, 0.77))
 
 
-    Z_classical = PlanarSemiinfImpCalculator(freqs, Ru = R_ohm, EZero = E_0, Eeq = E_i, Dred = D_f, Dox = D_b, Cap = K_dl, kp =kp, kmp=kmp, kf=kf, kmf=kmf, gamma = gamma)
-    plot2.plot(Z_classical.real,  -Z_classical.imag, marker = '.', label = 'EIS-normal', color ='black', linestyle = '')
-    plot2.plot(FT_Z.real, -FT_Z.imag, color ='black', linewidth=1, linestyle ='-')
-    plot2.set_xlabel(r'$\mathfrak{Re}(Z(\omega))$', fontsize = 20)
-    plot2.set_ylabel(r'$-\mathfrak{IM}(Z(\omega))$', fontsize = 20)
-    plot2.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
-    plot2.annotate("D)", xy = (0.05,0.9), xycoords = 'axes fraction', fontsize = 25)
-    plot2.axvline(Z_classical[25].real, color = 'black', linewidth = 0.5, linestyle = ':')
-    plot2.axhline(-Z_classical[25].imag, color = 'black', linewidth = 0.5, linestyle = ':')
+Z_classical = PlanarSemiinfImpCalculator(freqs, Ru = R_ohm, EZero = E_0, Eeq = E_i, Dred = D_f, Dox = D_b, Cap = K_dl, kp =kp, kmp=kmp, kf=kf, kmf=kmf, gamma = gamma)
+plot2.plot(Z_classical.real,  -Z_classical.imag, marker = '.', label = 'EIS-normal', color ='black', linestyle = '')
+plot2.plot(FT_Z.real, -FT_Z.imag, color ='black', linewidth=1, linestyle ='-')
+plot2.set_xlabel(r'$\mathfrak{Re}(Z(\omega))$', fontsize = 20)
+plot2.set_ylabel(r'$-\mathfrak{IM}(Z(\omega))$', fontsize = 20)
+plot2.tick_params(direction = 'in', length=4, width=0.5, colors='k', labelsize = 20)
+plot2.annotate("D)", xy = (0.05,0.9), xycoords = 'axes fraction', fontsize = 25)
+plot2.axvline(Z_classical[25].real, color = 'black', linewidth = 0.5, linestyle = ':')
+plot2.axhline(-Z_classical[25].imag, color = 'black', linewidth = 0.5, linestyle = ':')
+
+
+plt.tight_layout()
+plt.savefig("Impedance_from_TimeDat_Num_V_Dagger.png", dpi = 100)
 plt.show()
-
-#plt.tight_layout()
-#plt.savefig("Impedance_from_TimeDat_Num_V_Dagger.png", dpi = 100)

@@ -3,6 +3,7 @@ import math
 import warnings
 import copy
 import re
+from numpy import multiply, divide
 class params:
     def __init__(self,param_dict):
         SWV_set={"deltaE", "sampling_factor", "SW_amplitude", "scan_increment"}
@@ -103,11 +104,13 @@ class params:
             self.param_dict["omega"]=value/(2*math.pi*self.c_T0)
         elif flag == 'non_dim':
             self.param_dict["nd_omega"]=value*(2*math.pi*self.c_T0)
+            self.param_dict["freq_array"]=multiply(self.param_dict["freq_array"], 2*math.pi*self.c_T0)
     def de(self, value, flag):
         if flag=='re_dim':
             self.param_dict["d_E"]=value*self.c_E0
         elif flag == 'non_dim':
             self.param_dict["d_E"]=value/self.c_E0
+            self.param_dict["amp_array"]=divide(self.param_dict["amp_array"], self.c_E0)
     def ru(self, value, flag):
         if flag=='re_dim':
             self.param_dict["Ru"]=value*self.c_E0/self.c_I0

@@ -21,8 +21,8 @@ param_list={
     'E_reverse':0.5,
     'omega':10, #8.88480830076,  #    (frequency Hz)
     "original_omega":10,
-    #"v":0.25,
-    'd_E': 300*1e-3,   #(ac voltage amplitude - V) freq_range[j],#
+    "v":0.25,
+    'd_E': 150*1e-3,   #(ac voltage amplitude - V) freq_range[j],#
     'area': 0.07, #(electrode surface area cm^2)
     'Ru': 100.0,  #     (uncompensated resistance ohms)
     'Cdl': 1e-5, #(capacitance parameters)
@@ -42,7 +42,7 @@ param_list={
 import copy
 orig_param_list=copy.deepcopy(param_list)
 sim_options={
-    "method":"sinusoidal",
+    "method":"ramped",
     "experimental_fitting":False,
     "likelihood":"timeseries"
 }
@@ -54,10 +54,10 @@ z=np.zeros((2, len(frequencies)))
 print(frequencies)
 
 test_class=conv_model(None, dim_parameter_dictionary=param_list, simulation_options=sim_options)
-current=test_class.simulate_current(CPE=False)
+current=test_class.simulate_current(CPE=True)
 numerical_current=test_class.test_vals([], "timeseries")
 potential=test_class.e_nondim(test_class.define_voltages())
-plt.plot(potential, current)
+plt.plot(test_class.time_vec, current)
 
-plt.plot(potential, numerical_current)
+plt.plot(test_class.time_vec, numerical_current)
 plt.show()

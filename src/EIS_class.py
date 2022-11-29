@@ -278,7 +278,7 @@ class EIS:
         if circuit_type=="capacitor":
             if paralell==False:
                 def F(**kwargs):
-                 return 1/1j*kwargs["omega"]*kwargs[param]
+                 return 1/(1j*kwargs["omega"]*kwargs[param])
             else:
                 def F(**kwargs):
                  return 1j*kwargs["omega"]*kwargs[param]
@@ -311,7 +311,7 @@ class EIS:
                 def F(**kwargs):
 
                     B=kwargs[param[1]]/np.sqrt(kwargs[param[2]])
-                    return 1/(1/kwargs[param[0]])*np.tanh(B*np.sqrt(1j*kwargs["omega"]))
+                    return 1/((1/kwargs[param[0]])*np.tanh(B*np.sqrt(1j*kwargs["omega"])))
         elif circuit_type=="CPE":
             if paralell==False:
                 def F(**kwargs):
@@ -399,20 +399,36 @@ class EIS:
         return normed_params
     def simulate(self, parameters, frequencies):
         sim_params=dict(zip(self.param_names, parameters))
+
         if self.options["normalise"]==True:
-            normed_params=self.change_norm_group(sim_params, "un_norm")
+            normed_params=self.change_norm_group(sim_params, "un_norm", return_type="dict")
         else:
             normed_params=sim_params
-
+        #print(sim_params)
+        #print(normed_params)
+        #print("++"*20)
         spectra=np.zeros(len(frequencies), dtype="complex")
         for i in range(0, len(frequencies)):
             normed_params["omega"]=frequencies[i]
             spectra[i]=self.freq_simulate(**normed_params)
         if self.options["test"]==True:
+            print(normed_params, sim_params, self.options["normalise"])
             plt.plot(np.real(spectra), -np.imag(spectra))
             plt.show()
+        if self.options["data_representation"]=="nyquist":
+            return np.column_stack((np.real(spectra), np.imag(spectra)))
+        else:
 
-        return np.column_stack((np.real(spectra), np.imag(spectra)))
+            real=np.real(spectra)
+            imag=np.imag(spectra)
+            #plt.plot(real, -imag)
+            #plt.show()
+            phase=np.arctan(np.divide(-imag, real))*(180/math.pi)
+            magnitude=np.divide(np.add(np.square(real), np.square(imag)), 1000)
+            #if self.options["test"]==True:
+            #self.bode(np.column_stack((real, imag)), frequencies)
+            #plt.show()
+            return np.column_stack((real, imag))
     def nyquist(self, spectra, **kwargs):
         if "ax" not in kwargs:
             _,kwargs["ax"]=plt.subplots(1,1)
@@ -420,12 +436,24 @@ class EIS:
             kwargs["scatter"]=0
         if "label" not in kwargs:
             kwargs["label"]=None
+        if "linestyle" not in kwargs:
+            kwargs["linestyle"]="-"
+        if "marker" not in kwargs:
+            kwargs["marker"]="o"
+        if "colour" not in kwargs:
+            kwargs["colour"]=None
+        if "orthonormal" not in kwargs:
+            kwargs["orthonormal"]=True
         ax=kwargs["ax"]
-        ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"])
+        ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
         ax.set_xlabel("$Z_{Re}$ ($\\Omega$)")
         ax.set_ylabel("$-Z_{Im}$ ($\\Omega$)")
+        total_max=max(np.max(spectra[:,0]), np.max(-spectra[:,1]))
+        if kwargs["orthonormal"]==True:
+            ax.set_xlim([0, total_max+0.1*total_max])
+            ax.set_ylim([0, total_max+0.1*total_max])
         if kwargs["scatter"]!=0:
-            ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]])
+            ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
     def bode(self, spectra,frequency, **kwargs):
         if "ax" not in kwargs:
             _,kwargs["ax"]=plt.subplots(1,1)
@@ -644,3 +672,7 @@ class EIS:
             self.options["construct_netlist"]=kwargs["construct_netlist"]
         else:
             self.options["construct_netlist"]=False
+        if "data_representation" in kwargs:
+            self.options["data_representation"]=kwargs["data_representation"]
+        else:
+            self.options["data_representation"]="nyquist"

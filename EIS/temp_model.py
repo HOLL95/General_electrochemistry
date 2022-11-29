@@ -10,9 +10,9 @@ class solve_functions:
     def __init__(self, params, derivative_vars, dt, end, current_idx, source_func, cpe_locs=None):
         self.params=params
         self.t_array=np.arange(0, end, dt)
-        self.num_cpe=1
-        self.cpe_arrays={"cpe_"+str(x+1):np.zeros(len(self.t_array)) for x in range(0, self.num_cpe)}
-        self.cpe_potential_arrays={"cpe_"+str(x+1):deque([0,0,0,0]) for x in range(0, self.num_cpe)}
+        self.num_cpe=0
+        self.cpe_arrays={}
+        self.cpe_potential_arrays={}
         self.cpe_keys=["cpe_{0}".format(x) for x in range(1, self.num_cpe+1)]
         self.cpe_coeffs=np.multiply(1/6, [11, -18,9, -2])
         self.current_idx=current_idx
@@ -41,10 +41,12 @@ class solve_functions:
         #print(xdot)
         #parameter_area
         R0=self.params["R0"]
-        result[0]=x[3] - x[2]
-        result[1]=-x[3] + x[1]/R0
-        result[2]=self.source_func(t) - x[0]
-        result[3]=-self.cpe_dict["3"] + x[0] - x[1]
+        R1=self.params["R1"]
+        C1=self.params["C1"]
+        result[0]=-x[3] + x[0]/R0
+        result[1]=x[1]/R1 - x[2]/R1+(C1)*xdot[1]+(-C1)*xdot[2]
+        result[2]=-x[1]/R1 + x[2]/R1+(-C1)*xdot[1]+(C1)*xdot[2]
+        result[3]=self.source_func(t) - x[0]
 
         #print(result)
 
@@ -122,11 +124,11 @@ def impedance_simulate(sim_class, frequencies, amplitude=1e-3, num_osc=3.5):
 dt=0.0001
 
 def external_simulate():
-    sol_fs=solve_functions(params={"R0":1,"Q1":0.01,"alpha1":0.5,},
-                                    derivative_vars=[],
+    sol_fs=solve_functions(params={"R0":10,"R1":2,"C1":0.001,},
+                                    derivative_vars=[1,2],
                                     dt=dt,
                                     end=dt*1000,
-                                    current_idx=2,
-                                    source_func=lambda t:0.3*np.sin(math.pi*2*8*t),
-                                    cpe_locs=[3])
+                                    current_idx=3,
+                                    source_func=lambda t:0.005*np.sin(2*math.pi*183.29807108324357*t),
+                                    cpe_locs=[])
     return sol_fs.simulate(), sol_fs.t_array, [sol_fs.source_func(t) for t in sol_fs.t_array]
