@@ -22,6 +22,7 @@ harm_range=list(range(4, 6))
 from scipy import interpolate
 from SALib.sample import saltelli
 from SALib.analyze import sobol
+import time
 param_list={
     "E_0":-0.2,
     'E_start':  -600e-3, #(starting dc voltage - V)
@@ -127,7 +128,7 @@ problem =   {
 }
 all_params=simulation_params+freq_params
 print(all_params)
-dim=1024
+dim=32
 sample_values=saltelli.sample(problem, dim)
 len_sample_values=len(sample_values)
 sim.def_optim_list(all_params)
@@ -147,7 +148,7 @@ Si = sobol.analyze(problem, Y, print_to_console=False)
 print(Si["S1"], sum(Si["S1"]))
 print(Si["ST"], sum(Si["ST"]))"""
 time_series_vector=np.zeros(len_sample_values)
-time=sim.t_nondim(sim.time_vec)
+times=sim.t_nondim(sim.time_vec)
 
 highest_freq=sim.max_freq
 print(highest_freq)
@@ -160,10 +161,11 @@ simulation_options["sobol_dim"]=dim
 plt.plot(pot)
 print(list(freq_values))
 plt.show()
+start=time.time()
 des=Input_optimiser(param_list, simulation_options, other_values, param_bounds)
 print(des.sobol_simulate(freq_values))
-
-
+print(time.time()-start, "paralell")
+start=time.time()
 for i in range(0, len_sample_values):
     #print(i)
     electro_params=sample_values[i, :]
@@ -185,6 +187,7 @@ for i in range(0, len_sample_values):
     #plt.show()
     time_series_matrix[i, :]=current[1:] #row is parameter variation, column is timepoints
 #plt.show()
+
 sobol_1=np.zeros(( len(simulation_params), ts_len))
 variance=np.zeros(ts_len)
 for i in range(0, ts_len):
@@ -225,7 +228,7 @@ if extra_tw==True:
 time_window_sobol=np.sum(np.sum(time_window_sobol, axis=0))
 total_var=1/(np.sum(np.sqrt(np.std(time_series_matrix, axis=1)))) #variance over the columns
 print(total_entropy,time_window_sobol, total_var)
-
+print(time.time()-start, "non-paralell")
 """
 print(sobol_1)
 sobol_sum_i=np.sum(sobol_1, axis=1) #sum over every timepoint for each parameter (summing over col)

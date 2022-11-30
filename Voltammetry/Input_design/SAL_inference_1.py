@@ -104,11 +104,11 @@ sim.simulation_options["method"]="sum_of_sinusoids"
 simulation_params=["E_0", "k_0", "Ru", "gamma", "alpha"]
 simulation_options["sobol_params"]=simulation_params
 simulation_options["num_sinusoids"]=5
-simulation_options["sobol_dim"]=32
+simulation_options["sobol_dim"]=1024
 simulation_options["label"]="cmaes"
 simulation_options["save_file"]="Initial_optim_try"
 des=Input_optimiser(param_list, simulation_options, other_values, param_bounds)
 cma.fmin(des.sobol_simulate, 
         x0=[0.5]*des.simulation_options["num_sinusoids"]*3, 
         sigma0=0.1,
-        options={'ftarget': 1e-5})
+        options={'tolfun': 1e-7})
