@@ -75,7 +75,7 @@ param_bounds={
     'CdlE2': [-0.01,0.01],#0.000245772700637,
     'CdlE3': [-0.01,0.01],#1.10053945995e-06,
     'gamma': [0.1*param_list["original_gamma"],10*param_list["original_gamma"]],
-    'k_0': [0.1, 1e3], #(reaction rate s-1)
+    'k_0': [0.1, 2e3], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[math.pi/2, 2*math.pi],
     "E0_mean":[param_list['E_start'],param_list['E_reverse']],
@@ -96,18 +96,19 @@ rpotential=sim.e_nondim(sim.define_voltages())
 rcurrent=sim.test_vals([], "timeseries")
 sim.simulation_options["method"]="sum_of_sinusoids"
 #simulation_params=["E_0", "k_0", "Ru", "gamma", "alpha"]
-
+num_points=10
 param_ranges={
             "E_0":[0.25, 0.5, 0.75], 
             "k_0":[0.1, 100, 1000], 
             "gamma":[1e-11, 5e-11, 1e-10],
             "Ru":[0.1, 10, 1000],
             "alpha":[0.4, 0.5, 0.6]}
+param_ranges={x:np.linspace(param_bounds[x][0], param_bounds[x][1], num_points) for x in param_ranges.keys()}
 files=[x+".npy" for x in ["shannon_try_2"]]
 farad_params=list(param_ranges.keys())
 ref_farad_params=[param_ranges[x][1] for x in farad_params]
 ref_farad_params[0]=0
-fig, axis=plt.subplots(2,3)
+"""fig, axis=plt.subplots(2,3)
 f_params=["freq_1", "amp_1", "phase_1"]
 sim.def_optim_list(f_params)
 freq_vals=[10, 300e-3, 3*math.pi/2]
@@ -135,29 +136,38 @@ for j in range(0, len(farad_params)):
                 ax.plot(potential, current, label=label)
             ax.legend()
 plt.show()
-for file in files:
-    results_dict=np.load(file, allow_pickle=True).item()    
-    sim.def_optim_list(results_dict["params"])
-    freq_values=np.zeros(len(results_dict["params"]))
-    rands=np.random.rand(len(freq_values))
-    for i in range(0, len(results_dict["params"])):
+for i in range(0, len(results_dict["params"])):
         
         appropriate_key="all_{0}s".format(results_dict["params"][i][:results_dict["params"][i].index("_")])
         freq_values[i]=sim.un_normalise(rands[i], [param_bounds[appropriate_key][0], param_bounds[appropriate_key][1]])
-    for i in range(6, len(results_dict["param_values"]) ):
-        fig, axis=plt.subplots(2,3)
-        sim.def_optim_list(results_dict["params"])
-        if i<len(results_dict["param_values"]):
-            axis[0,0].set_title(results_dict["scores"][i])
-            sim.test_vals(results_dict["param_values"][i], "timeseries")
+"""
+
+f_params=["freq_1", "amp_1", "phase_1"]
+sim.def_optim_list(f_params)
+freq_vals=[10, 1, 3*math.pi/2]
+
+fig, axis=plt.subplots(2,3)
+shift=dict(zip(param_ranges.keys(), [10e-3, 1, 0.5e-11, 1, 0.01]))
+for file in files:
+    results_dict=np.load(file, allow_pickle=True).item()    
+    
+
+    for i in range(0, len(results_dict["param_values"]) ):
+        if i==0:
+            freq_params=f_params
+            f_vals=freq_vals
         else:
-            sim.test_vals(freq_values, "timeseries")
+            freq_params=results_dict["params"]
+            f_vals=results_dict["param_values"][i]
+        sim.def_optim_list(freq_params)
+        print(sim.optim_list)
         
         potential=sim.e_nondim(sim.define_voltages())
-        sim.def_optim_list(farad_params+results_dict["params"])
+        all_param_names=farad_params+freq_params
+        sim.def_optim_list(all_param_names)
         param_bounds["E_0"]=[min(potential), max(potential)]
         times=sim.t_nondim(sim.time_vec)
-        reference_current=sim.i_nondim(sim.test_vals(np.append(ref_farad_params,results_dict["param_values"][i]), "timeseries"))*1000
+        pc_diff=np.zeros(num_points)
         for j in range(0, len(farad_params)):
             ax=axis[j//3, j%3]
             sim_farad_params=copy.deepcopy(ref_farad_params)
@@ -166,15 +176,20 @@ for file in files:
                     value=sim.un_normalise(param_ranges[farad_params[j]][z], param_bounds["E_0"])
                 else:
                     value=param_ranges[farad_params[j]][z]
-                label=mplot.fancy_names[farad_params[j]]+"="+str(value)+mplot.unit_dict[farad_params[j]]
                 sim_farad_params[j]=value
-                print(sim_farad_params, farad_params[j])
-                if i<len(results_dict["param_values"]):
-                    current=sim.i_nondim(sim.test_vals(np.append(sim_farad_params,results_dict["param_values"][i]), "timeseries"))*1000 
-                else:
-                    current=sim.i_nondim(sim.test_vals(np.append(sim_farad_params,freq_values), "timeseries"))*1000
-                ax.plot(potential, current, label=label)
-            ax.legend()
-       
-        axis[-1, -1].set_axis_off()
-        plt.show()#
+                #print(sim_farad_params, farad_params[j])
+                current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
+                sim_farad_params[j]+=shift[farad_params[j]]
+                shifted_current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
+                pc_diff[z]=sim.RMSE(shifted_current, current)/np.mean(current)
+                print(np.mean(current))
+            
+            if i==0:
+                ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), linestyle="--")
+                
+            else:
+                ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), label=i)
+            
+ax.legend()
+axis[-1, -1].set_axis_off()
+plt.show()#

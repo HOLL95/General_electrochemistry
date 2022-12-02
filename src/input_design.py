@@ -52,7 +52,7 @@ class Input_optimiser(single_electron):
             "names":self.simulation_options["sobol_params"], 
             "bounds":[[self.param_bounds[x][0], self.param_bounds[x][1]] for x in self.simulation_options["sobol_params"]]  
         }       
-        sample_values=saltelli.sample(self.problem, self.simulation_options["sobol_dim"])
+        sample_values=saltelli.sample(self.problem, self.simulation_options["sobol_dim"],calc_second_order=False)
         len_sample_values=len(sample_values)
         param_mat=np.zeros((len_sample_values, len(self.all_params)))
         param_mat[:, :len(self.simulation_options["sobol_params"])]=sample_values
@@ -113,7 +113,7 @@ class Input_optimiser(single_electron):
         globals()["ts_arr"][params[0], :]=current[1:]
     def sobol_wrapper(self, timepoints):
 
-        Si=sobol.analyze(self.problem, timepoints[1])#Calculating sobol indices for every parameter (row), over iterative timepoints (col) 
+        Si=sobol.analyze(self.problem, timepoints[1], calc_second_order=False)#Calculating sobol indices for every parameter (row), over iterative timepoints (col) 
         negs=np.where(Si["S1"]<0)
         
         if len(negs[0])>0:

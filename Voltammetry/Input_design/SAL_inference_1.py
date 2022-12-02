@@ -106,8 +106,8 @@ simulation_options["sobol_params"]=simulation_params
 simulation_options["num_sinusoids"]=5
 simulation_options["sobol_dim"]=512
 simulation_options["label"]="cmaes"
-simulation_options["save_file"]="shannon_try_2"
-simulation_options["score"]="Shannon_entropy"
+simulation_options["save_file"]="Sobol_D_1"
+simulation_options["score"]="Sobol-D"
 des=Input_optimiser(param_list, simulation_options, other_values, param_bounds)
 cma.fmin(des.sobol_simulate, 
         x0=[0.5]*des.simulation_options["num_sinusoids"]*3, 
