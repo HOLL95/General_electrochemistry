@@ -60,35 +60,45 @@ class Input_optimiser(single_electron):
         ts_len=len(pot)-1
         self.create_global_2d(len_sample_values, ts_len, "ts_arr")#row is parameter variation, column is timepoints
         param_enumerate_arg=enumerate(param_mat)
+        start=time.time()
+        globals()['neg_counter']=0
         with mp.Pool(processes=mp.cpu_count()) as P:
             P.map(self.ts_wrapper,param_enumerate_arg)
         self.create_global_2d(len(self.simulation_options["sobol_params"]), ts_len, "sobol_arr")
         sobol_enumerate_arg=enumerate(np.transpose(globals()["ts_arr"]))
         with mp.Pool(processes=mp.cpu_count()) as P:
             P.map(self.sobol_wrapper,sobol_enumerate_arg)
+        print(time.time()-start, globals()['neg_counter'])
         variance=np.zeros(ts_len)    
         osc_points=int(1/self.dim_dict["sampling_freq"])
         num_intervals=ts_len//osc_points
-        if num_intervals%osc_points!=0:
-            extra_tw=True
-            time_window_sobol=np.zeros((len(self.simulation_options["sobol_params"]), num_intervals+1))
-        else:
-            extra_tw=False
-            time_window_sobol=np.zeros((len(self.simulation_options["sobol_params"]), num_intervals))
+        if self.simulation_options["score"]=="Shannon_entropy":
+            if num_intervals%osc_points!=0:
+                extra_tw=True
+                time_window_sobol=np.zeros((len(self.simulation_options["sobol_params"]), num_intervals+1))
+            else:
+                extra_tw=False
+                time_window_sobol=np.zeros((len(self.simulation_options["sobol_params"]), num_intervals))
 
-        for i in range(0, num_intervals):
-            for j in range(len(self.simulation_options["sobol_params"])):
-                sobol_sum=np.sum(globals()["sobol_arr"][j, i*osc_points:(i+1)*osc_points])#row is parameter, column is num_intervals
-                time_window_sobol[j,i]=sobol_sum*np.log(sobol_sum)
-        if extra_tw==True:
-            for j in range(len(self.simulation_options["sobol_params"])):
-                sobol_sum=np.sum(globals()["sobol_arr"][j, num_intervals*osc_points:])
-                time_window_sobol[j,-1]=sobol_sum*np.log(sobol_sum)
-        sobol_mean=np.mean(globals()["sobol_arr"], axis=1)
-        total_entropy=1/(np.sum(np.multiply(sobol_mean, np.log(sobol_mean))))
-        time_window_entropy=np.sum(np.sum(time_window_sobol, axis=0))
-        total_var=1/(np.sum(np.sqrt(np.std(globals()["ts_arr"], axis=1)))) #variance over the columns
-        return_val=sum([total_entropy*1000, 0.1*time_window_entropy, total_var])
+            for i in range(0, num_intervals):
+                for j in range(len(self.simulation_options["sobol_params"])):
+                    sobol_sum=np.sum(globals()["sobol_arr"][j, i*osc_points:(i+1)*osc_points])#row is parameter, column is num_intervals
+                    time_window_sobol[j,i]=sobol_sum*np.log(sobol_sum)
+            if extra_tw==True:
+                for j in range(len(self.simulation_options["sobol_params"])):
+                    sobol_sum=np.sum(globals()["sobol_arr"][j, num_intervals*osc_points:])
+                    time_window_sobol[j,-1]=sobol_sum*np.log(sobol_sum)
+            sobol_mean=np.mean(globals()["sobol_arr"], axis=1)
+            total_entropy=1/(np.sum(np.multiply(sobol_mean, np.log(sobol_mean))))
+            time_window_entropy=np.sum(np.sum(time_window_sobol, axis=0))
+            total_var=1/(np.sum(np.sqrt(np.std(globals()["ts_arr"], axis=1)))) #variance over the columns
+            return_val=sum([total_entropy*1000, 0.1*time_window_entropy, total_var])
+            
+        elif self.simulation_options["score"]=="Sobol-D":
+            
+            matrix=np.matmul(globals()["sobol_arr"],np.transpose(globals()["sobol_arr"]))
+            inv_matrix=np.linalg.inv(matrix)
+            return_val=np.linalg.det(inv_matrix)
         if self.simulation_options["save_file"]!=False:
             if return_val<max(self.save_dict["scores"]):
                 max_idx=np.where(self.save_dict["scores"]==max(self.save_dict["scores"]))
@@ -96,6 +106,7 @@ class Input_optimiser(single_electron):
                 self.save_dict["param_values"][max_idx[0][0], :]=normed_params
                 np.save(self.simulation_options["save_file"], self.save_dict)
                 #print(self.save_dict)
+        #print(return_val)
         return return_val
     def ts_wrapper(self, params):
         current=self.test_vals(params[1], "timeseries")
@@ -109,9 +120,10 @@ class Input_optimiser(single_electron):
             for j in range(0, len(negs[0])):
                 if (Si["S1"][negs[0][j]]+Si["S1_conf"][negs[0][j]])>0:
                     Si["S1"][negs[0][j]]=1e-20
-                    
+                    globals()["neg_counter"]+=1
                 else:
                     Si["S1"]=[1e-20]*len(Si["S1"])
+                    globals()["neg_counter"]+=5
                     break
         globals()["sobol_arr"][:, timepoints[0]]=Si["S1"]
     def create_global_2d(self, row, col, key):

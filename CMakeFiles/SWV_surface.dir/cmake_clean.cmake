@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o"
-  "SWV_surface.cpython-38-x86_64-linux-gnu.so"
+  "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o.d"
+  "SWV_surface.cpython-310-x86_64-linux-gnu.so"
   "SWV_surface.pdb"
 )
 

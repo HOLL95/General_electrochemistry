@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/isolver_martin_brent.dir/src/surface_process_brent.cpp.o"
-  "isolver_martin_brent.cpython-38-x86_64-linux-gnu.so"
+  "CMakeFiles/isolver_martin_brent.dir/src/surface_process_brent.cpp.o.d"
+  "isolver_martin_brent.cpython-310-x86_64-linux-gnu.so"
   "isolver_martin_brent.pdb"
 )
 

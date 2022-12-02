@@ -158,7 +158,7 @@ double sum_of_sinusoids_E(const std::vector<double> &amplitudes,const std::vecto
 double sum_of_sinusoids_dE(const std::vector<double> &amplitudes,const std::vector<double> &frequencies,const std::vector<double> &phases,const int num_frequencies, double t){
   double dE=0;
   for (int i=0; i<num_frequencies;i++){
-    dE+=-amplitudes[i]*frequencies[i]*cos((frequencies[i]*t)+phases[i]);
+    dE+=amplitudes[i]*frequencies[i]*cos((frequencies[i]*t)+phases[i]);
   }
   return dE;
 }
