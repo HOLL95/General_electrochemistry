@@ -46,7 +46,7 @@ param_list={
     'sampling_freq' : (1.0/200),
     'phase' :3*math.pi/2,
     "time_end": None,
-    'num_peaks': 3,
+    'num_peaks': 30,
 }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -143,7 +143,7 @@ for i in range(0, len(noise_vals)):
         mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioBardenetACMC)#, transformation=MCMC_transform)
 
         mcmc.set_parallel(True)
-        mcmc.set_max_iterations(50)
+        mcmc.set_max_iterations(20000)
         chains=mcmc.run()
         save_file="MCMC/interpolation_assessment/MCMC_{0}pc_{1}".format(noise_vals[i]*100, labels[j])
         f=open(save_file, "wb")
