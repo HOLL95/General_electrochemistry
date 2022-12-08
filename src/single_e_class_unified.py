@@ -8,8 +8,6 @@ import itertools
 from params_class import params
 #from pybamm_solve import pybamm_solver
 from dispersion_class import dispersion
-from filterpy.kalman import KalmanFilter
-from filterpy.common import Q_discrete_white_noise
 #from sklearn import linear_model, datasets
 from decimal import Decimal
 from scipy.optimize import curve_fit
@@ -197,83 +195,6 @@ class single_electron:
         else:
             dE=1
         return (dE/self.nd_param.nd_param_dict["Ru"])-(current/(self.nd_param.nd_param_dict["Ru"]*self.nd_param.nd_param_dict["Cdl"]))
-    def likelihood_surfaces(self, parameters, data, **kwargs):
-        if "pc" not in kwargs:
-            kwargs["pc"]=0.1
-        if "size" not in kwargs:
-            kwargs["size"]=20
-        if "scan_parameters" not in kwargs:
-            desired_range=range(0, len(parameters))
-        else:
-            if type(kwargs["scan_parameters"]) is not list:
-                raise TypeError("Parameters needs to be list not "+str(type(kwargs["scan_parameters"])))
-            else:
-                desired_range=[self.optim_list.index(x) for x in kwargs["scan_parameters"]]
-        save_dict={}
-
-        for i in desired_range:
-            save_dict={}
-            print(self.optim_list[i])
-            for j in range(0, len(parameters)):
-                if i==j:
-                    pass
-                if i>j:
-                    start=time.time()
-                    y_param, x_param=self.optim_list[i],self.optim_list[j]
-                    y_idx, x_idx=self.optim_list.index(y_param), self.optim_list.index(x_param)
-                    y_val, x_val=parameters[i], parameters[j]
-                    y_list=np.linspace(y_val*(1-kwargs["pc"]), y_val*(1+kwargs["pc"]), kwargs["size"])
-                    x_list=np.linspace(x_val*(1-kwargs["pc"]), x_val*(1+kwargs["pc"]), kwargs["size"])
-                    XX,YY=np.meshgrid(x_list, y_list)
-                    param_matrix=[[[0 for x in range(0, len(parameters))] for x in range(0, kwargs["size"])] for y in range(0, kwargs["size"])]
-                    for q in range(0, kwargs["size"]):
-                        for k in range(0, kwargs["size"]):
-                            sim_params=copy.deepcopy(parameters)
-                            sim_params[x_idx]=x_list[k]
-                            sim_params[y_idx]=y_list[q]
-                            param_matrix[q][k]=sim_params
-                    param_list=list(itertools.chain(*param_matrix))
-                    mp_argument=zip(param_list, ["fourier"]*(kwargs["size"]**2))
-                    with multiprocessing.Pool(processes=4) as pool:
-                        results = pool.starmap(self.test_vals, mp_argument)
-                    errors=[self.RMSE(x, data) for x in results]
-                    Z=[errors[i:i+kwargs["size"]] for i in range(0, len(errors), kwargs["size"])]
-                    save_dict[x_param+"_"+y_param]={"X":XX, "Y":YY, "Z":Z}
-                    print(x_param+"_"+y_param)
-                    print(XX)
-                    print(YY)
-                    print(Z)
-            np.save("Likelihood_surfaces_"+self.optim_list[i]+".npy", save_dict)
-    def likelihood_curves(self, parameters, data, **kwargs):
-        if "pc" not in kwargs:
-            kwargs["pc"]=0.1
-        if "size" not in kwargs:
-            kwargs["size"]=20
-        if "scan_parameters" not in kwargs:
-            desired_range=range(0, len(parameters))
-        else:
-            if type(kwargs["scan_parameters"]) is not list:
-                raise TypeError("Parameters needs to be list not "+str(type(kwargs["scan_parameters"])))
-            else:
-                desired_range=[self.optim_list.index(x) for x in kwargs["scan_parameters"]]
-        save_dict={}
-        for i in desired_range:
-            x_param=self.optim_list[i]
-            x_idx=self.optim_list.index(x_param)
-            x_val=parameters[i]
-            x_list=np.linspace(x_val*(1-kwargs["pc"]), x_val*(1+kwargs["pc"]), kwargs["size"])
-            param_list=[[0 for x in range(0, len(parameters))] for y in range(0, kwargs["size"])]
-            for q in range(0, kwargs["size"]):
-                sim_params=copy.deepcopy(parameters)
-                sim_params[x_idx]=x_list[q]
-                param_list[q]=sim_params
-
-            mp_argument=zip(param_list, ["fourier"]*kwargs["size"])
-            with multiprocessing.Pool(processes=4) as pool:
-                results = pool.starmap(self.test_vals, mp_argument)
-            errors=[self.RMSE(x, data) for x in results]
-            save_dict[x_param]={"X":x_list, "Y":errors}
-        np.save("Likelihood_curves_high_gamma.npy", save_dict)
     def def_optim_list(self, optim_list):
         keys=list(self.dim_dict.keys())
         for i in range(0, len(optim_list)):
@@ -513,80 +434,9 @@ class single_electron:
                     "params":params, "optim_list":self.optim_list}
         pickle.dump(save_dict, file, pickle.HIGHEST_PROTOCOL)
         file.close()
-    def Kalman_capacitance(self, q, error=0.005):
-        #error=0.005*max(self.secret_data_time_series)
-        my_filter = KalmanFilter(dim_x=2, dim_z=1)
-        my_filter.x = np.array([[self.secret_data_time_series[0]],
-                        [1.]])       # initial state (location and velocity)
-        dt=self.time_vec[1]-self.time_vec[0]
-        cdl=self.nd_param.nd_param_dict["Cdl"]
-        ru=self.nd_param.nd_param_dict["Ru"]
-        dt_rc=dt/(ru*cdl)
-        my_filter.F=np.array([[1/(1+dt_rc), (dt/ru)/(1+dt_rc)],[0, 0]])  # state transition matrix
-        tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
-        u=np.ones(len(self.time_vec))
-        u[np.where(self.time_vec>tr)]*=-1
-        my_filter.H = np.array([[1.,0.]])    # Measurement function
-        my_filter.P *= error      # covariance matrix
-        my_filter.R = error                      # state uncertainty
-        my_filter.Q = Q_discrete_white_noise(2, dt, q) # process uncertainty
-        my_filter.B=np.array([[0], [1]])
-        means, _, _, _=my_filter.batch_filter(self.secret_data_time_series, Fs=None, Qs=None, Hs=None, Bs=None, us=u)
-        return means[:, 0, 0]
-    def kalman_pure_capacitance(self, current, q):
-        my_filter = KalmanFilter(dim_x=2, dim_z=1)
-        my_filter.x = np.array([[self.nd_param.nd_param_dict["Cdl"]],
-                        [0]])       # initial state (location and velocity)
-        dt=self.time_vec[1]-self.time_vec[0]
-
-        my_filter.F=np.array([[1, dt],[0, 1]])  # state transition matrix
-        tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
-        u=np.ones(len(self.time_vec))
-        ru=self.nd_param.nd_param_dict["Ru"]
-        if self.simulation_options["method"]=="dcv":
-            u[np.where(self.time_vec>tr)]*=-1
-            self.kalman_u=u
-            pred_cap=self.kalman_u*current
-        elif self.simulation_options["method"]=="sinusoidal":
-            orignal_phase=self.nd_param.nd_param_dict["phase"]
-            self.nd_param.nd_param_dict["phase"]=self.nd_param.nd_param_dict["cap_phase"]
-            for i in range(0, len(self.time_vec)):
-                u[i]=(self.voltage_query(self.time_vec[i])[1])
-            self.kalman_u=u
-            pred_cap=np.divide((current), u)
-        norm_denom=np.zeros(len(current))
-        norm_denom[0]=u[0]
-
-        """
-        for i in range(1, len(self.secret_data_time_series)):
-            gradient=(self.secret_data_time_series[i]-self.secret_data_time_series[i-1])/dt
-            norm_denom[i]=u[i]-ru*gradient
-            norm=np.divide(1, norm_denom)
-        """
-        #H_array=[np.array([[1, 0]]) for x in range(0, len(norm_denom))]
-        my_filter.H = np.array([[1.,0.]])
-        my_filter.P *= 0.1      # covariance matrix
-        my_filter.R = 1                      # state uncertainty
-        my_filter.Q = Q_discrete_white_noise(2, dt, q) # process uncertainty
-        means=np.zeros(len(self.secret_data_time_series))
-        for i in range(0, len(self.time_vec)):
-            my_filter.predict()
-            my_filter.update(z=pred_cap[i], R=0.1)
-            means[i]=my_filter.x[0][0]
-
-        means=np.divide(means, self.kalman_u)
-        return pred_cap, means
+   
     def rolling_window(self,x, N, arg="same"):
         return np.convolve(x, np.ones(N)/N, mode=arg)
-    def kalman_dcv_simulate(self, Faradaic_current, q):
-
-        candidate_current=np.subtract(self.secret_data_time_series, Faradaic_current)
-        predicted_capcitance, predicted_current=self.kalman_pure_capacitance(candidate_current, q)
-        if self.simulation_options["Kalman_capacitance"]==True:
-            print([(x, self.dim_dict[x]) for x in self.optim_list])
-            self.pred_cap=predicted_current
-            self.farad_current=Faradaic_current
-        return np.add(predicted_current, Faradaic_current)
     def times(self):
         self.time_vec=np.arange(0, self.nd_param.nd_param_dict["time_end"], self.nd_param.nd_param_dict["sampling_freq"])
         #print(self.time_vec)

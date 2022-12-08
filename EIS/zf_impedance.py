@@ -97,7 +97,7 @@ def NodiffImpCalculator(freqs, Ru,gamma, Cap, alpha, kf_el, kb_el, ctot):
     Freq    = 2*np.pi*freqs
     R_u     = Ru
     coeff=-(ctot*A*F**2)/(R*T)
-    ZFar    =1/(coeff*(-alpha*kf_el-((1-alpha)*kb_el))
+    ZFar    =1/(coeff*(-alpha*kf_el-((1-alpha)*kb_el)))
     print(ZFar)
     #----------------------------------------------------------------------------------------------
     Z  = R_u + 1/((1.0/ZFar) + (((1j*Freq)**gamma)*Cap))

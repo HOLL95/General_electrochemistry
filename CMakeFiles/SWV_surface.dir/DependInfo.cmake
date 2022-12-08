@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/user/Documents/General_electrochemistry/src/surface_process_SWV.cpp" "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o" "gcc" "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o.d"
+  "/home/henney/Documents/Oxford/General_electrochemistry/src/surface_process_SWV.cpp" "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o" "gcc" "CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o.d"
   )
 
 # Targets to which this target links.
