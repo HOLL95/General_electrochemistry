@@ -1,14 +1,49 @@
 import sympy as sym
-info_symbols={x:sym.symbols(x) for x in ["E_0", "k_0", "Ru", "Cdl", "CdlE1", "CdlE2", "CdlE3", "gamma", "alpha"]}
-other_symbols={x:sym.symbols(x) for x in ["E_start", "dI", "deltaE"]}
-variables={x:sym.symbols(x) for x in ["I", "t" ]}
+param_vars={x:sym.symbols(x) for x in ["E_0", "k_0", "Ru", "Cdl", "CdlE1", "CdlE2", "CdlE3", "gamma", "alpha"]}
+deriv_vars={x:sym.symbols(x) for x in [ "dI", "dE", "dtheta"]}
+state_vars={x:sym.symbols(x) for x in ["I", "theta", "E"]}
+t=sym.symbols("t")
 num_sines=4
-e_keys=["E_{0}".format(i) for i in range(1,num_sines+1) ]+["dE_{0}".format(i) for i in range(1,num_sines) ]
-E_vars={x:sym.symbols(x) for x in e_keys}
 
-e_equations={x:sym.Eq(x, variables["fE"], other_symbols["E_start"]+other_symbols["deltaE"]*sym.sin(other_symbols["omega"]*variables["t"]+info_symbols["eta"]))}
+sinusoid_params=[]
+labels=["freq", "amp", "phase"]
+for i in range(0, num_sines):          
+            sinusoid_params+=[x+"_{0}".format(i+1) for x  in labels]
+sinusoid_vars={x:sym.symbols(x) for x in sinusoid_params}
+
+E_vars={x:sym.symbols(x) for x in ["E_{0}".format(i) for i in range(1,num_sines+1) ]}
+dE_vars={x:sym.symbols(x) for x in ["dE_{0}".format(i) for i in range(1,num_sines+1)]}
+
+full_expr=param_vars["Cdl"]* \
+                (1+param_vars["CdlE1"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])+\
+                param_vars["CdlE2"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])**2+\
+                param_vars["CdlE3"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])**3)*\
+                (deriv_vars["dE"]-param_vars["Ru"]*deriv_vars["dI"])+\
+                param_vars["gamma"]*\
+                (param_vars["k_0"]*(1-state_vars["theta"])*sym.exp((1-param_vars["alpha"])*(state_vars["E"]-param_vars["E_0"]-state_vars["I"]*param_vars["Ru"]))-\
+                param_vars["k_0"]*(state_vars["theta"])*sym.exp((param_vars["alpha"])*(state_vars["E"]-param_vars["E_0"]-state_vars["I"]*param_vars["Ru"])))
+current_eq=sym.Eq(state_vars["I"], full_expr)
 
 
-E=sym.Eq(variables["fE"], other_symbols["E_start"]+other_symbols["deltaE"]*sym.sin(other_symbols["omega"]*variables["t"]+info_symbols["eta"]))
 
-dE=sym.Eq(other_symbols["deltaE"]*sym.cos(other_symbols["omega"]*variables["t"]+info_symbols["eta"]))
+
+#current_eq.subs(deriv_vars["dtheta"],  
+#                param_vars["k_0"]*(1-state_vars["theta"])*sym.exp((1-param_vars["alpha"])*(state_vars["E"]-param_vars["E_0"]-state_vars["I"]*param_vars["Ru"]))-
+#                param_vars["k_0"]*(state_vars["theta"])*sym.exp((param_vars["alpha"])*(state_vars["E"]-param_vars["E_0"]-state_vars["I"]*param_vars["Ru"])))
+#er=sym.symbols("Er")
+#current_eq.subs("Cdl", param_vars["Cdl"]*(1+param_vars["CdlE1"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])+param_vars["CdlE2"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])**2+param_vars["CdlE1"]*(state_vars["E"]-param_vars["Ru"]*state_vars["I"])**3))
+
+
+#current_eq.subs("E",
+#              sym.Add(*[sinusoid_vars["amp_{0}".format(x)]*sym.sin(sinusoid_vars["freq_{0}".format(x)]*t+sinusoid_vars["phase_{0}".format(x)]) for x in range(1, num_sines+1)])
+#                )
+#current_eq.subs("dE",
+#               sym.Add(*[sinusoid_vars["amp_{0}".format(x)]*sinusoid_vars["freq_{0}".format(x)]*sym.cos(sinusoid_vars["freq_{0}".format(x)]*t+sinusoid_vars["phase_{0}".format(x)]) for x in range(1, num_sines+1)])
+#                )
+#sym.pprint(current_eq)
+#sym.pprint(sym.solve(current_eq, deriv_vars["dI"]))
+for key in param_vars.keys():
+    print(key)
+    print(sym.diff(full_expr, param_vars[key]))
+    
+    print("\n")
