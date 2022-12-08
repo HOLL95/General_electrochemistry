@@ -104,7 +104,7 @@ param_ranges={
             "Ru":[0.1, 10, 1000],
             "alpha":[0.4, 0.5, 0.6]}
 param_ranges={x:np.linspace(param_bounds[x][0], param_bounds[x][1], num_points) for x in param_ranges.keys()}
-files=[x+".npy" for x in ["shannon_try_2"]]
+files=[x+".npy" for x in ["Sobol_D_3_max_f_100"]]
 farad_params=list(param_ranges.keys())
 ref_farad_params=[param_ranges[x][1] for x in farad_params]
 ref_farad_params[0]=0
@@ -152,13 +152,13 @@ for file in files:
     results_dict=np.load(file, allow_pickle=True).item()    
     
 
-    for i in range(0, len(results_dict["param_values"]) ):
+    for i in range(0, len(results_dict["param_values"])+1 ):
         if i==0:
             freq_params=f_params
             f_vals=freq_vals
         else:
             freq_params=results_dict["params"]
-            f_vals=results_dict["param_values"][i]
+            f_vals=results_dict["param_values"][i-1]
         sim.def_optim_list(freq_params)
         print(sim.optim_list)
         
@@ -181,14 +181,14 @@ for file in files:
                 current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
                 sim_farad_params[j]+=shift[farad_params[j]]
                 shifted_current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
-                pc_diff[z]=sim.RMSE(shifted_current, current)/np.mean(current)
+                pc_diff[z]=100*(sim.RMSE(shifted_current, current)/np.mean(np.abs(current)))
                 print(np.mean(current))
             
             if i==0:
                 ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), linestyle="--")
                 
             else:
-                ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), label=i)
+                ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), label=i-1)
             
 ax.legend()
 axis[-1, -1].set_axis_off()

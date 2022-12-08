@@ -70,7 +70,7 @@ simulation_options={
 other_values={
     "filter_val": 0.5,
     "harmonic_range":harm_range,
-    "bounds_val":20000,
+    "bounds_val":2000,
 }
 param_bounds={
     'E_0':[param_list['E_start'],param_list['E_reverse']],
@@ -92,7 +92,7 @@ param_bounds={
     "k0_scale":[0,1e4],
     "k0_range":[1e2, 1e4],
     'phase' : [0, 2*math.pi],
-    "all_freqs":[1e-5, 2000],
+    "all_freqs":[1e-3, 100],
     "all_amps":[1e-5, 0.5],
     "all_phases":[0, 2*math.pi],
 }
@@ -106,8 +106,10 @@ simulation_options["sobol_params"]=simulation_params
 simulation_options["num_sinusoids"]=5
 simulation_options["sobol_dim"]=512
 simulation_options["label"]="cmaes"
-simulation_options["save_file"]="Sobol_D_1"
+simulation_options["save_file"]="Sobol_D_4_max_f_100_fourier"
 simulation_options["score"]="Sobol-D"
+simulation_options["skip_errors"]=True
+simulation_options["format"]="fourier"
 des=Input_optimiser(param_list, simulation_options, other_values, param_bounds)
 cma.fmin(des.sobol_simulate, 
         x0=[0.5]*des.simulation_options["num_sinusoids"]*3, 

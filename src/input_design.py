@@ -28,6 +28,10 @@ class Input_optimiser(single_electron):
             self.simulation_options["save_file"]=False
         elif "save_num" not in self.simulation_options:
             self.simulation_options["save_num"]=10
+        if "skip_errors" not in simulation_options:
+            self.simulation_options["skip_errors"]=True
+        if "format" not in self.simulation_options:
+            self.simulation_options["format"]="timeseries"
         labels=["freq", "amp", "phase"]
         sinusoid_params=[]
         for i in range(0, self.simulation_options["num_sinusoids"]):          
@@ -62,13 +66,20 @@ class Input_optimiser(single_electron):
         param_enumerate_arg=enumerate(param_mat)
         start=time.time()
         globals()['neg_counter']=0
+        if self.simulation_options["format"]=="timeseries":
+            para_func=self.ts_wrapper
+        elif self.simulation_options["format"]=="fourier":
+            para_func=self.fourier_wrapper
         with mp.Pool(processes=mp.cpu_count()) as P:
-            P.map(self.ts_wrapper,param_enumerate_arg)
+            P.map(para_func,param_enumerate_arg)
         self.create_global_2d(len(self.simulation_options["sobol_params"]), ts_len, "sobol_arr")
-        sobol_enumerate_arg=enumerate(np.transpose(globals()["ts_arr"]))
+        sobol_enumerate_arg=enumerate(np.transpose(globals()["ts_arr"]))#Now row is timepoint, column is parameter, because enumerate sends each row to pool
         with mp.Pool(processes=mp.cpu_count()) as P:
             P.map(self.sobol_wrapper,sobol_enumerate_arg)
-        print(time.time()-start, globals()['neg_counter'])
+        #print(time.time()-start, globals()['neg_counter'])
+        max_vals=np.max(np.abs(globals()["ts_arr"]), axis=1)
+        if self.i_nondim(np.mean(max_vals))>10:
+            return 1e9
         variance=np.zeros(ts_len)    
         osc_points=int(1/self.dim_dict["sampling_freq"])
         num_intervals=ts_len//osc_points
@@ -110,10 +121,13 @@ class Input_optimiser(single_electron):
         return return_val
     def ts_wrapper(self, params):
         current=self.test_vals(params[1], "timeseries")
-        globals()["ts_arr"][params[0], :]=current[1:]
+        globals()["ts_arr"][params[0], :]=current[1:]# row is the parameter, column is the timepoint
+    def fourier_wrapper(self, params):
+        current=self.test_vals(params[1], "timeseries")
+        globals()["ts_arr"][params[0], :]=abs(np.fft.fft(current))[1:]# row is the parameter, column is the timepoint
     def sobol_wrapper(self, timepoints):
 
-        Si=sobol.analyze(self.problem, timepoints[1], calc_second_order=False)#Calculating sobol indices for every parameter (row), over iterative timepoints (col) 
+        Si=sobol.analyze(self.problem, timepoints[1], calc_second_order=False)#Calculating sobol indices for every timepoint (each row is now one tim)
         negs=np.where(Si["S1"]<0)
         
         if len(negs[0])>0:
