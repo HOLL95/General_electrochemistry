@@ -333,4 +333,5 @@ PYBIND11_MODULE(isolver_martin_brent, m) {
   m.def("dcv_et", &dcv_et, "DCV potential input");
   m.def("dcv_dEdt", &dcv_dEdt, "DCV potential derivative");
   m.def("sum_of_sinusoids_E", &sum_of_sinusoids_E, "SoS potential");
+  m.def("sum_of_sinusoids_dE", &sum_of_sinusoids_dE, "SoS potential deriv");
 }

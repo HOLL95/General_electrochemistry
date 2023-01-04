@@ -56,7 +56,7 @@ for experiment in ["PSV","FTV"]:
                 #y=np.fft.fft(current)
                 #fft_freq=np.fft.fftfreq(len(current), time[1]-time[0])
                 #plt.plot(fft_freq, np.log10(np.abs(y)))
-                harms=harmonics(desired_harms, f, 0.5)
+                harms=harmonics(desired_harms, f, 0.1)
                 plot_harmonics=harms.generate_harmonics(time, np.multiply(current, 1000), hanning=experiment_funcs[experiment]["hanning"])
                 for i in range(0, len(plot_harmonics)):
                     ax[i,j].plot(xaxis[:len(time)//divisor], 

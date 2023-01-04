@@ -120,9 +120,13 @@ for i in range(0, len(freq_params)):
 f_params=["freq_1", "amp_1", "phase_1"]
 sim.def_optim_list(f_params)
 freq_vals=[10, 1, 3*math.pi/2]
-
+titles=mplot.get_titles(farad_params, units=True)
+units=[mplot.unit_dict[x] for x in farad_params]
+units[2]="pmol cm$^{-2}$"
 fig, axis=plt.subplots(2,3)
+shift_vals=[10e-3, 1, 5, 1, 0.01]
 shift=dict(zip(param_ranges.keys(), [10e-3, 1, 0.5e-11, 1, 0.01]))
+labels=["PSV", "Rand"]
 for file in files:
     results_dict=np.load(file, allow_pickle=True).item()    
     
@@ -146,7 +150,7 @@ for file in files:
         param_bounds["E_0"]=[min(potential), max(potential)]
         times=sim.t_nondim(sim.time_vec)
         pc_diff=np.zeros(num_points)
-        for j in range(0, len(farad_params)):
+        for j in range(0, len(farad_params), 2):
             ax=axis[j//3, j%3]
             sim_farad_params=copy.deepcopy(ref_farad_params)
             for z in range(0, len(param_ranges[farad_params[j]])):
@@ -160,6 +164,7 @@ for file in files:
                 sim_farad_params[j]+=shift[farad_params[j]]
                 shifted_current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
                 pc_diff[z]=100*(sim.RMSE(shifted_current, current)/np.mean(np.abs(current)))
+
                 
             
             if i<2:
@@ -167,7 +172,8 @@ for file in files:
                 
             else:
                 ax.plot(param_ranges[farad_params[j]], np.log10(pc_diff), label=i-1)
-            
+            ax.set_xlabel(titles[j])
+            ax.set_ylabel("log10(%) change after shift of {0} {1}".format(units[j], shift_vals[j]))
 ax.legend()
 axis[-1, -1].set_axis_off()
 plt.show()#

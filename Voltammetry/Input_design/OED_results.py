@@ -162,7 +162,7 @@ for file in files:
         param_bounds["E_0"]=[min(potential), max(potential)]
         times=sim.t_nondim(sim.time_vec)
         reference_current=sim.i_nondim(sim.test_vals(np.append(ref_farad_params,results_dict["param_values"][i]), "timeseries"))*1000
-        for j in range(0, len(farad_params)):
+        for j in range(1, 2):
             ax=axis[j//3, j%3]
             sim_farad_params=copy.deepcopy(ref_farad_params)
             for z in range(0, len(param_ranges[farad_params[j]])):
@@ -177,8 +177,9 @@ for file in files:
                     current=sim.i_nondim(sim.test_vals(np.append(sim_farad_params,results_dict["param_values"][i]), "timeseries"))*1000 
                 else:
                     current=sim.i_nondim(sim.test_vals(np.append(sim_farad_params,freq_values), "timeseries"))*1000
+                
                 desired_times=np.where((times>0.4130) & (times<0.4170))
-                ax.plot(times, current, label=label)
+                ax.plot(times[desired_times], current[desired_times], label=label)
                 ax.set_ylabel("Current (mA)")
                 ax.set_xlabel("Time (s)")
             ax.legend()

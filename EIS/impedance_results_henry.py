@@ -18,18 +18,18 @@ henry_files=["EIS_WT_0.005V.csv",
         "EIS_WT_0.2V.csv",
         "EIS_WT_-0.3V.csv",
         "EIS_blank_0.005V_wide_window.csv",]
-henry_labels=["5mV (Henry)",
-        "200mV (Henry)",
-        "-300mV (Henry)",
-        "Blank (Henry)"]
+henry_labels=["5mV (Repeat 1)",
+        "200mV (Repeat 1)",
+        "-300mV (Repeat 1)",
+        "Blank (Repeat 1)"]
 alice_files=[
         '0.1_M_Phosphate_CjX183_PGE_EIS_0.005_V_5deg.csv',
         '0.1_M_Phosphate_CjX183_PGE_EIS_0.2_V_5deg.csv',
         '0.1_M_Phosphate_CjX183_PGE_EIS_-0.3_V_5deg.csv'
         ]
-alice_labels=["5mV (Alice)",
-        "200mV (Alice)",
-        "-300mV (Alice)"
+alice_labels=["5mV (repeat 2)",
+        "200mV (Repeat 2)",
+        "-300mV (Repeat 2)"
         ]
 for info_dict in [mv5_plots, henry_plots, alice_plots]:
     alice_dict={
@@ -59,7 +59,7 @@ for info_dict in [mv5_plots, henry_plots, alice_plots]:
                 "marker":"o"
     }
     plot_dicts=[henry_dict, alice_dict]
-    DCV_labels=["Henry" ,"Alice"]
+    DCV_labels=["Repeat 1" ,"Repeat 2"]
 
     get_color=plt.rcParams['axes.prop_cycle'].by_key()['color']
     get_color[3]="lightslategrey"
@@ -72,13 +72,13 @@ for info_dict in [mv5_plots, henry_plots, alice_plots]:
 
     xaxis=["Potential(V)", "$Z_{re}$", "$log_{10}$(Freq)", "Potential(V)"]
     yaxis=["Current($\\mu A$)", "$Z_{im}$", "$Z_{mag}$", "Current($\\mu A$)"]
-    fig, ax=plt.subplots(1, 3)
+    fig, ax=plt.subplots(1, 2)
     plot_locs={"5mV":[1, 0], "200mV":[1, 1], "-300mV":[1, 2]}
 
     plot_loc_keys=plot_locs.keys()
     for i in range(0, len(plot_dicts)):
         current_dict=plot_dicts[i]
-        for j in range(0, len(current_dict["files"])):
+        for j in range(0, len(current_dict["files"]),):
 
                 data=read_csv(current_dict["file_loc"]+current_dict["files"][j], sep=",", encoding=current_dict["encoding"], engine="python", skiprows=current_dict["skiprows"], skipfooter=1)
                 if j==0:
@@ -87,9 +87,9 @@ for info_dict in [mv5_plots, henry_plots, alice_plots]:
                     DCV_numpy=DCV_data.to_numpy(copy=True, dtype='float')
                     potential=DCV_numpy[:,0]
                     current=DCV_numpy[:,1]
-                    ax[2].plot(potential, current, linestyle=current_dict["linestyle"],color= get_color[i+2], label=DCV_labels[i])
-                    ax[2].set_xlabel("Potential (V)")
-                    ax[2].set_ylabel("Current ($\\mu$A)")
+                    ax[1].plot(potential, current, linestyle=current_dict["linestyle"],color= get_color[i+2], label=DCV_labels[i])
+                    ax[1].set_xlabel("Potential (V)")
+                    ax[1].set_ylabel("Current ($\\mu$A)")
                 numpy_data=data.to_numpy(copy=True, dtype='float')
 
                 real=(numpy_data[:, current_dict["real_loc"]])
@@ -98,10 +98,10 @@ for info_dict in [mv5_plots, henry_plots, alice_plots]:
                 #phase=numpy_data[:,2]
                 #mag=numpy_data[:,5]
                 spectra=np.column_stack((real, imag))
-                trunc_vals=[35, 25]
+                trunc_vals=[30]
                 for k in range(0, len(trunc_vals)):
                     plot_spec=np.column_stack((real[:-trunc_vals[k]], imag[:-trunc_vals[k]]))
-                    plotter.nyquist(plot_spec, ax=ax[k], scatter=1,  linestyle=current_dict["linestyle"], marker=current_dict["marker"],label=current_dict["labels"][j],)
+                    plotter.nyquist(plot_spec, ax=ax[k], scatter=1,  linestyle=current_dict["linestyle"], marker=current_dict["marker"],label=current_dict["labels"][j],orthonormal=False)
                 #ax[0,2].plot(0,0,  color=get_color[j], linestyle=current_dict["linestyle"])
                 #if current_dict["labels"][j] in plot_loc_keys:
             #        current_label=current_dict["labels"][j]
@@ -117,14 +117,14 @@ for info_dict in [mv5_plots, henry_plots, alice_plots]:
                 c_idx+=1"""
     #ax[0,2].legend()
     ax[0].legend()
-    ax[2].legend()
+    ax[1].legend()
     #ax[0,2].set_axis_off()
     plt.subplots_adjust(top=0.955,
     bottom=0.110,
     left=0.085,
-    right=0.96,
+    right=0.98,
     hspace=0.315,
     wspace=0.315)
-    fig.set_size_inches(7, 4.5)
+    fig.set_size_inches(6.5, 4.5)
     plt.show()
     fig.savefig(info_dict["filename"], dpi=500)

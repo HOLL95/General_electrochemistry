@@ -46,7 +46,7 @@ param_list={
     'sampling_freq' : (1.0/200),
     'phase' :3*math.pi/2,
     "time_end": None,
-    'num_peaks': 30,
+    'num_peaks': 2,
 }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -127,8 +127,8 @@ for i in range(0, len(noise_vals)):
             interpolated_current=general_interp(times, sampled_times, noisy_sampled_current, method)
             residual=np.subtract(current, interpolated_current)
             print(method, time.time()-start)
-            axis.scatter(times, residual, label=method)
-        axis.plot(times, current)
+            axis.plot(times, residual, label=method)
+        #axis.plot(times, current)
     else:    
         axis.plot(potential, current, color="red")
         axis.scatter(potential, general_interp(times, sampled_times, noisy_sampled_current, method))

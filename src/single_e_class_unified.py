@@ -173,6 +173,11 @@ class single_electron:
         elif self.simulation_options["method"]=="dcv":
                 Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
                 dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
+        elif self.simulation_options["method"]=="sum_of_sinusoids":
+                Et=isolver_martin_brent.sum_of_sinusoids_E(self.nd_param.nd_param_dict["amp_array"],self.nd_param.nd_param_dict["freq_array"],
+                                                                    self.nd_param.nd_param_dict["phase_array"],self.nd_param.nd_param_dict["num_frequencies"], time)
+                dEdt=isolver_martin_brent.sum_of_sinusoids_dE(self.nd_param.nd_param_dict["amp_array"],self.nd_param.nd_param_dict["freq_array"],
+                                                                    self.nd_param.nd_param_dict["phase_array"],self.nd_param.nd_param_dict["num_frequencies"], time)
         return Et, dEdt
     def current_ode_sys(self, state_vars, time):
         current, theta, potential=state_vars
@@ -324,7 +329,11 @@ class single_electron:
         return len(self.optim_list)
     
         
-    def define_voltages(self, transient=False):
+    def define_voltages(self, **kwargs):
+        if "transient" not in kwargs:
+            transient=False
+        else:
+            transient=kwargs["transient"]
         voltages=np.zeros(len(self.time_vec))
         if self.simulation_options["method"]=="sinusoidal":
             for i in range(0, len(self.time_vec)):
@@ -346,9 +355,22 @@ class single_electron:
                 voltages[i]=SWV_surface.fourier_Et(math.pi, self.nd_param.nd_param_dict["scan_increment"], self.nd_param.nd_param_dict["fourier_order"], self.nd_param.nd_param_dict["SW_amplitude"], self.nd_param.nd_param_dict["E_start"], self.time_vec[i])
             voltages=voltages/self.nd_param.sw_class.c_E0
         elif self.simulation_options["method"]=="sum_of_sinusoids":
-            for i in range(0, len(self.time_vec)):
-                voltages[i]=isolver_martin_brent.sum_of_sinusoids_E(self.nd_param.nd_param_dict["amp_array"],self.nd_param.nd_param_dict["freq_array"],
+            if "individual_sines" not in kwargs:
+                kwargs["individual_sines"]=False
+            if kwargs["individual_sines"]==False:
+                for i in range(0, len(self.time_vec)):
+                    voltages[i]=isolver_martin_brent.sum_of_sinusoids_E(self.nd_param.nd_param_dict["amp_array"],self.nd_param.nd_param_dict["freq_array"],
                                                                     self.nd_param.nd_param_dict["phase_array"],self.nd_param.nd_param_dict["num_frequencies"], self.time_vec[i])
+            else:
+                if kwargs["individual_sines"]==True:
+                    f_range=range(self.nd_param.nd_param_dict["num_frequencies"])
+                else:
+                    f_range=kwargs["individual_sines"]
+                if transient==True:
+                    voltages=[self.nd_param.nd_param_dict["amp_array"][x]*np.sin(np.multiply(self.time_vec, self.nd_param.nd_param_dict["freq_array"][x])+self.nd_param.nd_param_dict["phase_array"][x])[self.time_idx] for x in f_range]
+                else:
+                    voltages=[self.nd_param.nd_param_dict["amp_array"][x]*np.sin(np.multiply(self.time_vec, self.nd_param.nd_param_dict["freq_array"][x])+self.nd_param.nd_param_dict["phase_array"][x]) for x in f_range]
+                return voltages
         if transient==True:
             voltages=voltages[self.time_idx]
         return voltages
