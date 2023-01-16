@@ -5,3 +5,4 @@ Makefile
 EIS/Symbolic-modified-nodal-analysis
 *.so
 lib/pybind11
+Theory/Numerics/MCMC/

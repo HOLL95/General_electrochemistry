@@ -6,14 +6,18 @@ loc=[i for i in range(0, len(dir_list)) if dir_list[i]=="General_electrochemistr
 source_list=dir_list[:loc[0]+1] + ["src"]
 source_loc=("/").join(source_list)
 sys.path.append(source_loc)
+from matplotlib.ticker import FuncFormatter
 from pints import plot
 from harmonics_plotter import harmonics
+import matplotlib.ticker as mticker
 import os
+import seaborn
 import sys
 import math
 import copy
 import pints
 from single_e_class_unified import single_electron
+from MCMC_plotting import MCMC_plotting
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -33,12 +37,22 @@ def general_interp(desired_times, given_times, given_data, flag):
                     returned_data=np.interp(desired_times, given_times, given_data)
                 return returned_data
 dimensions=10
-Ru_vals=np.logspace(-1, 3, dimensions)
-k0_vals=np.logspace(-1, 3, dimensions)
+Ru_vals=np.logspace(0, 3, dimensions)
+k0_vals=np.logspace(0, 3, dimensions)
 frequencies=[10]
+results_array=np.zeros((dimensions, dimensions))
+
 SRS=[25, 50, 100, 200, 400]
+keys=["Rhat", "Width", "Divergence"]
+results_dict={key:{"k_0":copy.deepcopy(results_array), "Ru":copy.deepcopy(results_array)} for key in keys}
 true_sf=400
 params=["E_0", "k_0", "Ru", "Cdl", "gamma", "alpha", "phase"]
+informative_params=["k_0", "Ru"]
+k_loc=1
+r_loc=2
+labels=["", "k_0", "Ru"]
+burn=5000
+mplot=MCMC_plotting(burn=burn)
 len_params=len(params)
 for i in range(0, dimensions):
     for j in range(0, dimensions):
@@ -51,7 +65,7 @@ for i in range(0, dimensions):
                 "original_omega":frequencies[k] ,
                 'd_E': 300e-3,   #(ac voltage amplitude - V) freq_range[j],#
                 'area': 0.07, #(electrode surface area cm^2)
-                'Ru': Ru_vals[i],  #     (uncompensated resistance ohms)
+                'Ru': Ru_vals[-i],  #     (uncompensated resistance ohms)
                 'Cdl':1e-4, #(capacitance parameters)
                 'CdlE1': 0.000653657774506*0,
                 'CdlE2': 0.000245772700637*0,
@@ -116,10 +130,63 @@ for i in range(0, dimensions):
             }
             
             noise_vals=0.01
-            for m in range(3, len(SRS)):
-                save_file="MCMC/interpolation_tests/R_{0}_k_{1}_SR_{2}_10_Hz".format(round(param_list["Ru"],2), round(param_list["k_0"],2), SRS[m])
-                chains=np.load(save_file)
-                print([pints.rhat(chains[:, :, i]) for i in range(0, len_params)])
-                pints.plot.trace(chains)
-                plt.show()
+            
+            save_file="MCMC/parameter_scan/Low_cdl/R_{0}_k_{1}_SR_{2}_10_Hz".format(round(param_list["Ru"],2), round(param_list["k_0"],2), 400)
+            chains=np.load(save_file)
+            
+            rhats={labels[i]:pints.rhat(chains[:, burn:, i]) for i in [k_loc, r_loc]}
 
+            #if rhats["Ru"]<1.05:
+            #    print(rhats)
+            #    print(i, j)
+            #    pints.plot.trace(chains)
+            #    plt.show()
+            widths={labels[i]:round(100*np.std(mplot.chain_appender(chains, i))/param_list[labels[i]],2) for i in [k_loc, r_loc]}
+            divergence={labels[i]:np.log10(100*abs(np.mean(chains[:, burn:, i])-param_list[labels[i]])/param_list[labels[i]]) for i in [k_loc, r_loc]}
+            metric={"Rhat":rhats, "Width":widths, "Divergence":divergence}
+            for key in keys:
+                for param in informative_params:
+                    #if key=="Rhat":
+
+                        #if metric[key][param]>1.1:
+                        #    print(metric[key])
+                        #    print(save_file)
+                        #    pints.plot.trace(chains)
+                        #    plt.show()
+                        #    metric[key][param]=2
+                   # if key=="Divergence":
+                    #    if param=="k_0":
+                    #        if metric[key][param]>1:
+                    #            print(metric[key])
+                    #            print(save_file)
+                    #            pints.plot.trace(chains)
+                    #            plt.show()
+                                
+                    results_dict[key][param][i,j]=metric[key][param]
+
+fig, ax=plt.subplots(2,2)
+ticklabels=mplot.get_titles(informative_params)
+plot_ticks=[round(x, 2) for x in Ru_vals]
+labels=["Rhat", "Error (% of true value)"]
+heatmap_params=["Rhat", "Divergence"]
+def logformat(x, pos):
+    'The two args are the value and tick position'
+    return '$10^{'+str(int(x))+"}$"
+for i in range(0, 2):
+    for j in range(0, len(informative_params)):
+        axes=ax[i,j]
+        if keys[i]=="Rhat":
+             annot=None
+        else:
+            annot=results_dict["Width"][informative_params[j]]
+        seaborn.heatmap(results_dict[heatmap_params[i]][informative_params[j]], ax=axes, 
+                        yticklabels=np.flip(plot_ticks), xticklabels=plot_ticks, cmap="viridis_r", cbar_kws={"label":labels[i], "format":FuncFormatter(logformat)}, annot=annot, robust=True)
+        axes.set_xlabel(ticklabels[0])
+        axes.set_ylabel(ticklabels[1])
+        axes.set_title(informative_params[j]+" "+heatmap_params[i])
+plt.subplots_adjust(hspace=0.38,
+                    left=0.05, 
+                    right=0.995, 
+                    top=0.961, 
+                    bottom=0.1)
+plt.show()
