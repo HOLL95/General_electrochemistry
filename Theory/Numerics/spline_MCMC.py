@@ -83,6 +83,7 @@ for i in range(0, dimensions):
                 "likelihood":likelihood_options[0],
                 "numerical_method": solver_list[1],
                 "label": "MCMC",
+                "top_hat_return":"abs",
                 "optim_list":[]
             }
             other_values={
@@ -132,25 +133,26 @@ for i in range(0, dimensions):
             #labels=["interpolated", "noisy"]
             sim.def_optim_list(["E_0", "k_0", "Ru","Cdl",  "gamma", "alpha", "phase"])
             for m in range(0, len(SRS)):
-                interval=true_sf//SRS[m]
+                #interval=true_sf//SRS[m]
                 reduced_data=noisy_current[::interval]
                 interped=reduced_data#general_interp(sim.time_vec, sim.time_vec[::interval], reduced_data, "basis")
                 if sim.simulation_options["likelihood"]=="fourier":
-                    error=error/len(interped)
+                    
                     interped=sim.top_hat_filter(interped)
+                    error=sim.RMSE(interped, sim.top_hat_filter(current))
                     times=np.linspace(0, 1, len(interped))
                     
                 elif sim.simulation_options["likelihood"]=="timeseries":
                     times=sim.time_vec
                 MCMC_problem=pints.SingleOutputProblem(sim, times, interped)
                 updated_lb=[param_bounds[x][0] for x in sim.optim_list]+[0]
-                updated_ub=[param_bounds[x][1] for x in sim.optim_list]+[10*error]
+                updated_ub=[param_bounds[x][1] for x in sim.optim_list]+[100*error]
                 updated_b=[updated_lb, updated_ub]
                 updated_b=np.sort(updated_b, axis=0)
                 log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
                 log_prior=pints.UniformLogPrior(updated_b[0], updated_b[1])
                 log_posterior=pints.LogPosterior(log_liklihood, log_prior)
-                mcmc_parameters=[sim.dim_dict[x] for x in sim.optim_list]+[error]
+                mcmc_parameters=[sim.dim_dict[x] for x in sim.optim_list]+[6*error]
                 print(list(mcmc_parameters))
                 #mcmc_parameters=np.append(mcmc_parameters,error)
                 xs=[mcmc_parameters,
@@ -161,7 +163,7 @@ for i in range(0, dimensions):
                 log_params=["k_0", "Ru"]
                 transforms=[pints.IdentityTransformation(n_parameters=1) if x not in log_params else pints.LogTransformation(n_parameters=1) for x in sim.optim_list+["error"]]
                 MCMC_transform=pints.ComposedTransformation(*transforms)
-                mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioBardenetACMC, transformation=MCMC_transform)
+                mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioBardenetACMC)#, transformation=MCMC_transform)
 
                 mcmc.set_parallel(True)
                 mcmc.set_max_iterations(5000)

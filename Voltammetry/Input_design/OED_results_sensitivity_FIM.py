@@ -14,11 +14,12 @@ from harmonics_plotter import harmonics
 import copy
 import math
 from single_e_class_unified import single_electron
+from single_electron_sensitivities import Sensitivity
 from MCMC_plotting import MCMC_plotting
 harm_range=list(range(4, 6))
 
 param_list={
-    "E_0":0.0,
+    "E_0":0.05,
     'E_start':  -600e-3, #(starting dc voltage - V)
     'E_reverse':-100e-3,
     'omega':8.88480830076,  #    (frequency Hz)
@@ -30,8 +31,8 @@ param_list={
     'CdlE1': 0.000653657774506,
     'CdlE2': 0.000245772700637,
     "CdlE3":-1e-6,
-    'gamma': 1e-10,
-    "original_gamma":1e-10,        # (surface coverage per unit area)
+    'gamma': 5e-11,
+    "original_gamma":5e-11,        # (surface coverage per unit area)
     'k_0': 1000, #(reaction rate s-1)
     'alpha': 0.5,
     "E0_mean":0.2,
@@ -91,9 +92,10 @@ param_bounds={
     "all_phases":[0, 2*math.pi],
 }
 mplot=MCMC_plotting()
-sim=single_electron(None, param_list, simulation_options, other_values, param_bounds)
+sim=Sensitivity( param_list, simulation_options, other_values, param_bounds)
 rpotential=sim.e_nondim(sim.define_voltages())
-rcurrent=sim.test_vals([], "timeseries")
+
+
 sim.simulation_options["method"]="sum_of_sinusoids"
 #simulation_params=["E_0", "k_0", "Ru", "gamma", "alpha"]
 num_points=10
@@ -108,7 +110,7 @@ param_ranges["E_0"]=np.linspace(0.25, 0.75, num_points)
 files=[x+".npy" for x in ["Sobol_D_3_max_f_100"]]
 farad_params=list(param_ranges.keys())
 ref_farad_params=[param_ranges[x][1] for x in farad_params]
-ref_farad_params[0]=0
+ref_farad_params[0]=0.05
 """fig, axis=plt.subplots(2,3)
 f_params=["freq_1", "amp_1", "phase_1"]
 sim.def_optim_list(f_params)
@@ -161,9 +163,9 @@ for file in files:
             freq_params=results_dict["params"]
             f_vals=results_dict["param_values"][i-1]
         sim.def_optim_list(freq_params)
-        print(sim.optim_list)
         
         potential=sim.e_nondim(sim.define_voltages())
+        
         all_param_names=farad_params+freq_params
         sim.def_optim_list(all_param_names)
         param_bounds["E_0"]=[-1, 1]
@@ -175,14 +177,17 @@ for file in files:
             for z in range(0, len(param_ranges[farad_params[j]])):
                 if farad_params[j]=="E_0":
                     value=sim.un_normalise(param_ranges[farad_params[j]][z], param_bounds["E_0"])
+                    
                 else:
                     value=param_ranges[farad_params[j]][z]
-                sim_farad_params[j]=value
+
+                sim.update_params(np.append(sim_farad_params,f_vals))
                 #print(sim_farad_params, farad_params[j])
                 current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
-                sim_farad_params[j]+=shift[farad_params[j]]
-                shifted_current=sim.test_vals(np.append(sim_farad_params,f_vals), "timeseries")
-                pc_diff[z]=100*(np.linalg.norm(np.subtract(shifted_current, current))/np.linalg.norm(current))
+                
+                num_sens=sim.get_numeric_sensitivity()
+                FIM_n=sim.calc_FIM(num_sens, noise=0.05*max(current))
+                pc_diff[z]=sim.D_optimality(FIM=FIM_n)
                 #print(np.mean(current))
             
             if i==0:

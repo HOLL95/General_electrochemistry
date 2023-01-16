@@ -114,5 +114,7 @@ for z in range(0, len(srs)):
     #plt.plot(potential, current)
     #plt.plot(sim.define_voltages(), fixed_current)
     #plt.title(100*sim.RMSE(fixed_current, current)/np.mean(current)
-plt.plot(srs[1:], np.log10(100*diffs[1:]))
+plt.semilogy(srs[1:], 100*diffs[1:])
+plt.xlabel("Sampling rate")
+plt.ylabel("L2 norm (%)")
 plt.show()

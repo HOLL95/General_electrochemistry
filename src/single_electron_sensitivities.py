@@ -14,7 +14,7 @@ import multiprocessing as mp
 class Sensitivity(single_electron):
     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
-        self.sens_params=["E_0", "k_0", "Ru", "Cdl", "CdlE1", "CdlE2", "CdlE3", "gamma", "alpha"]
+        self.sens_params=["E_0", "k_0", "Ru",  "gamma", "alpha"]
         self.num_sens=len(self.sens_params)
         self.sensitivity_array=np.array([])
         self.t_array=np.array([], dtype="float64")
@@ -108,7 +108,7 @@ class Sensitivity(single_electron):
                     Sens_func=self.get_numeric_sensitivity
                     args={}
                     if "Delta" not in kwargs:
-                        args["Delta"]=1e-2
+                        args["Delta"]=1e-3
                 if "params" in kwargs:
                     args["params"]=kwargs["params"]
                 sensitivity=Sens_func(noise=kwargs["noise"], **args)
@@ -125,32 +125,32 @@ class Sensitivity(single_electron):
             return idx
     def get_numeric_sensitivity(self, **kwargs):
         if "params" not in kwargs:
-            params=[self.dim_dict[x] for x in self.sens_params]
+            params=[self.dim_dict[x] for x in self.optim_list]
+            names=self.sens_params
         else:
+            if "param_names" not in kwargs:
+                raise ValueError("Need to provide list of parameter names")
+            names=kwargs["param_names"]
             params=kwargs["params"]
-        orig_params=copy.deepcopy(params)
+        
         #reference_current=self.test_vals(orig_params, "timeseries")
         if "Delta" not in kwargs:
             kwargs["Delta"]=1e-3
         if "max_size" not in kwargs:
             kwargs["max_size"]=25000
-        
+        orig_params=copy.deepcopy(params)
         current=(self.test_vals(orig_params, "timeseries"))
-        plt.plot(current)
-        plt.show()
-        for i in range(0, len(params)):
+        for i in range(0, len(names)):
             currents=[]
-            
+            loc=self.optim_list.index(names[i])
             for j in [-1, 1]:
                 sim_params=copy.deepcopy(orig_params)
-                sim_params[i]=sim_params[i]+(sim_params[i]*j*kwargs["Delta"])
+                sim_params[loc]=sim_params[loc]+(sim_params[loc]*j*kwargs["Delta"])
                 pot=self.e_nondim(self.define_voltages())
                 self.update_params(sim_params)
-                current=(self.test_vals(sim_params, "timeseries"))
-                #current, _,_=self.simulate_S1()
+                current=self.test_vals(sim_params, "timeseries")
                 currents.append(current)
             gradient=(np.divide(np.subtract(currents[1], currents[0]), 2*kwargs["Delta"]))
-           
             if i==0:
                 
                 if len(currents[0])>kwargs["max_size"]:
@@ -159,7 +159,7 @@ class Sensitivity(single_electron):
                 else:
                     resize=False
                     current_len=len(currents[0])
-                sensitivity=np.zeros((current_len, len(params)))
+                sensitivity=np.zeros((current_len, len(names)))
             if resize==False:
                 sensitivity[:,i]=gradient
             else:

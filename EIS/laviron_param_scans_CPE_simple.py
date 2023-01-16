@@ -73,7 +73,7 @@ for i in range(0, len(param_keys)):
         #print(Ra, sigma)
         Ca=1/46794.65389622453
         Ca=1/sigma
-        Cd=1e-6
+        #Cd=1e-6
 
         params={"R0":R0, "C1":1e-6, "R1":Ra,  "C2":Ca}
         test=EIS(circuit=circuit)

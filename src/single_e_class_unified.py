@@ -1,14 +1,11 @@
 import isolver_martin_brent
 import SWV_surface
-#import isolver_martin_NR
 from scipy.stats import norm, lognorm
 import math
 import numpy as np
 import itertools
 from params_class import params
-#from pybamm_solve import pybamm_solver
 from dispersion_class import dispersion
-#from sklearn import linear_model, datasets
 from decimal import Decimal
 from scipy.optimize import curve_fit
 from scipy_solver_class import scipy_funcs
@@ -37,13 +34,6 @@ class single_electron:
             self.file_init=False
         simulation_options=self.options_checker(simulation_options)
         dim_parameter_dictionary=self.param_checker(dim_parameter_dictionary)
-        #required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
-        #                    "E_reverse", "d_E"])
-        #param_set=set(dim_parameter_dictionary.keys())
-        #req_union=required_params.intersection(param_set)
-        #if len(req_union)!=len(required_params):
-        #    missing_params=required_params-req_union
-        #    raise KeyError("Essential parameter(s) mising:",missing_params)
         key_list=list(dim_parameter_dictionary.keys())
         if simulation_options["method"]=="ramped" or simulation_options["method"]=="sinusoidal":
             if simulation_options["phase_only"]==False and "cap_phase" not in key_list:
@@ -92,7 +82,7 @@ class single_electron:
         if self.simulation_options["experimental_fitting"]==True:
             self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
             self.secret_data_time_series=other_values["experiment_current"]
-        if self.simulation_options["sample_times"]!=False:
+        if isinstance(self.simulation_options["sample_times"], list):
             self.simulation_options["sample_times"]=np.divide(self.simulation_options["sample_times"],self.nd_param.c_T0)
     def calculate_times(self,):
         self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
@@ -127,13 +117,13 @@ class single_electron:
 
             else:
                 if self.simulation_options["method"]=="sinusoidal":
-                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])
                 else:
                     self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
                 self.times()
         else:
             if self.simulation_options["method"]=="sinusoidal":
-                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["original_omega"])#DIMENSIONAL
+                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#DIMENSIONAL
             else:
                 self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
             self.times()
@@ -149,8 +139,7 @@ class single_electron:
     def GH_setup(self):
         """
         We assume here that for n>1 normally dispersed parameters then the order of the integral
-        will be the same for bothif self.simulation_options["sample_times"] is not False:
-            self.downsample(self.time_vec, )
+        will be the same for both 
         """
         try:
             disp_idx=self.simulation_options["dispersion_distributions"].index("normal")
@@ -345,7 +334,7 @@ class single_electron:
             for i in range(0, len(self.time_vec)):
                 voltages[i]=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,(self.time_vec[i]))
         elif self.simulation_options["method"]=="square_wave":
-            #self.SW_end=(self.dim_dict["deltaE"]/self.dim_dict["scan_increment"])*self.dim_dict["sampling_factor"]
+           
             for i in self.time_vec:
                 i=int(i)
                 voltages[i-1]=SWV_surface.potential(i, self.dim_dict["sampling_factor"], self.dim_dict["scan_increment"],self.dim_dict["SW_amplitude"], self.dim_dict["E_start"])
@@ -383,8 +372,6 @@ class single_electron:
         f=np.fft.fftfreq(len(time_series), self.time_vec[1]-self.time_vec[0])
         Y=np.fft.fft(time_series)
         frequencies=f
-
-        #Y_pow=np.power(copy.deepcopy(Y[0:len(frequencies)]),2)
         top_hat=copy.deepcopy(Y)
         scale_flag=False
         true_harm=self.nd_param.nd_param_dict["omega"]*self.nd_param.c_T0
@@ -411,15 +398,9 @@ class single_electron:
             freq_idx_2=tuple(np.where((frequencies<-first_harm) & (frequencies>-last_harm)))
             likelihood_1=top_hat[freq_idx_1]
             likelihood_2=top_hat[freq_idx_2]
-            #self.test_frequencies=frequencies[np.where((frequencies>first_harm) & (frequencies<last_harm))]
             results=np.zeros(len(top_hat), dtype=complex)
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
-        #comp_results=np.real(np.fft.ifft(results))
-        #plt.plot(self.other_values["experiment_voltage"],comp_results)
-
-        #plt.plot(self.secret_data_time_series)
-        #plt.show()
         if self.simulation_options["top_hat_return"]=="abs":
             return abs(results)
         elif self.simulation_options["top_hat_return"]=="imag":
@@ -461,8 +442,6 @@ class single_electron:
         return np.convolve(x, np.ones(N)/N, mode=arg)
     def times(self):
         self.time_vec=np.arange(0, self.nd_param.nd_param_dict["time_end"], self.nd_param.nd_param_dict["sampling_freq"])
-        #print(self.time_vec)
-        #self.time_vec=np.linspace(0, self.nd_param.nd_param_dict["time_end"], num_points)
     def change_norm_group(self, param_list, method):
         normed_params=copy.deepcopy(param_list)
         if method=="un_norm":
@@ -505,7 +484,7 @@ class single_electron:
             normed_params=self.change_norm_group(param_list, "un_norm")
         else:
             normed_params=copy.deepcopy(param_list)
-        print(normed_params, self.optim_list)
+        
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         self.nd_param=params(self.dim_dict)
@@ -556,20 +535,12 @@ class single_electron:
                     data=self.rolling_window(current[int(x-kwargs["mean"]-1):int(x-1)], kwargs["window_length"])
                     #plt.scatter(range(int(x-kwargs["mean"]-1),int(x-1)), data, color=colours[j])
                     #mean_idx[j][i]=np.mean(range(int(x-kwargs["mean"]-1),int(x-1)))
-                    #plt.scatter(np.mean(range(int(x-kwargs["mean"]-1),int(x-1))), np.mean(data))
                     sampled_currents[j][i]=np.mean(data)
-            #plt.plot(current)
-            #plt.scatter(mean_idx[0], sampled_currents[0], color="red", marker="x")
-            #plt.scatter(mean_idx[1], sampled_currents[1], color="green", marker="x")
+
             forwards=np.zeros(len(self.f_idx))
             backwards=np.zeros(len(self.b_idx))
             forwards=np.array([current[x-1] for x in self.f_idx])
             backwards=np.array([current[int(x)-1] for x in self.b_idx])
-            #plt.scatter(self.f_idx-1, forwards, color="orange", marker="x")
-            #plt.scatter(self.b_idx-1, backwards, color="yellow", marker="x")
-            #plt.show()
-            #forwards=sampled_currents[0]
-            #backwards=sampled_currents[1]
         return forwards, backwards, forwards-backwards, self.E_p
 
     def paralell_disperse(self, solver):
@@ -590,11 +561,6 @@ class single_electron:
                 self.disp_test.append(time_series_current)
             time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
         return time_series
-    def NR_python(self):
-        self.def_optim_list([])
-        self.test_vals([], "timeseries")
-        class_init=python_NR_simulation(self.time_vec, self.nd_param.nd_param_dict, self.voltage_query)
-        return class_init.numerical_current
     def r_squared(self, data, prediction):
         residual_sq=np.sum(np.square(np.subtract(data, prediction)))
         mean=np.mean(data)
@@ -606,9 +572,6 @@ class single_electron:
         current=time_series[0]
         residual=time_series[1]
         residual_gradient=time_series[2]
-
-        #plt.subplot(1,2,1)
-        #plt.semilogy(current, np.abs(residual))
         bounds_val=self.bounds_val
         middle_index=(len(time_series[0])-1)//2 + 1
         I0=residual[middle_index]
@@ -638,7 +601,6 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
-        #print(list(normed_params), self.optim_list)
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.max_freq=0
             self.min_freq=1e9
@@ -677,8 +639,6 @@ class single_electron:
                 self.simulation_options["numerical_method"]="Brent minimisation"
         if self.simulation_options["numerical_method"]=="Brent minimisation":
             solver=isolver_martin_brent.brent_current_solver
-        elif self.simulation_options["numerical_method"]=="Newton-Raphson":
-            solver=isolver_martin_NR.NR_current_solver
             if self.simulation_options["method"]=="dcv":
                 raise ValueError("Newton-Raphson dcv simulation not implemented")
         elif self.simulation_options["numerical_method"]=="Kalman_simulate":
@@ -688,10 +648,6 @@ class single_electron:
                 cdl_record=self.nd_param.nd_param_dict["Cdl"]
                 self.nd_param.nd_param_dict["Cdl"]=0
                 solver=isolver_martin_brent.brent_current_solver
-
-        elif self.simulation_options["numerical_method"]=="pybamm":
-            pybamm_sol=pybamm_solver(self)
-            solver=pybamm_sol.simulate
         elif self.simulation_options["numerical_method"]=="scipy":
             if self.simulation_options["scipy_type"]==None:
                 warnings.warn("No defined reaction mechanism, assuming single electron Faradaic")
@@ -715,13 +671,12 @@ class single_electron:
                         time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
                     except:
 
-                        time_series=np.zeros(len(self.time_vec))#isolver_martin_brent.brent_current_solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                        time_series=np.zeros(len(self.time_vec))
                 else:
                     
                     
                     
                     time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
-        #print(time.time()-start)
         if self.simulation_options["numerical_method"]=="Kalman_simulate":
             self.nd_param.nd_param_dict["Cdl"]=cdl_record
             time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])
