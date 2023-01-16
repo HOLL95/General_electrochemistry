@@ -601,6 +601,8 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
+
+        
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.max_freq=0
             self.min_freq=1e9
@@ -708,6 +710,7 @@ class single_electron:
         elif self.simulation_options["likelihood"]=='timeseries':
             if self.simulation_options["test"]==True:
                 print(list(normed_params))
+                print(list(parameters), self.optim_list)
                 if self.simulation_options["experimental_fitting"]==True:
                     plt.subplot(1,2,1)
                     plt.plot(self.other_values["experiment_voltage"],time_series)
