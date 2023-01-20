@@ -16,6 +16,8 @@ import time
 import warnings
 import re
 import matplotlib.pyplot as plt
+import multiprocessing as mp
+import ctypes as c
 class single_electron:
     def __init__(self,file_name="", dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
         if type(file_name) is dict:
@@ -590,7 +592,29 @@ class single_electron:
             return current, residual
     def downsample(self, times, data, samples):
         sampled_data=np.interp(samples, times, data)
-        return sampled_data
+        return sampled_data     
+    def create_global_2d(self, row, col, key):
+        mp_arr = mp.Array(c.c_double, row*col)
+        arr = np.frombuffer(mp_arr.get_obj())
+        globals()[key]=arr.reshape((row, col))
+    def ts_wrapper(self, params):
+        current=self.test_vals(params[1], "timeseries")
+        globals()["ts_arr"][params[0], :]=current# row is the parameter, column is the timepoint
+    def fourier_wrapper(self, params):
+        current=self.test_vals(params[1], "timeseries")
+        globals()["ts_arr"][params[0], :]=abs(np.fft.fft(current))# row is the parameter, column is the timepoint
+    def matrix_simulate(self, parameter_matrix, format="timeseries"):
+        ts_len=len(self.time_vec[self.time_idx])
+        len_sample_values=len(parameter_matrix)
+        self.create_global_2d(len_sample_values, ts_len, "ts_arr")#row is parameter variation, column is timepoints
+        param_enumerate_arg=enumerate(parameter_matrix)
+        if format=="timeseries":
+            para_func=self.ts_wrapper
+        elif format=="fourier":
+            para_func=self.fourier_wrapper
+        with mp.Pool(processes=mp.cpu_count()) as P:
+            P.map(para_func,param_enumerate_arg)
+        return globals()["ts_arr"]  
     def simulate(self,parameters, frequencies):
         start=time.time()
         if len(parameters)!= len(self.optim_list):
@@ -777,30 +801,4 @@ class single_electron:
             if key not in params:
                 params[key]=len(params["freq_array"])
         return params
-class paralell_class:
-    def __init__(self, params, times, method, bounds, solver):
-        self.params=params
-        self.times=times
-        self.method=method
-        self.bounds=bounds
-        self.solver=solver
-    def paralell_simulate(self, weight_val_entry):
-        start=time.time()
-        self.sim_params=copy.deepcopy(self.params)
-        for i in range(len(weight_val_entry[0])):
-            self.sim_params[weight_val_entry[0][i]]=weight_val_entry[1][i]
-        time_series=self.solver(self.sim_params, self.times, self.method,-1, self.bounds)
-        time_series=np.multiply(time_series, weight_val_entry[2])
-        return (time_series)
-    def paralell_dispersion(self, weight_list):
-        p = mp.Pool(4)
-        start1=time.time()
-        sc = p.map_async(self,  [weight for weight in weight_list])
-        start=time.time()
-        results=sc.get()
-        p.close()
-        disped_time=np.sum(results, axis=0)
-        start2=time.time()
-        return disped_time
-    def __call__(self, x):
-        return self.paralell_simulate(x)
+   
