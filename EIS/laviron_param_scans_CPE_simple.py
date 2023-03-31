@@ -33,8 +33,9 @@ labels={
 param_keys=list(param_variations.keys())
 param_vals={key:param_variations[key][1] for key in param_keys}
 orig_param_vals=copy.deepcopy(param_vals)
+print(orig_param_vals)
 circuit_list=[circuit_1, circuit_2]
-frequency_powers=np.arange(2.5, 5, 0.1)
+frequency_powers=np.arange(2, 5, 0.1)
 frequencies=[10**x for x in frequency_powers]
 for i in range(0, len(param_keys)):
 
@@ -42,23 +43,30 @@ for i in range(0, len(param_keys)):
     circuit=circuit_1
     current_key=param_keys[i]
     param_vals=orig_param_vals
+    print(orig_param_vals)
     for j in range(0, len(param_variations[current_key])):
         param_vals[current_key]=param_variations[current_key][j]
         k0=param_vals["k0"]
         #dc_pot=0
-        gamma=4e-10
         alpha=param_vals["alpha"]
+        k0=100#self.dim_dict["k_0"]
+        e0=-0.2#self.dim_dict["E_0"]
+        alpha=0.5#self.dim_dict["alpha"]
+        gamma=4e-11#self.dim_dict["gamma"]
+        area=0.07#self.dim_dict["area"]
+       
 
 
-
-        dc_pot=0
-        area=5e-2
+        dc_pot=e0
+        area=5e-1
         FRT=F/(R*T)
-
-        e0=param_vals["E_0"]
+        print(dc_pot-e0)
+        
         ratio=np.exp(FRT*(e0-dc_pot))
+        print(ratio)
         red=gamma/(ratio+1)
         ox=gamma-red
+        print(ox, red)
         #ox=1.3340954705306548e-10
         #red=ox
         #print(red, ox)
@@ -76,6 +84,7 @@ for i in range(0, len(param_keys)):
         #Cd=1e-6
 
         params={"R0":R0, "C1":1e-6, "R1":Ra,  "C2":Ca}
+        print(params)
         test=EIS(circuit=circuit)
         spectra=test.test_vals(params, frequencies)
 

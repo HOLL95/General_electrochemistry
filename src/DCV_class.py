@@ -186,3 +186,8 @@ class DCVTrumpet(single_electron):
             return forward_sweep_pos
         else:
             return reverse_sweep_pos
+class Laviron_EIS(single_electron):
+     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
+
+        super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
+        

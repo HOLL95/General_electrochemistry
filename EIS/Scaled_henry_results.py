@@ -37,7 +37,7 @@ phase=np.flip(numpy_data[:,2])
 sim=np.column_stack((real,imag))
 for method in ["AIC"]:
     for i in range(1, 6):
-        file_name="Best_candidates/Cjx183/{1}/5mV/Best_candidates_dict_{0}_12_gen_truncated_1_scaled_1.npy".format(i, method)
+        file_name="Best_candidates/Cjx183/{1}/Blank/Best_candidates_dict_{0}_12_gen_truncated_1_scaled_1.npy".format(i, method)
         #file_name="Best_candidates/Cjx183/AIC/Blank/Best_candidates_dict_1_12_gen_truncated_1)_multiplicative.npy"
         results_dict=np.load(file_name, allow_pickle=True).item()
         #data=read_csv(current_dict["file_loc"]+current_dict["files"][j], sep=",", encoding=current_dict["encoding"], engine="python", skiprows=current_dict["skiprows"], skipfooter=1)

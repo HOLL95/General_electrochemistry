@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import copy
 import matplotlib.ticker as ticker
 from PIL import Image
-from pints import rhat
+import re
+
+import pints
 class MCMC_plotting:
     def __init__(self,**kwargs):
         self.options=kwargs
@@ -22,7 +24,7 @@ class MCMC_plotting:
                         'CdlE1': "",#0.000653657774506,
                         'CdlE2': "",#0.000245772700637,
                         'CdlE3': "",#1.10053945995e-06,
-                        'gamma': '$mol cm^{-2}$',
+                        'gamma': 'mol cm$^{-2}$',
                         'k_0': '$s^{-1}$', #(reaction rate s-1)
                         'alpha': "",
                         'E0_skew':"",
@@ -32,14 +34,16 @@ class MCMC_plotting:
                         "sampling_freq":"$s^{-1}$",
                         "k0_loc":"",
                         "k0_scale":"",
-                        "cap_phase":"rads",
-                        'phase' : "rads",
+                        "cap_phase":"",
+                        'phase' : "",
                         "alpha_mean": "",
                         "alpha_std": "",
                         "":"",
                         "noise":"",
                         "error":"$\\mu A$",
-                        "sep":"V"
+                        "sep":"V",
+                        "cpe_alpha_faradaic" :"",
+                        "sigma":""
                         }
         self.fancy_names={
                         "E_0": '$E^0$',
@@ -60,17 +64,19 @@ class MCMC_plotting:
                         'alpha': "$\\alpha$",
                         "E0_mean":"$E^0 \\mu$",
                         "E0_std": "$E^0 \\sigma$",
-                        "cap_phase":"C$_{dl}$ phase",
+                        "cap_phase":"C$_{dl}$ $\\eta$",
                         "k0_shape":"$\\log(k^0) \\sigma$",
                         "k0_scale":"$\\log(k^0) \\mu$",
                         "alpha_mean": "$\\alpha\\mu$",
                         "alpha_std": "$\\alpha\\sigma$",
-                        'phase' : "Phase",
+                        'phase' : "$\\eta$",
                         "sampling_freq":"Sampling rate",
                         "":"Experiment",
                         "noise":"$\sigma$",
                         "error":"RMSE",
-                        "sep":"Seperation"
+                        "sep":"Seperation",
+                        "cpe_alpha_faradaic" :"$\\psi$",
+                        "sigma":"$\\sigma$"
                         }
     def det_subplots(self, value):
         if np.floor(np.sqrt(value))**2==value:
@@ -94,11 +100,40 @@ class MCMC_plotting:
             kwargs["units"]=True
         if "positions" not in kwargs:
             kwargs["positions"]=range(0, len(titles))
-        if kwargs["units"]==True:
-            params=[self.fancy_names[titles[x]]+" ("+self.unit_dict[titles[x]]+")" if self.unit_dict[titles[x]]!="" else self.fancy_names[titles[x]] for x in kwargs["positions"]]
-        else:
-            params=[self.fancy_names[titles[x]] for x in kwargs["positions"]]
+        params=["" for x in kwargs["positions"]]
+       
+        for i in range(0, len(kwargs["positions"])):
+            z=kwargs["positions"][i]
+            if titles[z] in self.fancy_names:
+                if kwargs["units"]==True and self.unit_dict[titles[z]]!="":
+                    
+                    params[i]=self.fancy_names[titles[z]]+" ("+self.unit_dict[titles[z]]+")" 
+                else:
+                    params[i]=self.fancy_names[titles[z]]
+            else:
+                for key in self.fancy_names.keys():
+                    if re.search(".*_[1-9]+", titles[z]) is not None:
+                        underscore_idx=[i for i in range(0, len(titles[z])) if titles[z][i]=="_"]
+                        true_name=titles[z][:underscore_idx[-1]]
+                        value=titles[z][underscore_idx[-1]+1:]
+                        if kwargs["units"]==True and self.unit_dict[true_name]!="":
+                            params[i]=self.fancy_names[true_name]+"$_{"+value +"}$"+" ("+self.unit_dict[true_name]+")" 
+                        else:
+                            params[i]=self.fancy_names[true_name]+"$_{"+value +"}$"
+                        break
+
         return params
+    def format_values(self, value, dp=2):
+        abs_val=abs(value)
+        if abs_val<1000 and abs_val>0.01:
+            return str(round(value, dp))
+        else:
+            return "{:.{}e}".format(value, dp)
+    def get_units(self, titles, **kwargs):
+        if "positions" not in kwargs:
+            kwargs["positions"]=range(0, len(titles))
+        units=[self.unit_dict[titles[x]] for x in kwargs["positions"]]
+        return units
     def change_param(self, params, optim_list, parameter, value):
         param_list=copy.deepcopy(params)
         param_list[optim_list.index(parameter)]=value
@@ -108,6 +143,8 @@ class MCMC_plotting:
         for i in range(1, len(chains)):
             new_chain=np.append(new_chain, chains[i, self.options["burn"]:, param])
         return new_chain
+    def concatenate_all_chains(self, chains):
+        return [self.chain_appender(chains, x) for x in range(0, len(chains[0, 0, :]))]
     def plot_params(self, titles, set_chain, **kwargs):
         if "positions" not in kwargs:
             kwargs["positions"]=range(0, len(titles))
@@ -174,31 +211,143 @@ class MCMC_plotting:
         else:
             ax.legend(bbox_to_anchor=kwargs["bbox"])
         ax.set_axis_off()
-    def trace_plots(self, titles, chains, names, rhat=False, burn_in_thresh=0):
-        row, col=det_subplots(len(titles))
+    def trace_plots(self, params, chains,**kwargs):
+        if "rhat" not in kwargs:
+            rhat =False
+        else:
+            rhat=kwargs["rhat"]
+        if "burn" not in kwargs:
+            burn=0
+        else:
+            burn=kwargs["burn"]
+        if "order" not in kwargs:
+            order=list(range(0, len(params)))
+        else:
+            
+            order=kwargs["order"]
+            print(order)
+        if "true_values" not in kwargs:
+            kwargs["true_values"]=None
+        row, col=self.det_subplots(len(params))
+        
         if rhat==True:
-            rhat_vals=pints.rhat_all_params(chains[:, burn_in_thresh:, :])
-        for i in range(0, len(titles)):
+            rhat_vals=pints.rhat(chains[:, burn:, :], warm_up=0.5)
+        names=self.get_titles(params, units=False)
+        y_labels=self.get_titles(params, units=True)
+        for i in range(0, len(params)):
             axes=plt.subplot(row,col, i+1)
             for j in range(0, len(chains)):
-                axes.plot(chains[j, :, i], label="Chain "+str(j), alpha=0.7)
-            if abs(np.mean(chains[j, :, i]))<0.01:
+                axes.plot(chains[j, :, order[i]], label="Chain "+str(j), alpha=0.7)
+            if abs(np.mean(chains[j, :, order[i]]))<0.01:
                 axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
-            if "omega" in titles[i]:
+            if "omega" in params[i]:
                 axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.5f'))
             #else:
             #    axes.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
-            axes.set_xticks([0, 10000])
-
-            if i>(len(titles))-(col+1):
+            #axes.set_xticks([0, 10000])
+            if kwargs["true_values"] is not None:
+                if params[i] in kwargs["true_values"]:
+                    print(params[i], params[i])
+                    axes.axhline(kwargs["true_values"][params[i]], color="black", linestyle="--")
+            if i>(len(params))-(col+1):
                 axes.set_xlabel('Iteration')
             #if i==len(titles)-1:
             #    axes.legend(loc="center", bbox_to_anchor=(2.0, 0.5))
             #lb, ub = axes.get_xlim( )
             #axes.set_xticks(np.linspace(lb, ub, 5))
             if rhat == True:
-                axes.set_title(names[i]+ " Rhat="+str(round(rhat_vals[i],3))+"")
+                axes.set_title("$\\hat{R}$="+str(round(rhat_vals[i],2))+"")
             else:
                 axes.set_title(names[i])
-            axes.set_ylabel(titles[i])
+            
+            axes.set_ylabel(y_labels[i])
+    def plot_2d(self, params, chains, **kwargs):
+        n_param=len(params)
+        if "pooling" not in kwargs:
+            kwargs["pooling"]=False
+        if "burn" not in kwargs:
+            burn=0
+        else:
+            burn=kwargs["burn"]
+        if "order" not in kwargs:
+            kwargs["order"]=list(range(0, n_param))
+        if "true_values" not in kwargs:
+            kwargs["true_values"]=None
+        if "density" not in kwargs:
+            kwargs["density"]=False
+        fig, ax=plt.subplots(n_param, n_param)
+        chain_results=chains
+        labels=self.get_titles(params, units=True)
+        for i in range(0,n_param):
+           
+            z=kwargs["order"][i]
+                
+            pooled_chain_i=[chain_results[x, burn:, z] for x in range(0, 3)]
+            if kwargs["pooling"]==True: 
+                
+                chain_i=[np.concatenate(pooled_chain_i)]
+            else:
+                chain_i=pooled_chain_i
+            if "rotation" not in kwargs:
+                kwargs["rotation"]=False
+            #for m in range(0, len(labels)):
+            #    box_params[chain_order[i]][labels[m]][exp_counter]=func_dict[labels[m]]["function"](chain_i, *func_dict[labels[m]]["args"])
+            #chain_i=np.multiply(chain_i, values[i])
+            for j in range(0, n_param):
+                
+                m=kwargs["order"][j]
+                if i==j:
+                    axes=ax[i,j]
+                    ax1=axes.twinx()
+                    for z in range(0, len(chain_i)):
+                        axes.hist(chain_i[z], density=kwargs["density"])
+                    ticks=axes.get_yticks()
+                    axes.set_yticks([])
+                    ax1.set_yticks(ticks)
+                    if kwargs["density"] is False:
+                        ax1.set_ylabel("Frequency")
+                    else:
+                        ax1.set_ylabel("Density")
+                elif i<j:
+                    ax[i,j].axis('off')
+                else:
+                    axes=ax[i,j]
+                    chain_j=[chain_results[x, burn:, m] for x in range(0, 3)]
+                    if kwargs["pooling"]==True: 
+                        chain_j=[np.concatenate(chain_j)]
+                    for z in range(0, len(chain_i)):
+                        axes.scatter(chain_j[z], chain_i[z], s=0.5)
+                if kwargs["true_values"] is not None:
+                    
+                    if params[j] in kwargs["true_values"] and params[i] in kwargs["true_values"]:
+                        if i>j:
+                            axes.scatter(kwargs["true_values"][params[j]],kwargs["true_values"][params[i]], color="black", s=20, marker="x")
+                        elif i==j:
+                            axes.axvline(kwargs["true_values"][params[i]], color="black", linestyle="--")
+
+                """ if i!=0:
+                    if chain_order[i]=="CdlE3":
+                        ax[i, 0].set_ylabel(titles[i], labelpad=20)
+                    elif chain_order[i]=="gamma":
+                        ax[i, 0].set_ylabel(titles[i], labelpad=30)
+                    else:
+                        """
+                if i<n_param-1:
+                    ax[i,j].set_xticklabels([])#
+                if j>0 and i!=j:
+                    ax[i,j].set_yticklabels([])
+                if j!=n_param:
+                    ax[-1, i].set_xlabel(labels[i])
+                    if np.mean(np.abs(chain_i))<1e-4:
+                        ax[-1, i].xaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
+                    if kwargs["rotation"] is not False:
+                        plt.setp( ax[-1, i].xaxis.get_majorticklabels(), rotation=kwargs["rotation"] )
+                if i!=0:
+                    ax[i, 0].set_ylabel(labels[i])
+                    if np.mean(np.abs(chain_i))<1e-4:
+                        ax[i, 0].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
+                    
+                    
+        return ax
+
     

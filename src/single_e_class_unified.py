@@ -18,11 +18,11 @@ import re
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import ctypes as c
+
 class single_electron:
     def __init__(self,file_name="", dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
         if type(file_name) is dict:
             raise TypeError("Need to define a filename - this is currently a dictionary!")
-
         if len(dim_parameter_dictionary)==0 and len(simulation_options)==0 and len(other_values)==0:
             self.file_init=True
             file=open(file_name, "rb")
@@ -86,58 +86,81 @@ class single_electron:
             self.secret_data_time_series=other_values["experiment_current"]
         if isinstance(self.simulation_options["sample_times"], list):
             self.simulation_options["sample_times"]=np.divide(self.simulation_options["sample_times"],self.nd_param.c_T0)
+
     def calculate_times(self,):
-        self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
-        if self.simulation_options["experimental_fitting"]==True:
-            if self.simulation_options["method"]=="sinusoidal":
-                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["original_omega"])
-            elif self.simulation_options["method"]=="ramped":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
-            elif self.simulation_options["method"]=="dcv":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+            self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+            if self.simulation_options["experimental_fitting"]==True:
+                if self.simulation_options["method"]=="sinusoidal":
+                    if self.simulation_options["psv_copying"]==False:
+                        time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["original_omega"])
+                    elif self.simulation_options["psv_copying"]==True:
+                        time_end=self.simulation_options["no_transient"]+(1/self.nd_param.nd_param_dict["original_omega"])
 
-            if self.simulation_options["no_transient"]!=False:
-                if self.simulation_options["no_transient"]>time_end:
-                    warnings.warn("Previous transient removal method detected")
-                    time_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
-                    desired_idx=tuple((range(self.simulation_options["no_transient"],time_idx[0][-1])))
-                    self.time_idx=time_idx[:-1]
+                elif self.simulation_options["method"]=="ramped":
+                    time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+                elif self.simulation_options["method"]=="dcv":
+                    time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+
+                if self.simulation_options["no_transient"]!=False:
+                    if self.simulation_options["no_transient"]>time_end:
+                        warnings.warn("Previous transient removal method detected")
+                        time_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
+                        desired_idx=tuple((range(self.simulation_options["no_transient"],time_idx[0][-1])))
+                        self.time_idx=time_idx[:-1]
+                    else:
+                        time_idx=tuple(np.where((self.other_values["experiment_time"]<=time_end) & (self.other_values["experiment_time"]>self.simulation_options["no_transient"])))
+                        desired_idx=time_idx
+                        self.time_idx=time_idx[:-1]
                 else:
-                    time_idx=tuple(np.where((self.other_values["experiment_time"]<=time_end) & (self.other_values["experiment_time"]>self.simulation_options["no_transient"])))
-                    desired_idx=time_idx
+                    desired_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
+                    time_idx=desired_idx
                     self.time_idx=time_idx[:-1]
-            else:
-                desired_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
-                time_idx=desired_idx
-                self.time_idx=time_idx[:-1]
-            if self.file_init==False or results_flag==True:
-                self.time_vec=self.other_values["experiment_time"][time_idx]/self.nd_param.c_T0
+                if self.file_init==False or results_flag==True:
+                    self.time_vec=self.other_values["experiment_time"][time_idx]/self.nd_param.c_T0
 
-                self.other_values["experiment_time"]=self.other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
-                self.other_values["experiment_current"]=self.other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
-                self.other_values["experiment_voltage"]=self.other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
+                    self.other_values["experiment_time"]=self.other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
+                    self.other_values["experiment_current"]=self.other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
+                    self.other_values["experiment_voltage"]=self.other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
 
+                else:
+                    if self.simulation_options["method"]=="sinusoidal":
+                        if self.simulation_options["psv_copying"]==True:
+                            if self.simulation_options["no_transient"]!=False:
+                                self.nd_param.nd_param_dict["time_end"]=(self.simulation_options["no_transient"]/self.nd_param.c_T0)+1+self.nd_param.nd_param_dict["sampling_freq"]
+                            else:
+                                self.nd_param.nd_param_dict["time_end"]=2
+                                if self.nd_param.nd_param_dict["num_peaks"]%2!=0:
+                                    self.nd_param.nd_param_dict["num_peaks"]+=1
+                            self.simulation_times=np.arange(0, self.nd_param.nd_param_dict["num_peaks"], self.nd_param.nd_param_dict["sampling_freq"])
+                            self.simulation_times=self.simulation_times[np.where(self.simulation_times>self.simulation_options["no_transient"]/self.nd_param.c_T0)]
+                        else:
+                            self.nd_param.nd_param_dict["time_end"]=self.nd_param.nd_param_dict["num_peaks"]
+                    else:
+                        self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
+                    self.times()
             else:
                 if self.simulation_options["method"]=="sinusoidal":
-                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])
+                    if self.simulation_options["psv_copying"]==True:
+                            if self.simulation_options["no_transient"]!=False:
+                                self.nd_param.nd_param_dict["time_end"]=(self.simulation_options["no_transient"]/self.nd_param.c_T0)+1+self.nd_param.nd_param_dict["sampling_freq"]
+                            else:
+                                self.nd_param.nd_param_dict["time_end"]=2
+                            self.simulation_times=np.arange(0, self.nd_param.nd_param_dict["num_peaks"], self.nd_param.nd_param_dict["sampling_freq"])
+                            self.simulation_times=self.simulation_times[np.where(self.simulation_times>self.simulation_options["no_transient"]/self.nd_param.c_T0)]
+                    else:
+                        self.nd_param.nd_param_dict["time_end"]=self.nd_param.nd_param_dict["num_peaks"]
                 else:
-                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
+                    self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
                 self.times()
-        else:
-            if self.simulation_options["method"]=="sinusoidal":
-                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#DIMENSIONAL
-            else:
-                self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
-            self.times()
-            if self.simulation_options["no_transient"]!=False:
-                    transient_time=self.t_nondim(self.time_vec)
-                    time_idx=np.where((transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)) & (transient_time>self.simulation_options["no_transient"]))
-                    self.time_idx=time_idx
+                if self.simulation_options["no_transient"]!=False:
+                        transient_time=self.t_nondim(self.time_vec)
+                        time_idx=np.where((transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)) & (transient_time>self.simulation_options["no_transient"]))
+                        self.time_idx=time_idx
 
-            else:
-                    transient_time=self.t_nondim(self.time_vec)
-                    desired_idx=tuple(np.where(transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)))
-                    self.time_idx=desired_idx
+                else:
+                        transient_time=self.t_nondim(self.time_vec)
+                        desired_idx=tuple(np.where(transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)))
+                        self.time_idx=desired_idx   
     def GH_setup(self):
         """
         We assume here that for n>1 normally dispersed parameters then the order of the integral
@@ -295,8 +318,16 @@ class single_electron:
                             sinusoid_count+=1
 
                 self.param_positions=list(set(range(0, len(optim_list)))-set(sinusoid_positions))
-    def add_noise(self, series, sd):
-        return np.add(series, np.random.normal(0, sd, len(series)))
+    def add_noise(self, series, sd, **kwargs):
+        if "method" not in kwargs:
+            kwargs["method"]="simple"
+        if kwargs["method"]=="simple":
+            return np.add(series, np.random.normal(0, sd, len(series)))
+        elif kwargs["method"]=="proportional":
+            noisy_series=copy.deepcopy(series)
+            for i in range(0, len(series)):
+                noisy_series[i]+=(np.random.normal()*series[i]*sd)
+            return noisy_series
     def normalise(self, norm, boundaries):
         return  (norm-boundaries[0])/(boundaries[1]-boundaries[0])
     def un_normalise(self, norm, boundaries):
@@ -366,7 +397,6 @@ class single_electron:
             voltages=voltages[self.time_idx]
         return voltages
     def top_hat_filter(self, time_series):
-
         L=len(time_series)
         window=np.hanning(L)
         if self.simulation_options["hanning"]==True:
@@ -377,7 +407,7 @@ class single_electron:
         top_hat=copy.deepcopy(Y)
         scale_flag=False
         true_harm=self.nd_param.nd_param_dict["omega"]*self.nd_param.c_T0
-
+        print(self.harmonic_range[-1], true_harm)
         if self.simulation_options["fourier_scaling"]!=None:
                 scale_flag=True
         if sum(np.diff(self.harmonic_range))!=len(self.harmonic_range)-1 or scale_flag==True:
@@ -616,6 +646,7 @@ class single_electron:
             P.map(para_func,param_enumerate_arg)
         return globals()["ts_arr"]  
     def simulate(self,parameters, frequencies):
+       
         start=time.time()
         if len(parameters)!= len(self.optim_list):
             print(self.optim_list)
@@ -665,8 +696,6 @@ class single_electron:
                 self.simulation_options["numerical_method"]="Brent minimisation"
         if self.simulation_options["numerical_method"]=="Brent minimisation":
             solver=isolver_martin_brent.brent_current_solver
-            if self.simulation_options["method"]=="dcv":
-                raise ValueError("Newton-Raphson dcv simulation not implemented")
         elif self.simulation_options["numerical_method"]=="Kalman_simulate":
             if self.simulation_options["method"]=="ramped":
                 raise ValueError("Ramped not implemented for Kalman approach")
@@ -712,7 +741,12 @@ class single_electron:
             print(len(time_series))
         elif self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
-        
+        if self.simulation_options["psv_copying"]==True:
+            if self.simulation_options["no_transient"]==False:
+                multiply_num=int(self.dim_dict["num_peaks"]/2)-1
+            else:
+                multiply_num=self.dim_dict["num_peaks"]-1-int(self.simulation_options["no_transient"]/self.nd_param.c_T0)
+            time_series=np.append(time_series, [time_series for x in range(0, multiply_num)])[:-1]
         if self.simulation_options["method"]=="square_wave":
             if self.simulation_options["square_wave_return"]=="net":
                 _, _, net, _=self.SW_peak_extractor(time_series)
@@ -734,6 +768,7 @@ class single_electron:
         elif self.simulation_options["likelihood"]=='timeseries':
             if self.simulation_options["test"]==True:
                 print(list(normed_params))
+                print(self.simulation_options["method"])
                 print(list(parameters), self.optim_list)
                 if self.simulation_options["experimental_fitting"]==True:
                     plt.subplot(1,2,1)
@@ -744,7 +779,8 @@ class single_electron:
                     plt.show()
                 else:
                     plt.plot(self.time_vec[self.time_idx], time_series)
-                    plt.plot(self.time_vec[self.time_idx], self.secret_data_time_series)
+                    if "secret_data_time_series" in vars(self):
+                        plt.plot(self.time_vec[self.time_idx], self.secret_data_time_series)
                     plt.show()
             return time_series
     def options_checker(self, simulation_options):
@@ -768,6 +804,10 @@ class single_electron:
             simulation_options["label"]="MCMC"
         if "adaptive_ru" not in simulation_options:
             simulation_options["adaptive_ru"]=False
+        if "psv_copying" not in simulation_options:
+            simulation_options["psv_copying"]=False
+        elif simulation_options["method"]!="sinusoidal":
+            simulation_options["psv_copying"]=False
         if "optim_list" not in simulation_options:
             simulation_options["optim_list"]=[]
         if "GH_quadrature" not in simulation_options:

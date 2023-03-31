@@ -65,8 +65,8 @@ class Input_optimiser(single_electron):
         self.create_global_2d(len(self.simulation_options["sobol_params"]), ts_len, "sobol_arr")
         scanned_ts=self.matrix_simulate(param_mat, self.simulation_options["format"])
         sobol_enumerate_arg=enumerate(np.transpose(scanned_ts))#Now row is timepoint, column is parameter, because enumerate sends each row to pool
-            with mp.Pool(processes=mp.cpu_count()) as P:
-                P.map(self.sobol_wrapper,sobol_enumerate_arg)
+        with mp.Pool(processes=mp.cpu_count()) as P:
+            P.map(self.sobol_wrapper,sobol_enumerate_arg)
         globals()['neg_counter']=0
         #########################################################################
         #print(time.time()-start, globals()['neg_counter'])
