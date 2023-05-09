@@ -5,7 +5,7 @@ import copy
 import re
 from numpy import multiply, divide
 class params:
-    def __init__(self,param_dict):
+    def __init__(self,param_dict, multi_flag=False):
         SWV_set={"deltaE", "sampling_factor", "SW_amplitude", "scan_increment"}
         if len(set(param_dict.keys()).intersection(SWV_set))>0:
             warnings.warn("Using square-wave nondimensionalisation")
@@ -30,7 +30,6 @@ class params:
             self.c_I0=(self.F*self.param_dict["area"]*self.c_Gamma)/self.c_T0
             self.method_switch={
                                 'e_0':self.e0,
-
                                 'cdl':self.cdl,
                                 'e_start' :self.estart,
                                 'e_reverse': self.erev,
@@ -42,12 +41,21 @@ class params:
                                 "dcv_sep":self.d_sep
                                 }
             keys=sorted(param_dict.keys())
-            p=re.compile("(?=k_[0-9])^((?!_shape).)*$")
+            
+            k_p=re.compile("^k(?:0|_0)?_[0-9]*(?:_scale)?$")
+            if multi_flag==True:
+                e_match=re.compile("^E(?:0|_0|0_mean|0_std)_[0-9]*$")
             for i in range(0, len(keys)):
                 if keys[i].lower() in self.method_switch:
                     self.non_dimensionalise(keys[i], param_dict[keys[i]])
-                elif p.match(keys[i])!=None or keys[i]=="k0_scale":
+                elif k_p.match(keys[i])!=None or keys[i]=="k0_scale":
+                    
                     self.generic_k(keys[i], param_dict[keys[i]])
+                elif multi_flag==True and e_match.match(keys[i])!=None:
+                    
+                    self.generic_e(keys[i], param_dict[keys[i]])
+
+                
             self.nd_param_dict=self.param_dict
 
 
@@ -61,8 +69,9 @@ class params:
         else:
             raise ValueError(name + " not in param list!")
     def generic_k(self, key, value):
-        #print(key)
         self.param_dict[key]=value*self.c_T0
+    def generic_e(self, key, value):
+        self.param_dict[key]=value/self.c_E0
     def e0(self, value, flag):
         if flag=='re_dim':
             self.param_dict["E_0"]=value*self.c_E0

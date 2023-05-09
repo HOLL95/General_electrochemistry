@@ -20,6 +20,7 @@ class combined_heuristics:
         input_switch={"params":common_params, "options":common_options, "others":common_others, "bounds":common_bounds}
         self.common_optim_list=list(set().union(*[option_dict[x]["options"]["optim_list"] for x in option_dict.keys()]))
         self.common_bounds={key:common_bounds[key] for key in self.common_optim_list}
+        self.counter=0
         for method_key in option_dict.keys():
             method=option_dict[method_key]
             current_object=copy.deepcopy(input_switch)
@@ -40,8 +41,12 @@ class combined_heuristics:
         self.discriminator_idx=[self.common_optim_list.index(x) for x in discriminator["options"]["optim_list"]]
         self.other_idx=[[self.common_optim_list.index(x) for x in self.class_dict[key].optim_list ] for key in self.slow_keys]
         self.discriminator_noise=discriminator["noise_bounds"]
-        self.total_likelihood=self.data_combiner([self.y_values[x] for x in all_names])
         self.global_options=global_options
+        if self.global_options["return_arg"]=="scalarised":
+            self.total_likelihood=self.data_combiner([self.y_values[x] for x in all_names])
+        else:
+            self.total_likelihood=[self.y_values[x] for x in all_names]
+        
         
         if self.y_values[self.discriminator_key].ndim>1:
             score_func=pints.MultiOutputProblem(self.discriminator_class,self.x_values[self.discriminator_key], self.y_values[self.discriminator_key])

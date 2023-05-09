@@ -1,6 +1,8 @@
-import isolver_martin_brent
-import SWV_surface
-#import isolver_martin_NR
+try:
+    import isolver_martin_brent
+    import SWV_surface
+except:
+    pass
 from scipy.stats import norm, lognorm
 import math
 import numpy as np

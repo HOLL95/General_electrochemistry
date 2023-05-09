@@ -1,3 +1,8 @@
+import warnings
+try:
+    import isolver_martin_brent
+except:
+    warnings.warn("C++ single electron solver not found, did you compile it?")
 import isolver_martin_brent
 import SWV_surface
 from scipy.stats import norm, lognorm
@@ -13,7 +18,6 @@ from scipy.stats import pearsonr
 import multiprocessing
 import copy
 import time
-import warnings
 import re
 import matplotlib.pyplot as plt
 import multiprocessing as mp
@@ -621,8 +625,23 @@ class single_electron:
         else:
             return current, residual
     def downsample(self, times, data, samples):
-        sampled_data=np.interp(samples, times, data)
-        return sampled_data     
+        if self.simulation_options["downsample_mode"]=="interpolation":
+            sampled_data=np.interp(samples, times, data)
+            return sampled_data
+        elif self.simulation_options["downsample_mode"]=="decimation":
+            long_len=len(times)
+            short_len=len(samples)
+            ratio=long_len//short_len
+            dec_data=copy.deepcopy(data)
+            max_dec=13
+            n=np.log(ratio)/np.log(max_dec)
+            int_n=int(np.floor(n))
+            for i in range(0, int_n):
+                dec_data=decimate(dec_data, max_dec)
+            dec_data=decimate(dec_data, int(max_dec**(n-int_n)))
+            dec_times=np.linspace(times[0], times[-1], len(dec_data))
+            sampled_data=np.interp(samples, dec_times, dec_data)
+            return sampled_data     
     def create_global_2d(self, row, col, key):
         mp_arr = mp.Array(c.c_double, row*col)
         arr = np.frombuffer(mp_arr.get_obj())
@@ -736,7 +755,7 @@ class single_electron:
             self.nd_param.nd_param_dict["Cdl"]=cdl_record
             time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])
         time_series=np.array(time_series)
-        if self.simulation_options["sample_times"] is not False:
+        if self.simulation_options["sample_times"] is not None:
             time_series=self.downsample(self.time_vec, time_series, self.simulation_options["sample_times"])
             print(len(time_series))
         elif self.simulation_options["no_transient"]!=False:
@@ -831,7 +850,9 @@ class single_electron:
         if "dispersion_test" not in simulation_options:
             simulation_options["dispersion_test"]=False
         if "sample_times" not in simulation_options:
-            simulation_options["sample_times"]=False
+            simulation_options["sample_times"]=None
+        if "downsample_mode" not in simulation_options:
+            simulation_options["downsample_mode"]="interpolation"
         return simulation_options
     def param_checker(self, params):
         for key in ["freq_array", "amp_array", "phase_array"]:

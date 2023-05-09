@@ -67,7 +67,8 @@ simulation_options={
     "optim_list":[],
     "EIS_Cf":"CPE",
     "EIS_Cdl":"C",
-    "DC_pot":param_list["E_0"]+0.05
+    "DC_pot":param_list["E_0"]+0.05,
+    "invert_imaginary":True
 }
 other_values={
     "filter_val": 0.5,
@@ -102,29 +103,35 @@ param_bounds={
 }
 #psv=single_electron("", param_list, simulation_options, other_values, param_bounds)
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["k_0",  "Cdl", "alpha", "cpe_alpha_faradaic", "Ru"])
+laviron.def_optim_list(["E_0","gamma","k_0",  "Cdl", "alpha", "cpe_alpha_faradaic", "Ru"])
 vals=[param_list[x] for x in laviron.optim_list]
 frequency_powers=np.arange(1, 5, 0.05)
 frequencies=[10**x for x in frequency_powers]
 sim=laviron.simulate(vals, frequencies)
 noise_val=0.01
+exponent=0.6
+theta=0.0005*np.mean(sim)
+noisy_data=np.column_stack((sim[:,0]+pints.noise.multiplicative_gaussian(exponent, theta, sim[:,0]),sim[:,1]+pints.noise.multiplicative_gaussian(exponent, theta, sim[:,1])))
 noisy_data=np.column_stack((laviron.add_noise(sim[:,0], noise_val, method="proportional"), laviron.add_noise(sim[:,1], noise_val, method="proportional")))
-noisy_data=np.column_stack((laviron.add_noise(sim[:,0], noise_val*np.mean(sim[:,0])), laviron.add_noise(sim[:,1], noise_val*np.mean(-sim[:,1]))))
+noisy_data=np.column_stack((laviron.add_noise(sim[:,0], noise_val*np.mean(sim[:,0])), laviron.add_noise(sim[:,1], noise_val*np.mean(sim[:,1]))))
 #laviron.dim_dict["gamma"]=5e-11
 laviron.secret_data_EIS=noisy_data
-vals[0]-=50
+#vals[0]-=50
 sim2=laviron.simulate(vals, frequencies)
 fig, ax=plt.subplots()
-for data in [sim, noisy_data, sim2]:
-    laviron.simulator.nyquist(data, ax=ax, orthonormal=False, scatter=1)
+vals=[sim, noisy_data]
+labels=["Simulation", "Simulation + noise"]
+for i in range(0, len(vals)):
+    laviron.simulator.nyquist(vals[i], ax=ax, orthonormal=False, scatter=1, label=labels[i])
+plt.legend()
 plt.show()
 
 
 laviron.simulation_options["label"]="cmaes"
 cmaes_problem=pints.MultiOutputProblem(laviron,frequencies, noisy_data)
-score = pints.GaussianLogLikelihood(cmaes_problem)
-lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0, 0])
-upper_bound=np.append(np.ones(len(laviron.optim_list)), [100, 100])
+score = pints.MultiplicativeGaussianLogLikelihood(cmaes_problem)
+lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0,0,0, 0])
+upper_bound=np.append(np.ones(len(laviron.optim_list)), [100, 50, 100, 50])
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
 true_params=[param_list[x] for x in laviron.optim_list]
 print(true_params)
@@ -137,38 +144,43 @@ found=False
 best_score=-1e6
 params=np.zeros((num_runs, laviron.n_parameters()+1))
 for i in range(0, num_runs):
-    x0=list(np.random.rand(len(true_params)))+[5,5]
+    x0=list(np.random.rand(len(true_params)))+[5,5,5,5]
     z+=1
     print(len(x0), laviron.n_parameters())
-    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+2)], boundaries=CMAES_boundaries, method=pints.CMAES)
+    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+4)], boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
+    laviron.simulation_options["test"]=False
     cmaes_fitting.set_parallel(True)
     found_parameters, found_value=cmaes_fitting.run()
     if found_value>best_score:
-        dim_params=laviron.change_norm_group(found_parameters[:-2], "un_norm")
+        dim_params=laviron.change_norm_group(found_parameters[:-4], "un_norm")
         
-        print(dim_params, found_parameters[-2:])
+        print(list(dim_params), found_parameters[-4:])
         
 
 dim_param_dict=dict(zip(laviron.optim_list, dim_params))
-laviron.def_optim_list(["k_0", "Cdl", "alpha", "cpe_alpha_faradaic", "Ru"])
 laviron.simulation_options["label"]="MCMC"
-
+vals=[noisy_data, laviron.simulate(dim_params, frequencies)]
+fig, ax=plt.subplots()
+for i in range(0, len(vals)):
+    laviron.simulator.nyquist(vals[i], ax=ax, orthonormal=False, scatter=1, label=labels[i])
+plt.legend()
+plt.show()
+laviron.def_optim_list(["E_0", "gamma","k_0", "Cdl", "alpha", "cpe_alpha_faradaic", "Ru"])
 
 MCMC_problem=pints.MultiOutputProblem(laviron, frequencies, noisy_data)
-updated_lb=[param_bounds[x][0] for x in laviron.optim_list]+[0, 0]
-updated_ub=[param_bounds[x][1] for x in laviron.optim_list]+[100, 100]
+updated_lb=[param_bounds[x][0] for x in laviron.optim_list]+[0, 0, 0, 0]
+updated_ub=[param_bounds[x][1] for x in laviron.optim_list]+[100,50, 100,50]
 
 updated_b=[updated_lb, updated_ub]
 updated_b=np.sort(updated_b, axis=0)
-mean=[param_list[x] for x in laviron.optim_list]+[1.5, 1.5]
-std_vals=[abs(0.02*param_list[x]) for x in laviron.optim_list]+[1.5, 1.5]
-log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
+
+log_liklihood=pints.MultiplicativeGaussianLogLikelihood(MCMC_problem)
 log_prior=pints.UniformLogPrior(updated_b[0], updated_b[1])
 #log_prior=pints.MultivariateGaussianLogPrior(mean, np.multiply(std_vals, np.identity(len(std_vals))))
 log_posterior=pints.LogPosterior(log_liklihood, log_prior)
 mcmc_parameters=[param_list[x] for x in laviron.optim_list]#
-mcmc_parameters=np.append([dim_param_dict[x] for x in laviron.optim_list], [found_parameters[-2:]])#[laviron.dim_dict[x] for x in laviron.optim_list]+[error]
+mcmc_parameters=np.append([dim_param_dict[x] for x in laviron.optim_list], [found_parameters[-4:]])#[laviron.dim_dict[x] for x in laviron.optim_list]+[error]
 print(mcmc_parameters)
 #mcmc_parameters=np.append(mcmc_parameters,error)
 xs=[mcmc_parameters,
@@ -180,9 +192,9 @@ xs=[mcmc_parameters,
 mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioACMC)#, transformation=MCMC_transform)
 laviron.simulation_options["test"]=False
 mcmc.set_parallel(False)
-mcmc.set_max_iterations(10000)
+mcmc.set_max_iterations(30000)
 chains=mcmc.run()
-save_file="EIS_functional"
+save_file="EIS_both_HS"
 f=open(save_file, "wb")
 np.save(f, chains)
 plot.trace(chains)

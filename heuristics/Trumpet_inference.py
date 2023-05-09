@@ -101,18 +101,22 @@ scan_rates=[x*1e-3 for x in np.logspace(1, 3.5, 20)]
 start=time.time()
 trumpet.simulation_options["synthetic_noise"]=0.01
 start=time.time()
-noisy_trumpet_result=trumpet.simulate([param_list["dcv_sep"]], scan_rates, optimise_flag=False)
+noisy_trumpet_result=trumpet.e_nondim(trumpet.simulate([param_list["dcv_sep"]], scan_rates, optimise_flag=False))
 trumpet.secret_data_trumpet=noisy_trumpet_result
 print(time.time()-start, "external_time_1")
 trumpet.simulation_options["synthetic_noise"]=0
 for i in range(0, 3):
     start=time.time()
-    trumpet_result=trumpet.simulate([param_list["dcv_sep"]], scan_rates)
+    trumpet_result=trumpet.e_nondim(trumpet.simulate([param_list["dcv_sep"]], scan_rates))
     print(time.time()-start, "external_time_2")
 cc=0
+labels=["Simulation", "Simulation + noise"]
 for data in [trumpet_result, noisy_trumpet_result]:
-    trumpet.trumpet_plot(scan_rates, data, ax=ax, colour_counter=cc)
+    trumpet.trumpet_plot(scan_rates, data, ax=ax, colour_counter=cc, label=labels[cc])
     cc+=1
+plt.xlabel("Log(scan rate (V s$^{-1}$))")
+plt.ylabel("Peak position (V)")
+plt.legend()
 plt.show()
 
 trumpet.def_optim_list(["E_0", "k_0", "alpha"])

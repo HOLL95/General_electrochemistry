@@ -104,10 +104,14 @@ param_bounds={
 #psv=single_electron("", param_list, simulation_options, other_values, param_bounds)
 p_min=PSV_harmonic_minimum(param_list, simulation_options, other_values, param_bounds)
 print(p_min.simulation_options["psv_copying"])
-plt.plot(p_min.simulation_options["even_harms"],p_min.test_vals([], "timeseries"))
+plt.plot(p_min.simulation_options["even_harms"],p_min.test_vals([], "timeseries"), label="Simulation", marker="o")
+
 p_min.simulation_options["synthetic_noise"]=0.01
 noisy_observations=p_min.test_vals([], "timeseries")
-plt.plot(p_min.simulation_options["even_harms"], noisy_observations)
+plt.plot(p_min.simulation_options["even_harms"], noisy_observations, label="Simulation + noise", marker="o")
+plt.xlabel("Harmonic number")
+plt.ylabel("Minimum harmonic potential offset")
+plt.legend()
 plt.show()
 p_min.def_optim_list(["k_0", "alpha", "Ru"])
 p_min.simulation_options["synthetic_noise"]=0

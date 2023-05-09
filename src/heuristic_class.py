@@ -393,13 +393,19 @@ class Laviron_EIS(single_electron):
         self.T=298
         self.FRT=self.F/(self.R*self.T)
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
-        self.simulator=EIS(circuit=self.Laviron_circuit)
+        self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
     def n_outputs(self):
         return 2     
-    def synthetic_noise(self, parameters, frequencies, noise):
+    def synthetic_noise(self, parameters, frequencies, noise, flag="proportional"):
+
         sim=self.simulate(parameters, frequencies)
-        return np.column_stack((self.add_noise(sim[:,0], noise*np.mean(sim[:,0])), self.add_noise(sim[:,1], noise*np.mean(-sim[:,1]))))   
+        if flag=="proportional":
+            return_arg=np.column_stack((self.add_noise(sim[:,0], noise, method="proportional"), self.add_noise(sim[:,1], noise, method="proportional")))
+        else:
+            return_arg=np.column_stack((self.add_noise(sim[:,0], noise*np.mean(sim[:,0])), self.add_noise(sim[:,1], noise*np.mean(-sim[:,1]))))   
+        
+        return return_arg
     def simulate(self, parameters, frequencies):
         if self.simulation_options["label"]=="cmaes":
             params=self.change_norm_group(parameters, "un_norm")

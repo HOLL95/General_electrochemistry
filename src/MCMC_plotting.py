@@ -275,9 +275,19 @@ class MCMC_plotting:
             kwargs["true_values"]=None
         if "density" not in kwargs:
             kwargs["density"]=False
-        fig, ax=plt.subplots(n_param, n_param)
+        if "nbins" not in kwargs:
+            kwargs["nbins"]=None
+        if "log" not in kwargs:
+            kwargs["log"]=False
+        if "axis" not in kwargs:
+            fig, ax=plt.subplots(n_param, n_param)
+        elif len(kwargs["axis"])!=n_param:
+            return ValueError("Axis length must be {0}".format(n_param))
+        else:
+            ax=kwargs["axis"]    
         chain_results=chains
         labels=self.get_titles(params, units=True)
+        twinx=[]
         for i in range(0,n_param):
            
             z=kwargs["order"][i]
@@ -293,17 +303,22 @@ class MCMC_plotting:
             #for m in range(0, len(labels)):
             #    box_params[chain_order[i]][labels[m]][exp_counter]=func_dict[labels[m]]["function"](chain_i, *func_dict[labels[m]]["args"])
             #chain_i=np.multiply(chain_i, values[i])
+            
             for j in range(0, n_param):
                 
                 m=kwargs["order"][j]
                 if i==j:
                     axes=ax[i,j]
+                    axes.set_yticks([])
                     ax1=axes.twinx()
                     for z in range(0, len(chain_i)):
-                        axes.hist(chain_i[z], density=kwargs["density"])
-                    ticks=axes.get_yticks()
-                    axes.set_yticks([])
-                    ax1.set_yticks(ticks)
+                        ax1.hist(chain_i[z], density=kwargs["density"], bins=kwargs["nbins"], log=kwargs["log"])
+                    twinx.append(ax1)
+                    #ticks=axes.get_yticks()
+                    #axes.set_yticks([])
+                    #ax1.set_yticks(ticks)
+                    #if kwargs["log"]==True:
+                    #    ax1.set_yscale("log")
                     if kwargs["density"] is False:
                         ax1.set_ylabel("Frequency")
                     else:
@@ -347,7 +362,20 @@ class MCMC_plotting:
                     if np.mean(np.abs(chain_i))<1e-4:
                         ax[i, 0].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
                     
-                    
-        return ax
+        print("++", len(twinx))     
+        return ax, twinx
+    def convert_idata_to_pints_array(self,idata):
+        chains=idata.to_dict()
+        params=list(chains["posterior"].keys())
+        num_params=len(params)
+        num_chains=len(chains["posterior"][params[0]])
+        num_samples=len(chains["posterior"][params[0]][0])
+        empty_pints=np.zeros((num_chains, num_samples, num_params))
+
+        for i in range(0, num_params):
+            key=params[i]
+            for j in range(0, num_chains):
+                empty_pints[j, :, i]=chains["posterior"][key][j]
+        return empty_pints
 
     

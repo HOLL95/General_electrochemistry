@@ -415,8 +415,13 @@ class EIS:
             print(normed_params, sim_params, self.options["normalise"])
             plt.plot(np.real(spectra), -np.imag(spectra))
             plt.show()
+        
+
         if self.options["data_representation"]=="nyquist":
-            return np.column_stack((np.real(spectra), np.imag(spectra)))
+            if self.options["invert_imaginary"]==True:
+                return np.column_stack((np.real(spectra), -np.imag(spectra)))
+            else:
+                return np.column_stack((np.real(spectra), np.imag(spectra)))
         else:
 
             real=np.real(spectra)
@@ -445,7 +450,12 @@ class EIS:
         if "orthonormal" not in kwargs:
             kwargs["orthonormal"]=True
         ax=kwargs["ax"]
-        ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
+        imag_spectra_mean=np.mean(spectra[:,1])
+        if imag_spectra_mean<0:
+
+            ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
+        else:
+            ax.plot(spectra[:,0], spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
         ax.set_xlabel("$Z_{Re}$ ($\\Omega$)")
         ax.set_ylabel("$-Z_{Im}$ ($\\Omega$)")
         total_max=max(np.max(spectra[:,0]), np.max(-spectra[:,1]))
@@ -453,7 +463,11 @@ class EIS:
             ax.set_xlim([0, total_max+0.1*total_max])
             ax.set_ylim([0, total_max+0.1*total_max])
         if kwargs["scatter"]!=0:
-            ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
+            if imag_spectra_mean<0:
+                ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
+            else:
+                ax.scatter(spectra[:,0][0::kwargs["scatter"]], spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
+
     def bode(self, spectra,frequency, **kwargs):
         if "ax" not in kwargs:
             _,kwargs["ax"]=plt.subplots(1,1)
@@ -676,3 +690,7 @@ class EIS:
             self.options["data_representation"]=kwargs["data_representation"]
         else:
             self.options["data_representation"]="nyquist"
+        if "invert_imaginary" in kwargs:
+            self.options["invert_imaginary"]=kwargs["invert_imaginary"]
+        else:
+            self.options["invert_imaginary"]=False
