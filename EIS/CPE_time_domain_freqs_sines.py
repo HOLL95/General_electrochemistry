@@ -50,6 +50,7 @@ def cpe1(denom, i, charge_array, time_array, dt):
 
 alphas=[0.7, 0.8, 0.9]
 fig, ax=plt.subplots(1,len(alphas))
+amp=5e-3
 for z in range(0, len(alphas)):
     for m in range(0, len(frequencies)):
 
@@ -68,7 +69,7 @@ for z in range(0, len(alphas)):
             period=(num_oscillations/frequencies[m])
             interval_times=np.linspace(0, period, interval_points)
             dt=interval_times[1]-interval_times[0]
-            interval_potential=0.1*np.sin(omegas[m]*interval_times)#interval_times*ramp
+            interval_potential=amp*np.sin(omegas[m]*interval_times)#interval_times*ramp
             convolv=np.zeros(interval_points)
             current_2=np.zeros(interval_points)
             convolv[1:]=np.power(interval_times[1:], true_params["alpha1"]-1)

@@ -212,13 +212,14 @@ for j in range(0, 3):
         theta =pt.as_tensor_variable(composed_dist)
         save_str= "/home/henney/Documents/Oxford/General_electrochemistry/heuristics/Pymc_combined_inference_{0}.nc".format(j)
         pm.Potential("likelihood", c(theta))
-        idata_mh = pm.sample(5000, tune=1000, chains=3, cores=4)
+        idata_mh = pm.sample(10000, tune=1000, chains=3, cores=4)
         try:
             idata_mh.to_netcdf(save_str)
         except:
-            pints_list=mplot.convert_idata_to_pints_array(idata)
+            pints_list=mplot.convert_idata_to_pints_array(idata_mh)
             save_file="Pymc_combined_inference"
             f=open(save_file, "wb")
-            np.save(f, chains)
+            np.save(f, pints_list)
             f.close()
         
+    

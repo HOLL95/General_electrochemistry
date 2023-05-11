@@ -33,6 +33,7 @@ colors=plt.rcParams['axes.prop_cycle'].by_key()['color']
 param_names=["E_0", "k_0", "Ru","Cdl",  "gamma", "alpha", "phase"]
 results_1=np.load("Likelihoods/Low_cdl_profile_likelihoods_2.npy", allow_pickle=True).item()
 results_2=np.load("Likelihoods/Low_cdl_profile_likelihoods.npy", allow_pickle=True).item()
+results_3=np.load("Likelihoods/Low_cdl_profile_likelihoods_symmetrical.npy", allow_pickle=True).item()
 chosen_param="Ru"
 r_loc=param_names.index(chosen_param)
 true_sf=400
@@ -40,16 +41,13 @@ s1=time.time()
 results_list=np.zeros((likelihood_dim, dimensions, dimensions))
 param_values_list=np.zeros((likelihood_dim, dimensions, dimensions))
 results_dict={"errors":results_list, "values":param_values_list}
-fig, ax=plt.subplots(4, 5)
+#fig, ax=plt.subplots(4, 5)
 for i in range(0, dimensions):
-    if i<11:
-        results=results_1
-    else:
-        results=results_2
+    results=results_3
     #fig=plt.figure()
     #ax=fig.add_subplot()
     print(i)
-    for j in range(0, 10):
+    for j in range(0, dimensions):
        
      
         param_list={
@@ -128,7 +126,7 @@ for i in range(0, dimensions):
         
         noise_vals=0.01
         sim=single_electron(None, param_list, simulation_options, other_values, param_bounds)
-        axes=ax[i//5, i%5]
+        #axes=ax[i//5, i%5]
         #print(i//5)
         #axes=ax
         curr_results=results["errors"][:,i,j]
@@ -137,9 +135,16 @@ for i in range(0, dimensions):
         normed_results=[sim.normalise(x, [min_res, max_res]) for x in curr_results]
         param=results["inferred_results"][r_loc,i,j]
         plot_val=np.interp([param, param_list["Ru"]], results["values"][:,i,j],curr_results)
-        axes.scatter(param, plot_val[0], s=20, color=colors[j%len(colors)])
-        axes.scatter(param_list["Ru"], plot_val[1], s=20, color=colors[j%len(colors)], marker="*")
-        axes.loglog(results["values"][:,i,j],curr_results, label=round(param_list["Ru"], 1))
+        #if np.mean(results["values"][:,i,j])>1e3:
+        #    continue
+        plt.scatter(param, plot_val[0], s=20, color=colors[j%len(colors)])
+        plt.scatter(param_list["Ru"], plot_val[1], s=20, color=colors[j%len(colors)], marker="*")
+        plt.loglog(results["values"][:,i,j],curr_results, label=round(param_list["Ru"], 1))
+        print(param, results["values"][:,i,j][0], results["values"][:,i,j][-1])
+        plt.show()
+        axes=plt.gca()
+
+
         if i%5==0:
             axes.set_ylabel("Likelihood")
         if i//5==3:

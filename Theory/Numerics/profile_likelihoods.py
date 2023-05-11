@@ -39,8 +39,8 @@ results_list=np.zeros((likelihood_dim, dimensions, dimensions))
 param_values_list=np.zeros((likelihood_dim, dimensions, dimensions))
 found_params=np.zeros((len(param_names), dimensions, dimensions))
 results_dict={"errors":results_list, "values":param_values_list, "inferred_results":found_params}
-for i in range(11, dimensions):
-    fig, ax=plt.subplots(3, 5)
+for i in range(0   , dimensions):
+    #fig, ax=plt.subplots(3, 5)
     for j in range(0, dimensions):
         
        
@@ -136,16 +136,17 @@ for i in range(11, dimensions):
         CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
         true_params=[param_list[x] for x in sim.optim_list]
         print(true_params)
-        x0=sim.change_norm_group(true_params, "norm")+[sigma]
-        print(x0)
-        num_runs=3
+    
+        num_runs=10
         z=-1
         found=False
         params=np.zeros((num_runs, sim.n_parameters()+1))
         while found==False:
+            x0=np.random.rand(len(true_params)+1)#sim.change_norm_group(true_params, "norm")+[sigma]
+            x0[-1]=sim.un_normalise(x0[-1], [0, 10*sigma])
             z+=1
             
-            cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.05 for x in range(0, sim.n_parameters()+1)], boundaries=CMAES_boundaries, method=pints.CMAES)
+            cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.25 for x in range(0, sim.n_parameters()+1)], boundaries=CMAES_boundaries, method=pints.CMAES)
             cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
             cmaes_fitting.set_parallel(True)
             found_parameters, found_value=cmaes_fitting.run()
@@ -153,7 +154,7 @@ for i in range(11, dimensions):
             params[z, :-1]=dim_params
             params[z, -1]=found_parameters[-1]
             error=found_parameters[-1]
-            if found_value>-5000:
+            if found_value>-5300:
                 error_loc=z
                 found=True
             elif z==num_runs-1:
@@ -163,16 +164,18 @@ for i in range(11, dimensions):
             
         dim_params=params[error_loc, :-1]
         print(dim_params)
+        distance=1.1*abs(dim_params[r_loc]-param_list[chosen_param])
         if 100*(np.abs(dim_params[r_loc]-param_list[chosen_param])/param_list[chosen_param])>50:
-            maximum=max([dim_params[r_loc], param_list[chosen_param]])
-            minimum=min([dim_params[r_loc], param_list[chosen_param]])
-            r_range=np.logspace(np.log10(0.9*minimum), np.log10(1.1*maximum), likelihood_dim)
+            minima=max(param_list[chosen_param]-distance, 1e-2)
+            maxima= param_list[chosen_param]+distance#param_list[chosen_param]+(param_list[chosen_param]-minima)
+            r_range=np.logspace(np.log10(minima), np.log10(maxima), likelihood_dim)
         elif 100*(np.abs(dim_params[r_loc]-param_list[chosen_param])/param_list[chosen_param])>0.1:
-            maximum=max([dim_params[r_loc], param_list[chosen_param]])
-            minimum=min([dim_params[r_loc], param_list[chosen_param]])
-            r_range=np.linspace(0.9*minimum, 1.1*maximum, likelihood_dim)
+            r_range=np.linspace(param_list[chosen_param]-distance, param_list[chosen_param]+distance, likelihood_dim)
         else:
-            r_range=np.linspace(0.9*param_list[chosen_param], 1.1*param_list[chosen_param], likelihood_dim)
+            r_range=np.linspace(0.8*param_list[chosen_param], 1.2*param_list[chosen_param], likelihood_dim)
+        if np.any(np.isnan(r_range))==True:
+            print(distance, dim_params[r_loc], param_list[chosen_param])
+            raise ValueError("Still not working")
         print(r_range[::100])
         param_mat[:,r_loc]=r_range
         pot=sim.define_voltages()
@@ -183,4 +186,4 @@ for i in range(11, dimensions):
         results_dict["errors"][:, i, j]=errors
         results_dict["values"][:, i, j]=r_range
         results_dict["inferred_results"][:, i, j]=dim_params
-        np.save("Likelihoods/Low_cdl_profile_likelihoods", results_dict)       
+        np.save("Likelihoods/Low_cdl_profile_likelihoods_symmetrical_2", results_dict)       
