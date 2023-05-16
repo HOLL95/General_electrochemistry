@@ -81,11 +81,11 @@ for i in range(0, len(plot_dicts)):
             #phase=numpy_data[:,2]
             #mag=numpy_data[:,5]
             spectra=np.column_stack((real, imag))
-            plotter.nyquist(spectra, ax=ax0, scatter=1, colour=get_color[j], linestyle=current_dict["linestyle"], marker=current_dict["marker"],label=current_dict["labels"][j],)
+            plotter.nyquist(spectra, ax=ax0, scatter=1, colour=get_color[j], linestyle=current_dict["linestyle"], marker=current_dict["marker"],label=current_dict["labels"][j],orthonormal=False)
             #ax[0,2].plot(0,0,  color=get_color[j], linestyle=current_dict["linestyle"])
             if current_dict["labels"][j] in plot_loc_keys:
                 current_label=current_dict["labels"][j]
-                plotter.nyquist(spectra, label=current_dict["labels"][j], ax=ax[plot_locs[current_label][0],plot_locs[current_label][1]], scatter=1, colour=get_color[j], linestyle=current_dict["linestyle"], marker=current_dict["marker"])
+                plotter.nyquist(spectra, label=current_dict["labels"][j], ax=ax[plot_locs[current_label][0],plot_locs[current_label][1]], scatter=1, colour=get_color[j], linestyle=current_dict["linestyle"], marker=current_dict["marker"], orthonormal=False)
                 ax[plot_locs[current_label][0],plot_locs[current_label][1]].set_title(current_label)
             """ax[1].scatter(real, imag, color=get_color[c_idx])
             ax[1].plot(real,imag, label=label_dict[file], color=get_color[c_idx])

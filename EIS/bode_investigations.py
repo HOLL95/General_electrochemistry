@@ -13,19 +13,22 @@ import time
 import matplotlib.image as mpimg
 from scipy import special
 thesis_circuits=[{"z1":"R1"}, {"z1":"C1"}, {"z1":("Q1", "alpha1")}]
-faradaic_circuit={"z1":"R1", "z2":{"p_1":"R2", "p_2":("Q1", "alpha1")}}
-blank_circuit={"z1":"R1", "z2":"C1"}
+faradaic_circuit={"z1":"R1", "z2":{"p_1":"C1", "p_2":["R2", ("Q1", "alpha1")]}, "z3":{"p_1":"R3", "p_2":"C2"}}
+blank_circuit={"z1":{"p_1":"R1", "p_2":"C1"}, "z2":"R2", "z3":{"p_1":"R3", "p_2":"C2"},}
 #debeye={"z1":{"p_1":"C1", "p_2":["R1", ("Q1", "alpha1")]}}
-params={"R2":1000, "R1":10,"C1":1e-5, "Q1":1e-2, "alpha1":0.5}
-variables={"R1":{"vals":[5, 10, 20], "sym":"R", "unit":"$\\Omega$"}, "C1":{"vals":np.flip([1e-1, 2.5e-1, 3e-1]), "sym":"C", "unit":"F"},  "alpha1":{"vals":[0.9, 0.8, 0.7], "sym":"$\\alpha$", "unit":""}}
-variable_key=list(variables.keys())
+params={"R2":1000, "R1":1500,"C1":1e-3, "Q1":1e-3, "alpha1":0.4, "C2":50e-3, "R3":500}
+#variables={"R1":{"vals":[5, 10, 20], "sym":"R", "unit":"$\\Omega$"}, "C1":{"vals":np.flip([1e-1, 2.5e-1, 3e-1]), "sym":"C", "unit":"F"},  "alpha1":{"vals":[0.9, 0.8, 0.7], "sym":"$\\alpha$", "unit":""}}
+#variable_key=list(variables.keys())
 #test.write_model(circuit=Randles)
+fig, ax=plt.subplots(1, 2)
 
-frequency_powers=np.arange(-1, 5, 0.1)
+#params["R2"]=R
+frequency_powers=np.arange(-3, 9, 0.1)
 frequencies=[10**x for x in frequency_powers]
 sim_class=EIS(circuit=blank_circuit)
 spectra=np.zeros((2, len(frequencies)), dtype="complex")
 spectra=sim_class.test_vals(params, frequencies)
-sim_class.nyquist(spectra, scatter=2,)
-sim_class.bode(spectra, frequencies)
+
+sim_class.nyquist(spectra, scatter=2,orthonormal=False, ax=ax[0])
+sim_class.bode(spectra, frequencies, ax=ax[1])
 plt.show()

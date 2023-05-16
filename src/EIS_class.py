@@ -11,14 +11,15 @@ from uuid import uuid4
 
 #TODO->paralell in series+ gerischer
 class EIS:
-    def __init__(self,  **kwargs):
+    def __init__(self,  **kwargs,):
         self.options={}
         self.options_checker(**kwargs)
+
         self.all_nodes=["paralell", "series",]#"element"]
-        self.all_elems=[ "R", "C", "W_inf", "CPE"]
+        self.all_elems=self.options["construction_elements"]
         self.num_nodes=len(self.all_nodes)-1
         self.num_elems=len(self.all_elems)-1
-        if len(kwargs.keys())==0:
+        if "circuit" not in kwargs:
             return
         if self.options["fitting"]==True:
             if kwargs["parameter_bounds"] is None:
@@ -428,12 +429,18 @@ class EIS:
             imag=np.imag(spectra)
             #plt.plot(real, -imag)
             #plt.show()
-            phase=np.arctan(np.divide(-imag, real))*(180/math.pi)
-            magnitude=np.divide(np.add(np.square(real), np.square(imag)), 1000)
+            phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-imag, real))*(180/math.pi)
+            magnitude=np.log10(np.abs(spectra))#np.divide(np.add(np.square(real), np.square(imag)), 1000)
             #if self.options["test"]==True:
             #self.bode(np.column_stack((real, imag)), frequencies)
             #plt.show()
-            return np.column_stack((real, imag))
+            return np.column_stack((phase, magnitude))
+    def convert_to_bode(self,spectra):
+        spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
+        phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
+        #print(np.divide(spectra[:,1], spectra[:,0]))
+        magnitude=np.abs(spectra)
+        return np.column_stack((phase,magnitude))
     def nyquist(self, spectra, **kwargs):
         if "ax" not in kwargs:
             _,kwargs["ax"]=plt.subplots(1,1)
@@ -475,23 +482,32 @@ class EIS:
             kwargs["label"]=None
         if "type" not in kwargs:
             kwargs["type"]="both"
+        if "twinx" not in kwargs:
+            kwargs["twinx"]=kwargs["ax"].twinx()
+        if "data_type" not in kwargs:
+            kwargs["data_type"]="complex"
+        if kwargs["data_type"]=="complex":
+            spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
+            phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
+            #print(np.divide(spectra[:,1], spectra[:,0]))
+            magnitude=np.abs(spectra)#np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
+        elif kwargs["data_type"]=="phase_mag":
+            phase=spectra[:,0]
+            magnitude=spectra[:,1]
         ax=kwargs["ax"]
-        phase=np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
-        print(np.divide(spectra[:,1], spectra[:,0]))
-        magnitude=np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
         ax.set_xlabel("$\\log_{10}(Frequency)$")
         x_freqs=np.log10(frequency)
         if kwargs["type"]=="both":
             ax.plot(x_freqs, phase)
             ax.set_ylabel("Phase")
-            twinx=ax.twinx()
+            twinx=kwargs["twinx"]
             twinx.plot(x_freqs, magnitude, color="red")
             twinx.set_ylabel("Magnitude")
         elif kwargs["type"]=="phase":
             ax.set_ylabel("Phase")
             ax.plot(x_freqs, phase)
         elif kwargs["type"]=="magnitude":
-            twinx=ax
+            twinx=kwargs["twinx"]
             twinx.plot(x_freqs, magnitude)
             twinx.set_ylabel("Magnitude")
 
@@ -694,3 +710,7 @@ class EIS:
             self.options["invert_imaginary"]=kwargs["invert_imaginary"]
         else:
             self.options["invert_imaginary"]=False
+        if "construction_elements" not in kwargs:
+            self.options["construction_elements"]=[ "R", "C", "W_inf", "CPE"]
+        else:
+            self.options["construction_elements"]=kwargs["construction_elements"]

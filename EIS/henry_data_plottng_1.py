@@ -44,11 +44,11 @@ for file in files:
             mag=numpy_data[:,5]
             ax[1].scatter(real, imag, color=get_color[c_idx])
             ax[1].plot(real,imag, label=label_dict[file], color=get_color[c_idx])
-            ax[2].plot(freq,mag, color=get_color[c_idx], label=label_dict[file],)
-            ax[2].scatter(freq,mag, color=get_color[c_idx])
+            ax[2].plot(freq,np.log10(mag), color=get_color[c_idx], label=label_dict[file],)
+            #ax[2].scatter(freq,mag, color=get_color[c_idx])
             twinx.plot(freq, phase, color=get_color[c_idx])
             twinx.set_ylabel("Phase")
-            twinx.scatter(freq, phase, color=get_color[c_idx])
+            #twinx.scatter(freq, phase, color=get_color[c_idx])
             c_idx+=1
     elif "DCV" in file:
         data=read_csv(data_loc+file, sep=",", encoding="unicode_escape", engine="python", skiprows=3, skipfooter=1)

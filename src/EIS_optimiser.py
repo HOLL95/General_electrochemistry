@@ -144,6 +144,8 @@ class EIS_genetics:
             kwargs["generation_test_save"]=False
         elif kwargs["generation_size"]%2!=0:
             kwargs["generation_size"]+=1
+        if "individual_test" not in kwargs:
+            kwargs["individual_test"]=False
         if "selection" not in kwargs:
             kwargs["selection"]="bayes_factors"
         if "best_record" not in kwargs:
@@ -152,10 +154,16 @@ class EIS_genetics:
             self.best_array=[]
             self.best_circuits=[]
         if "num_top_circuits" not in kwargs:
-            kwargs["num_top_circuits"]=10
+            kwargs["num_top_circuits"]=10#
+        if "data_representation" not in kwargs:
+            kwargs["data_representation"]="nyquist"
+        if "construction_elements" not in kwargs:
+            kwargs["construction_elements"]=[ "R", "C", "W_inf", "CPE"]
+        
         if kwargs["initial_circuit"]==False:
+            
             initial_generation=[]#
-            random_constructor=EIS()
+            random_constructor=EIS(construction_elements=kwargs["construction_elements"])
             for i in range(0, kwargs["generation_size"]):
                 initial_generation.append(random_constructor.random_circuit_tree(kwargs["initial_tree_size"]))
         self.options=kwargs
@@ -220,7 +228,18 @@ class EIS_genetics:
                 found_value=cmaes_value
                 covariance=cov
                 sim_data=simulation
-
+            if self.options["individual_test"]==True:
+                print(circuit_dictionary)
+                fig, ax=plt.subplots(1,1)
+                twinx=ax.twinx()
+                if self.options["data_representation"]=="nyquist":
+                    EIS().nyquist(simulation, ax=ax)
+                    EIS().nyquist(data, ax=ax)
+                elif self.options["data_representation"]=="bode":
+                    EIS().bode(simulation,frequencies, ax=ax, data_type="phase_mag", twinx=twinx)
+                    EIS().bode(data,frequencies, ax=ax, data_type="phase_mag", twinx=twinx)
+                print(found_value)
+                plt.show()
         #fig2, ax2=plt.subplots(1, 2)
         #print(circuit_dictionary)
         #circuit_artist(circuit_dictionary, ax2[1])
@@ -265,12 +284,13 @@ class EIS_genetics:
                         meaningful_circuit=True
                         generation[i]=new_try
             if self.options["generation_test"]==True:
-                generation_scores[i], params, sim_data=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"])
+                generation_scores[i], params, sim_data=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"], data_representation=self.options["data_representation"])
             else:
-                generation_scores[i], params=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"])
+                generation_scores[i], params=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"],  data_representation=self.options["data_representation"])
             returned_params.append(params)
             if self.options["generation_test"]==True:
                 returned_data.append(sim_data)
+
         if self.options["generation_test"]==True:
             return generation_scores, returned_params, returned_data
         else:

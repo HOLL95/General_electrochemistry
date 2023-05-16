@@ -126,6 +126,8 @@ for i in range(0, len(vals)):
 plt.legend()
 plt.show()
 
+laviron.simulator.bode(vals[i], frequencies)
+plt.show()
 
 laviron.simulation_options["label"]="cmaes"
 cmaes_problem=pints.MultiOutputProblem(laviron,frequencies, noisy_data)
