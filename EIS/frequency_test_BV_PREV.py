@@ -17,7 +17,7 @@ def potential(amp,frequency, time, phase):
 def current(cdl,frequency, time, phase):
     return (cdl)*frequency*np.cos(2*np.pi*frequency*time+phase)
 param_list={
-        "E_0":0.001,
+        "E_0":0.0,
         'E_start':  -5e-3, #(starting dc voltage - V)
         'E_reverse':5e-3,
         'omega':10,  #    (frequency Hz)
@@ -26,12 +26,12 @@ param_list={
         'area': 0.07, #(electrode surface area cm^2)
         'Ru': 100,  #     (uncompensated resistance ohms)
         'Cdl':1e-4, #(capacitance parameters)
-        'CdlE1': 0.000653657774506*0,
-        'CdlE2': 0.000245772700637*0,
+        'CdlE1': 0.000653657774506,
+        'CdlE2': 0.000245772700637,
         "CdlE3":0,
         'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
-        'k_0': 100, #(reaction rate s-1)
+        'k_0': 1, #(reaction rate s-1)
         'alpha': 0.55,
         "E0_mean":0.2,
         "E0_std": 0,
@@ -197,7 +197,7 @@ max_f=7
 points_per_decade=10
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-for k0 in [10]:
+for k0 in [1000]:
     param_list["k_0"]=k0
     
     frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
@@ -205,7 +205,7 @@ for k0 in [10]:
     sim_class=eis_sim(param_list, simulation_options,other_values, param_bounds, ["E_0", "k_0", "omega"] )
     
     m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
-                        parameters={"E_0":0.001, "k_0":100},sim_class=sim_class, 
+                        parameters={"E_0":0.3, "k_0":100},sim_class=sim_class, 
                         sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
 
 
@@ -214,5 +214,7 @@ for k0 in [10]:
     
     EIS().bode(save_data, freqs, label=k0, ax=ax, twinx=twinx, data_type="phase_mag")
 
-plt.show()    
+    plt.show()    
+    EIS().nyquist(np.column_stack((real, z.imag)), orthonormal=False)
+    plt.show()
 np.save("BV_sim",np.column_stack((freqs, save_data)))

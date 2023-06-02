@@ -8,6 +8,13 @@ class circuit_artist(EIS):
             fig,ax=plt.subplots()
         else:
             ax=kwargs["ax"]
+        if "crimson_elem" in kwargs:
+            self.crimson_elem=kwargs["crimson_elem"]
+        else:
+            self.crimson_elem=[]
+        if "colour" not in kwargs:
+            kwargs["colour"]=None
+        self.colour=kwargs["colour"]
         self.patch_library={}
         print(circuit_dictionary)
         element_width=0.5
@@ -57,11 +64,14 @@ class circuit_artist(EIS):
             name=element_type+element_number
 
         if element==True:
-
+            if name in self.crimson_elem:
+                colour="crimson"
+            else:
+                colour=self.colour
             rect=patches.Rectangle(self.get_anchor_from_centre(target_x_pos,
                                                          target_y_pos,
                                                          element_width, element_height),
-                                                         element_width, element_height, zorder=2)
+                                                         element_width, element_height, zorder=2, color=colour)
             self.patch_library[name]=ax.add_patch(rect)
             ax.text(target_x_pos-element_width*0.5, target_y_pos+(element_height*0.6),name )
         if isinstance(circuit_dict, dict):
@@ -77,10 +87,16 @@ class circuit_artist(EIS):
             else:
                 new_height=0.5*height_sep
                 new_element_height=element_height
-            for key in ["p1", "p2"]:
-                if key=="p1":
+            keys =circuit_dict.keys()
+            if "p_1" in keys:
+                key_list=["p_1", "p_2"]
+            elif "p1" in keys:
+                key_list=["p1", "p2"]
+            for key in key_list:
+               
+                if key==key_list[0]:
                     self.paralell_drawer(circuit_dict[key], level+1, target_y_pos+height_sep, target_x_pos, new_height, width_sep*0.8,element_width*0.8, new_element_height, ax=ax)
-                elif key=="p2":
+                elif key==key_list[1]:
                     self.paralell_drawer(circuit_dict[key], level+1, target_y_pos-height_sep, target_x_pos, new_height, width_sep*0.8, element_width*0.8, new_element_height,ax=ax)
         if isinstance(circuit_dict, list):
             flat_list=super().list_flatten(circuit_dict)

@@ -14,9 +14,10 @@ class EIS:
     def __init__(self,  **kwargs,):
         self.options={}
         self.options_checker(**kwargs)
-
+        
         self.all_nodes=["paralell", "series",]#"element"]
         self.all_elems=self.options["construction_elements"]
+      
         self.num_nodes=len(self.all_nodes)-1
         self.num_elems=len(self.all_elems)-1
         if "circuit" not in kwargs:
@@ -417,7 +418,7 @@ class EIS:
             plt.plot(np.real(spectra), -np.imag(spectra))
             plt.show()
         
-
+        
         if self.options["data_representation"]=="nyquist":
             if self.options["invert_imaginary"]==True:
                 return np.column_stack((np.real(spectra), -np.imag(spectra)))
@@ -431,15 +432,20 @@ class EIS:
             #plt.show()
             phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-imag, real))*(180/math.pi)
             magnitude=np.log10(np.abs(spectra))#np.divide(np.add(np.square(real), np.square(imag)), 1000)
+            return_arg=np.column_stack((phase, magnitude))
+            #self.bode(return_arg, frequencies,data_type="phase_mag")
+            #ax=plt.gca()
+            #ax.set_title("test")
+            #plt.show()
             #if self.options["test"]==True:
             #self.bode(np.column_stack((real, imag)), frequencies)
             #plt.show()
-            return np.column_stack((phase, magnitude))
+            return return_arg
     def convert_to_bode(self,spectra):
         spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
         phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
         #print(np.divide(spectra[:,1], spectra[:,0]))
-        magnitude=np.abs(spectra)
+        magnitude=np.log10(np.abs(spectra))
         return np.column_stack((phase,magnitude))
     def nyquist(self, spectra, **kwargs):
         if "ax" not in kwargs:
@@ -456,6 +462,7 @@ class EIS:
             kwargs["colour"]=None
         if "orthonormal" not in kwargs:
             kwargs["orthonormal"]=True
+
         ax=kwargs["ax"]
         imag_spectra_mean=np.mean(spectra[:,1])
         if imag_spectra_mean<0:
@@ -486,36 +493,61 @@ class EIS:
             kwargs["twinx"]=kwargs["ax"].twinx()
         if "data_type" not in kwargs:
             kwargs["data_type"]="complex"
+        if "compact_labels" not in kwargs:
+            kwargs["compact_labels"]=False
+        if "lw" not in kwargs:
+            kwargs["lw"]=1.5
+        if "alpha" not in kwargs:
+            kwargs["alpha"]=1
         if kwargs["data_type"]=="complex":
             spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
             phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
             #print(np.divide(spectra[:,1], spectra[:,0]))
-            magnitude=np.abs(spectra)#np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
+            magnitude=np.log10(np.abs(spectra))#np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
         elif kwargs["data_type"]=="phase_mag":
             phase=spectra[:,0]
             magnitude=spectra[:,1]
+            if "data_is_log" not in kwargs:
+                kwargs["data_is_log"]=True
+            if kwargs["data_is_log"]==False:
+                magnitude=np.log10(magnitude)
+            
+            
         ax=kwargs["ax"]
-        ax.set_xlabel("$\\log_{10}(Frequency)$")
+        ax.set_xlabel("$\\log_{10}$(Frequency)")
         x_freqs=np.log10(frequency)
         if kwargs["type"]=="both":
-            ax.plot(x_freqs, phase)
-            ax.set_ylabel("Phase")
             twinx=kwargs["twinx"]
-            twinx.plot(x_freqs, magnitude, color="red")
-            twinx.set_ylabel("Magnitude")
+            ax.plot(x_freqs, phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            if kwargs["compact_labels"]==False:
+                ax.set_ylabel("Phase")
+                twinx.set_ylabel("Magnitude")
+            else:
+                ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
+                ax.text(x=1.05, y=1.05, s="$|Z|$", fontsize=12, transform=ax.transAxes)
+            twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"])
+            
         elif kwargs["type"]=="phase":
-            ax.set_ylabel("Phase")
-            ax.plot(x_freqs, phase)
-        elif kwargs["type"]=="magnitude":
-            twinx=kwargs["twinx"]
-            twinx.plot(x_freqs, magnitude)
-            twinx.set_ylabel("Magnitude")
+            if kwargs["compact_labels"]==False:
+                ax.set_ylabel("Phase")
+            else:
+                 ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
+            ax.plot(x_freqs, phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
 
+        elif kwargs["type"]=="magnitude":
+            
+            ax.plot(x_freqs, magnitude, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            if kwargs["compact_labels"]==False:
+                ax.set_ylabel("Magnitude")
+            else:
+                 ax.text(x=-0.05, y=1.05, s="$|Z|$", fontsize=12, transform=ax.transAxes)
+        if kwargs["label"]!=None:
+            kwargs["ax"].legend()
 
     def test_vals(self, parameters, frequencies):
         normalise=self.options["normalise"]
         self.options["normalise"]=False
-        if isinstance(parameters, list):
+        if isinstance(parameters, (list, np.ndarray)):
             list_params=parameters
         elif isinstance(parameters, dict):
             list_params=[parameters[x] for x in self.param_names]

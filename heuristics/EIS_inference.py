@@ -126,7 +126,7 @@ for i in range(0, len(vals)):
 plt.legend()
 plt.show()
 
-laviron.simulator.bode(vals[i], frequencies)
+laviron.simulator.bode(vals[0], frequencies)
 plt.show()
 
 laviron.simulation_options["label"]="cmaes"

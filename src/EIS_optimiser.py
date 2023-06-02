@@ -34,6 +34,7 @@ class EIS_optimiser(EIS):
             self.normalise=False
         else:
             self.normalise=kwargs["normalise"]
+        print(kwargs["data_representation"], "OPTIM")
         super().__init__(parameter_bounds=self.param_bounds, parameter_names=self.params,
                         circuit=circuit_as_dict, fitting=True,
                          test=self.test, data_representation=kwargs["data_representation"], normalise=self.normalise)
@@ -45,7 +46,7 @@ class EIS_optimiser(EIS):
         return std_list
 
     def optimise(self, data, sigma_fac=0.001, method="minimisation"):
-        print(self.frequency_range)
+        #print(self.frequency_range)
         cmaes_problem=pints.MultiOutputProblem(self, self.frequency_range, data)
         if method=="likelihood":
             score = pints.GaussianLogLikelihood(cmaes_problem)
@@ -94,8 +95,8 @@ class EIS_optimiser(EIS):
             cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
         #cmaes_fitting.set_log_to_screen(False)
-        cmaes_fitting.set_parallel(True)
-
+        cmaes_fitting.set_parallel(False)
+        cmaes_fitting.set_log_to_screen(True)
         found_parameters, found_value=cmaes_fitting.run()
 
 
@@ -175,8 +176,8 @@ class EIS_genetics:
             kwargs["label"]=None
         ax.plot(data[:,0], -data[:,1], label=kwargs["label"])
     def tree_simulation(self, circuit_tree, frequencies, data, param_vals):
-        translator=EIS()
-        dictionary, params=translator.translate_tree(circuit_tree, get_param_list=True)
+        
+        dictionary, params=EIS().translate_tree(circuit_tree, get_param_list=True)
         sim_class=self.assess_score(dictionary, params, frequencies, data,get_simulator=True)
         return sim_class.simulate(param_vals, frequencies)
     def dict_simulation(self, circuit_dict, frequencies, data, param_vals, param_names):
@@ -189,17 +190,18 @@ class EIS_genetics:
             methods["get_simulator"]=False
         if "data_representation" not in methods:
             methods["data_representation"]="nyquist"
+        
         if "normalise" not in methods:
             methods["normalise"]=False
         param_bounds={}
 
         for param in parameter_list:
             if "R" in param:
-                param_bounds[param]=[0, 10000]
+                param_bounds[param]=[0, 1e11]
             elif "C" in param:
-                param_bounds[param]=[0, 1e-2]
+                param_bounds[param]=[0, 100]
             elif "Q" in param:
-                param_bounds[param]=[0, 10]
+                param_bounds[param]=[0, 100]
             elif "alpha" in param:
                 param_bounds[param]=[0, 1]
             elif "W" in param:
@@ -217,11 +219,12 @@ class EIS_genetics:
                                 normalise=methods["normalise"])
         if methods["get_simulator"]==True:
             return optimiser
-        method="scaled_minimisation"
+        method="minimisation"
         found_value=-1e11
         for i in range(0, self.options["num_optim_runs"]):
             cmaes_params, cmaes_value, cov, simulation=optimiser.optimise(data, method=method)
-            print(cmaes_value, found_value)
+            print(circuit_dictionary)
+            print("current_score=",cmaes_value, "current_best=",found_value)
             if cmaes_value>found_value:
 
                 return_params=cmaes_params
@@ -229,7 +232,7 @@ class EIS_genetics:
                 covariance=cov
                 sim_data=simulation
             if self.options["individual_test"]==True:
-                print(circuit_dictionary)
+              
                 fig, ax=plt.subplots(1,1)
                 twinx=ax.twinx()
                 if self.options["data_representation"]=="nyquist":
@@ -268,7 +271,7 @@ class EIS_genetics:
                 return return_val, return_params
 
     def get_generation_score(self, generation, frequencies, data, selection):
-        dictionary_constructor=EIS()
+        dictionary_constructor=EIS(construction_elements=self.options["construction_elements"])
         generation_scores=np.zeros(len(generation))
         returned_params=[]
         if self.options["generation_test"]==True:
@@ -287,6 +290,7 @@ class EIS_genetics:
                 generation_scores[i], params, sim_data=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"], data_representation=self.options["data_representation"])
             else:
                 generation_scores[i], params=self.assess_score(circuit_dict, param_list, frequencies, data, score_func=selection, normalise=self.options["normalise"],  data_representation=self.options["data_representation"])
+            print(generation_scores[i], "gen")
             returned_params.append(params)
             if self.options["generation_test"]==True:
                 returned_data.append(sim_data)
@@ -347,7 +351,6 @@ class EIS_genetics:
         winning_candidates=[generation[x] for x in winners]
         winning_params=[param_array[x] for x in winners]
         winning_scores=[generation_score[x] for x in winners]
-        translator=EIS()
         num_entries=len(self.best_candidates["scores"])
         if num_entries==0:
             self.best_candidates["scores"]=winning_scores
@@ -416,13 +419,13 @@ class EIS_genetics:
             for j in range(0, len(winning_generation), 2):
                 original=copy.deepcopy(winning_generation[j])
                 target=copy.deepcopy(winning_generation[j+1])
-                child=mutator.crossover(original, target, self.options["minimum_replacement_depth"])
+                child=EIS().crossover(original, target, self.options["minimum_replacement_depth"])
                 crossover_generation.append(child)
 
         for j in range(0, len(crossover_generation)):
-            new_mutator=EIS()
+            
             original=copy.deepcopy(crossover_generation[j])
-            next_generation.append(new_mutator.mutation(original, max_mutant_size=self.options["maximum_mutation_size"], min_depth=self.options["minimum_replacement_depth"]))
+            next_generation.append(EIS().mutation(original, max_mutant_size=self.options["maximum_mutation_size"], min_depth=self.options["minimum_replacement_depth"]))
         if methods["keep_winners"]==True:
             if "num_elites" not in methods:
                 next_generation+=winning_generation
@@ -442,11 +445,10 @@ class EIS_genetics:
     def plot_generation(self, windex, loser_idx, scores,  sim_array, generation, data,axes, plot_count):
         idxes=[windex, loser_idx]
         titles=["Winner", "Loser"]
-        dict_constructor=EIS()
         for i in range(0, len(idxes)):
             circuit_ax=axes[0][plot_count+i]
             idx=idxes[i]
-            circuit_dict=dict_constructor.translate_tree(generation[idx])
+            circuit_dict=EIS().translate_tree(generation[idx])
             circuit_artist(circuit_dict, circuit_ax)
             circuit_ax.set_title(titles[i])
             circuit_ax.set_axis_off()

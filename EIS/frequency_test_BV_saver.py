@@ -31,11 +31,11 @@ param_list={
         "CdlE3":0,
         'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
-        'k_0': 100, #(reaction rate s-1)
+        'k_0': 0.1, #(reaction rate s-1)
         'alpha': 0.55,
         "E0_mean":0.2,
         "E0_std": 0,
-        "cap_phase":3*math.pi/2,
+    
         "alpha_mean":0.45,
         "alpha_std":1e-3,
         'sampling_freq' : (1.0/2**8),
@@ -121,6 +121,7 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
     magnitudes=np.zeros(len(freqs))
     phases=np.zeros(len(freqs))
     parameters=sim_class.param_list
+    problem_child=False
     for i in range(0, len(frequency_powers)):
         time_end=num_osc/freqs[i]
         times1=np.linspace(0, time_end, num_points, endpoint=False)
@@ -174,16 +175,19 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         impedances[i]=Z_f[freq_idx][0]
         #print(impedances)
         phases[i]=abs(np.angle(fft, deg=True))[freq_idx][0]
-        """if phases[i]<1e-10:
-            print(freqs[i])
-            fig, ax=plt.subplots(1,2)
-            ax[0].plot(times, V)
-            ax[1].plot(times, I)
-            plt.show()
-            plt.plot(fft_freq, ffts[0])
-            plt.show()
-            plt.plot(fft_freq, ffts[1])
-            plt.show()"""
+        """ if phases[i]<1e-10 or (problem_child==True):
+                print(freqs[i], phases[i])
+                print(conv_class.dim_dict["E_0"])
+                fig, ax=plt.subplots(1,2)
+                ax[0].plot(times, V)
+                ax[1].plot(times, I)
+                plt.show()
+                plt.plot(fft_freq, ffts[0])
+                plt.show()
+                plt.plot(fft_freq, ffts[1])
+                plt.show()
+                problem_child=True"""
+        
    
         #plt.show()
         #plt.plot(np.angle(fft, deg=True))
@@ -197,22 +201,65 @@ max_f=7
 points_per_decade=10
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-for k0 in [10]:
-    param_list["k_0"]=k0
+param_val_scans={"k_0":[0.1, 10, 100, 125], 
+            "gamma":[7.5e-11, 9e-11, 1.1e-10, 1.25e-10],
+            "Cdl":[2e-5, 5e-5, 1e-4, 5e-4],
+            "Ru":[0.1, 1, 10, 1000], 
+            "alpha":[0.4, 0.5, 0.6, 0.7],
+            "phase":[0, np.pi/4, np.pi/2, 0.75*np.pi],
+            "cap_phase":[0, np.pi/4, np.pi/2], }
+fig, ax=plt.subplots(2,4)
+import copy
+param_names=list(param_val_scans.keys())
+save_dict={}
+ax[-1, -1].set_axis_off()
+for i in range(0, len(param_names)):
+    axis=ax[i//4, i%4]
+
     
-    frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
-    freqs=[10**x for x in frequency_powers]
-    sim_class=eis_sim(param_list, simulation_options,other_values, param_bounds, ["E_0", "k_0", "omega"] )
-    
-    m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
-                        parameters={"E_0":0.001, "k_0":100},sim_class=sim_class, 
-                        sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
+    key=param_names[i]
+    save_dict[key]={}
+    axis.set_title(key)
+    twinx=axis.twinx()
+
+    for j in range(0, len(param_val_scans[key])):
+        if i==0:
+            if j==0:
+                copy_list=copy.deepcopy(param_list)
+                copy_list[key]=param_val_scans[key][j]
+            
+                frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
+                freqs=[10**x for x in frequency_powers]
+                sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
+                param_dict={key:copy_list[key] for key in param_names}
+                param_dict["E_0"]=0.001
+                m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
+                                    parameters=param_dict,sim_class=sim_class, 
+                                    sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
 
 
-    real=z.real
-    save_data=EIS().convert_to_bode(np.column_stack((real, z.imag)))
+                real=z.real
+                save_data=EIS().convert_to_bode(np.column_stack((real, z.imag)))
+                save_dict["original"]=save_data
+               
+        copy_list=copy.deepcopy(param_list)
+        copy_list[key]=param_val_scans[key][j]
     
-    EIS().bode(save_data, freqs, label=k0, ax=ax, twinx=twinx, data_type="phase_mag")
+        frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
+        freqs=[10**x for x in frequency_powers]
+        sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
+        param_dict={key:copy_list[key] for key in param_names}
+        param_dict["E_0"]=0.001
+        m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
+                            parameters=param_dict,sim_class=sim_class, 
+                            sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
 
-plt.show()    
-np.save("BV_sim",np.column_stack((freqs, save_data)))
+
+        real=z.real
+        save_data=EIS().convert_to_bode(np.column_stack((real, z.imag)))
+        save_dict[key][str(param_val_scans[key][j])]=save_data
+        EIS().bode(np.column_stack((real, z.imag)), freqs, ax=axis, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
+save_dict["freq"]=freqs
+
+plt.show()  
+#np.save("BV_param_scans",save_dict)
