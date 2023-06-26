@@ -11,8 +11,10 @@ distance=(E_reverse-E_start)
 DC_range=distance/0.5
 end_time=(2*distance)/desired_scan_rate
 num_points=int(end_time//min_interval)+1
-#if num_points>62000:
-#    raise ValueError("Number of points required is too high!")
+if num_points>65000:
+    splitting=True
+else:
+    splitting=False
 fft_freq=np.fft.fftfreq(num_points, min_interval)
 total_sine_waves=end_time*desired_Hz
 Ac_amplitude=0.15

@@ -43,6 +43,7 @@ class MCMC_plotting:
                         "error":"$\\mu A$",
                         "sep":"V",
                         "cpe_alpha_faradaic" :"",
+                        "cpe_alpha_cdl" :"",
                         "sigma":""
                         }
         self.fancy_names={
@@ -75,7 +76,8 @@ class MCMC_plotting:
                         "noise":"$\sigma$",
                         "error":"RMSE",
                         "sep":"Seperation",
-                        "cpe_alpha_faradaic" :"$\\psi$",
+                        "cpe_alpha_faradaic" :"$\\psi$ $(\\Gamma)$",
+                        "cpe_alpha_cdl" :"$\\psi$ $(C_{dl})$",
                         "sigma":"$\\sigma$"
                         }
     def det_subplots(self, value):

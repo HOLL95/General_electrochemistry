@@ -31,7 +31,7 @@ param_list={
         "CdlE3":0,
         'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
-        'k_0': 0.1, #(reaction rate s-1)
+        'k_0': 10, #(reaction rate s-1)
         'alpha': 0.55,
         "E0_mean":0.2,
         "E0_std": 0,
@@ -42,7 +42,7 @@ param_list={
         'phase' :0,
         "cap_phase":0,
         "time_end": None,
-        'num_peaks': 5,
+        'num_peaks': 10,
     }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -204,10 +204,9 @@ twinx=ax.twinx()
 param_val_scans={"k_0":[0.1, 10, 100, 125], 
             "gamma":[7.5e-11, 9e-11, 1.1e-10, 1.25e-10],
             "Cdl":[2e-5, 5e-5, 1e-4, 5e-4],
-            "Ru":[0.1, 1, 10, 1000], 
-            "alpha":[0.4, 0.5, 0.6, 0.7],
-            "phase":[0, np.pi/4, np.pi/2, 0.75*np.pi],
-            "cap_phase":[0, np.pi/4, np.pi/2], }
+            "Ru":[0.1, 1, 10, 750], 
+            "alpha":[0.4, 0.5, 0.6, 0.7],}
+
 fig, ax=plt.subplots(2,4)
 import copy
 param_names=list(param_val_scans.keys())
@@ -260,6 +259,6 @@ for i in range(0, len(param_names)):
         save_dict[key][str(param_val_scans[key][j])]=save_data
         EIS().bode(np.column_stack((real, z.imag)), freqs, ax=axis, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
 save_dict["freq"]=freqs
-
+np.save("BV_param_scans_for_laviron",save_dict)
 plt.show()  
-#np.save("BV_param_scans",save_dict)
+

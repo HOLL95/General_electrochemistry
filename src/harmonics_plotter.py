@@ -9,6 +9,34 @@ class harmonics:
         self.filter_val=filter_val
     def reorder(list, order):
         return [list[i] for i in order]
+    def plot_ffts(self, time, current, **kwargs):
+        if "ax" not in kwargs:
+            _, ax=plt.subplots(1,1)
+        else:
+            ax=kwargs["ax"]
+        if "harmonics" not in kwargs:
+            harmonics=list(range(0, self.harmonics[-1]))
+        else:
+            harmonics=kwargs["harmonics"]
+        if "colour" not in kwargs:
+            colour=None
+        else:
+            colour=kwargs["colour"]
+        if "label" not in kwargs:
+            kwargs["label"]=None
+        if "log" not in kwargs:
+            kwargs["log"]=True
+        if "plot_func" not in kwargs:
+            kwargs["plot_func"]=abs
+        fft=np.fft.fft(current)
+        fft_freq=np.fft.fftfreq(len(current), time[1]-time[0])
+        freq_idx=np.where((fft_freq>(self.input_frequency*harmonics[0])) & (fft_freq<(self.input_frequency*harmonics[-1])))
+        if kwargs["log"]==True:
+            ax.semilogy(fft_freq[freq_idx], kwargs["plot_func"](fft[freq_idx]), label=kwargs["label"], color=colour)
+        else:
+            ax.plot(fft_freq[freq_idx], kwargs["plot_func"](fft[freq_idx]), label=kwargs["label"],color=colour)
+        if kwargs["label"] is not None:
+            ax.legend()
     def generate_harmonics(self, times, data, **kwargs):
         if "func" not in kwargs or kwargs["func"]==None:
             func=self.empty

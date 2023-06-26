@@ -21,10 +21,28 @@ colours=plt.rcParams['axes.prop_cycle'].by_key()['color']
 mode="error"
 circuit_1={"z1":{"p_1":"R1", "p_2":"C1"}, "z2":"R0", "z3":{"p_1":["R3","C3" ], "p_2":"C2"},}
 norm_potential=0.001
-RTF=(self.R*self.T)/((self.F**2))
+#RTF=(self.R*self.T)/((self.F**2))
 circuit_2={ "z2":"R0", "z3":{"p_1":["R3","C3" ], "p_2":"C2"},}
 circuit_3={ "z2":"R0", "z3":{"p_1":["R3",("Q1", "alpha1") ], "p_2":"C2"},}
 mark_circuit={"z1":{"p_1":"R1", "p_2":"C1"}, "z2":"R0", "z3":{"p_1":["R3",("Q1", "alpha1") ], "p_2":"C2"},}
+F=96485.3321
+R=8.3145
+T=298
+RT=R*T
+FRT=F/(R*T)
+k0=100
+e0=0.001
+alpha=0.55
+gamma=1e-10
+area=0.07
+dc_pot=0
+ratio=np.exp(FRT*(e0-dc_pot))
+gamma_red=gamma/(ratio+1)
+gamma_ox=gamma-gamma_red
+exp=np.exp
+norm_E=dc_pot-e0
+fitted_params=["Ru", "alpha", "k_0", "Cdl"]
+
 circs=[circuit_1, circuit_2, circuit_3,mark_circuit]
 for plot in ["magnitude", "phase", "both"]:
     fig, axis=plt.subplots(rows, cols, constrained_layout=True)
@@ -60,9 +78,9 @@ for plot in ["magnitude", "phase", "both"]:
                             fitted_sim_vals=current_file["results"][key][val+"_results"]
                             simulator=EIS(circuit=circs[z])
                             sim=simulator.test_vals(fitted_sim_vals, freq)
-                            print("="*30, circs[z], val)
-                            for keyz in fitted_sim_vals:
-                                print(keyz, fitted_sim_vals[keyz])
+                            #print("="*30, circs[z], val)
+                            #for keyz in fitted_sim_vals:
+                            #    print(keyz, fitted_sim_vals[keyz])
                             if mode=="bode" or plot=="both":
                                     if z==1:
                                             EIS().bode(fitting_data, freq, data_type="phase_mag", ax=ax, twinx=twinx, compact_labels=True, data_is_log=False, lw=2, alpha=0.65,type=plot)
@@ -74,12 +92,31 @@ for plot in ["magnitude", "phase", "both"]:
                                     mag_error=np.subtract(mag, bode_data[:,1])
                                     
                                     ax.set_title("{0}={1} {2}".format(titles[i], val, units[i]))    
-                                    if sub_keys[i]=="Ru":
-                                        sim_Ru_val=float(val)
-                                        pred_ru_val=fitted_sim_vals["R0"]
-                                        error=np.square(sim_Ru_val-pred_ru_val)
-                                        error=round(100*error/sim_Ru_val,2)
-                                        label="$\\epsilon$ = {0}%".format(error)
+                                    if sub_keys[i] in fitted_params:
+                                        if sub_keys[i]=="Ru":
+                                            sim_Ru_val=float(val)
+                                            pred_ru_val=fitted_sim_vals["R0"]
+                                            error=np.square(sim_Ru_val-pred_ru_val)
+                                            error=round(100*error/sim_Ru_val,2)
+                                            label="$\\epsilon$ = {0}%".format(error)
+                                        elif (sub_keys[i]=="alpha" or sub_keys[i]=="k_0") and "C3" in fitted_sim_vals:
+                                            sim_alpha_val=float(val)
+                                            Ca=fitted_sim_vals["C3"]
+                                            Ra=fitted_sim_vals["R3"]
+                                            answer=[(exp(norm_E*(Ca*RT*exp(F*norm_E/RT) + Ca*RT - F**2*area*gamma_red*exp(F*norm_E/RT))/(F*RT*area*(gamma_ox - gamma_red*exp(F*norm_E/RT))))/(Ca*Ra*(exp(F*norm_E/RT) + 1)), (Ca*RT*exp(F*norm_E/RT) + Ca*RT - F**2*area*gamma_red*exp(F*norm_E/RT))/(F**2*area*(gamma_ox - gamma_red*exp(F*norm_E/RT))))]
+                                            print("k0", "alpha", sub_keys[i])
+                                            print(answer)
+                                            label=None
+                                            """if sub_keys[i]=="alpha":
+                                                a_val=z[1]
+                                            else:
+                                                a_val=z[0]
+                                            error=np.square(sim_alpha_val-a_val)
+                                            error=round(100*error/sim_alpha_val,2)
+                                            label="$\\epsilon$ = {0}%".format(error)"""
+                                        elif sub_keys[i]=="Cdl":
+                                            print("Cdl")
+                                            print(fitted_sim_vals["C2"])                                        
                                     else:
                                         label=None
                                     EIS().bode(np.column_stack((phase_error, mag_error)), freq, data_type="phase_mag", ax=ax, twinx=twinx, compact_labels=True, data_is_log=True, type=plot, label=label)

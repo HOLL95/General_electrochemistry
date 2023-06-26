@@ -136,7 +136,7 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         if i==0:
             print(conv_class.dim_dict["k_0"])
         V=conv_class.e_nondim(conv_class.define_voltages())[conv_class.time_idx]#
-        print(np.mean(V))
+
         #V1=potential(amplitude, freqs[i], times1, phase)
         times=conv_class.t_nondim(conv_class.time_vec)[conv_class.time_idx]
         

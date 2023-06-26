@@ -145,8 +145,11 @@ for j in range(0, dimensions):
                     sim=single_electron(None, param_list, simulation_options, other_values, param_bounds)
                     sim.def_optim_list(["E0_mean", "E0_std"])
                     current=sim.test_vals([param_list["E_0"], param_list["E0_std"]], "timeseries")
+                    
                     #current=sim.test_vals([], "timeseries")
                     potential=sim.e_nondim(sim.define_voltages(transient=True))
+                    plt.plot(potential, current)
+                    plt.show()
                     times=sim.time_vec[sim.time_idx]
                     min_potential[i]=get_even_amplitudes(times, current)[2]
         

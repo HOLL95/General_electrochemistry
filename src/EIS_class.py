@@ -278,7 +278,7 @@ class EIS:
             self.param_names.append(param)
     def z_functions(self, circuit_type,param, paralell):
         if circuit_type=="capacitor":
-            if paralell==False:
+            if paralell==False: 
                 def F(**kwargs):
                  return 1/(1j*kwargs["omega"]*kwargs[param])
             else:
@@ -499,6 +499,8 @@ class EIS:
             kwargs["lw"]=1.5
         if "alpha" not in kwargs:
             kwargs["alpha"]=1
+        if "scatter" not in kwargs:
+            kwargs["scatter"]=False
         if kwargs["data_type"]=="complex":
             spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
             phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
@@ -518,21 +520,25 @@ class EIS:
         x_freqs=np.log10(frequency)
         if kwargs["type"]=="both":
             twinx=kwargs["twinx"]
-            ax.plot(x_freqs, phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            
             if kwargs["compact_labels"]==False:
-                ax.set_ylabel("Phase")
+                ax.set_ylabel("-Phase")
                 twinx.set_ylabel("Magnitude")
             else:
-                ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
-                ax.text(x=1.05, y=1.05, s="$|Z|$", fontsize=12, transform=ax.transAxes)
+                ax.text(x=-0.05, y=1.05, s="$-\\psi$", fontsize=12, transform=ax.transAxes)
+                ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
             twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"])
+            if kwargs["scatter"] is not False:
+                ax.scatter(x_freqs, -phase)
+                twinx.scatter(x_freqs, magnitude, marker="v")
             
         elif kwargs["type"]=="phase":
             if kwargs["compact_labels"]==False:
                 ax.set_ylabel("Phase")
             else:
                  ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
-            ax.plot(x_freqs, phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
 
         elif kwargs["type"]=="magnitude":
             

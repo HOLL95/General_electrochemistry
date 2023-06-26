@@ -4,7 +4,7 @@ def potential(amp,frequency, time, phase):
     return amp*np.sin(2*np.pi*frequency*time+phase)
 def current(cdl,frequency, time, phase):
     return (cdl)*frequency*np.cos(2*np.pi*frequency*time+phase)
-def impedance_response(min_f, max_f, points_per_decade, num_osc, sf=200, amplitude=5e-3):
+def impedance_response(min_f, max_f, points_per_decade, num_osc, cdl, sf=200, amplitude=5e-3):
     if (np.log2(sf)%2)!=0:
         sf=2**np.ceil(np.log2(sf))
     
@@ -59,12 +59,9 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, sf=200, amplitu
     return phases, magnitudes,impedances
 #plt.show()
 cdl=1e-3
-p,m,z=impedance_response(0, 8, 10, 10)
+p,m,z=impedance_response(0, 8, 10, 10, cdl)
 real=z.real
 real[np.where(real<1e-3)]=0
 plt.plot(z.real, -z.imag)
-plt.show()
-fig, ax =plt.subplots(1,2)
-ax[0].plot(p)
-ax[1].semilogy(m)
-plt.show()
+data=np.column_stack((real, z.imag))
+sim_class=EIS(circuit={"z1":"C1"})

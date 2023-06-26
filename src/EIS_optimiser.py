@@ -193,6 +193,7 @@ class EIS_genetics:
         
         if "normalise" not in methods:
             methods["normalise"]=False
+        
         param_bounds={}
 
         for param in parameter_list:
@@ -235,10 +236,10 @@ class EIS_genetics:
               
                 fig, ax=plt.subplots(1,1)
                 twinx=ax.twinx()
-                if self.options["data_representation"]=="nyquist":
+                if methods["data_representation"]=="nyquist":
                     EIS().nyquist(simulation, ax=ax)
                     EIS().nyquist(data, ax=ax)
-                elif self.options["data_representation"]=="bode":
+                elif methods["data_representation"]=="bode":
                     EIS().bode(simulation,frequencies, ax=ax, data_type="phase_mag", twinx=twinx)
                     EIS().bode(data,frequencies, ax=ax, data_type="phase_mag", twinx=twinx)
                 print(found_value)

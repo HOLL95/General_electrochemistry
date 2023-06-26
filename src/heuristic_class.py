@@ -374,7 +374,16 @@ class DCV_peak_area():
             self.show_bg=False
         
 class Laviron_EIS(single_electron):
-    def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
+    def __init__(self, dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}):
+        self.F=96485.3321
+        self.R=8.3145
+        self.T=298
+        self.FRT=self.F/(self.R*self.T)
+        
+        if len(dim_parameter_dictionary)==0 and len(simulation_options)==0:
+            self.simulation_options={"data_representation":"nyquist"}
+            self.dim_dict={}
+            return
         from EIS_class import EIS
         EIS_Cs=["EIS_Cdl", "EIS_Cf"]
         for i in range(0, len(EIS_Cs)):
@@ -386,17 +395,23 @@ class Laviron_EIS(single_electron):
                 simulation_options[EIS_Cs[i]]=("Q{0}".format(i+1), "alpha{0}".format(i+1))
             else:
                 raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element)".format(EIS_Cs[i]))
+        if "data_representation" not in simulation_options:
+            simulation_options["data_representation"]="nyquist"  
+        elif simulation_options["data_representation"]=="bode":
+            if "bode_split" not in simulation_options:
+                simulation_options["bode_split"]=None
+            
         if "DC_pot" not in simulation_options:
             raise ValueError("Please define a DC EIS potential")
-        self.F=96485.3321
-        self.R=8.3145
-        self.T=298
-        self.FRT=self.F/(self.R*self.T)
+     
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
     def n_outputs(self):
-        return 2     
+        if self.simulation_options["bode_split"]==None:
+            return 2     
+        else:
+            return 1
     def synthetic_noise(self, parameters, frequencies, noise, flag="proportional"):
 
         sim=self.simulate(parameters, frequencies)
@@ -406,6 +421,40 @@ class Laviron_EIS(single_electron):
             return_arg=np.column_stack((self.add_noise(sim[:,0], noise*np.mean(sim[:,0])), self.add_noise(sim[:,1], noise*np.mean(-sim[:,1]))))   
         
         return return_arg
+    def clean_simulate(self,params,frequencies, **kwargs):
+        from EIS_class import EIS
+        self.optim_list=[]
+        self.simulation_options["label"]="MCMC"
+        self.simulation_options["test"]=False
+        if "data_representation" in kwargs:
+            self.simulation_options["data_representation"]=kwargs["data_representation"]
+       
+        EIS_Cs=["EIS_Cdl", "EIS_Cf"]
+        for i in range(0, len(EIS_Cs)):
+            if EIS_Cs[i] not in kwargs:
+                kwargs[EIS_Cs[i]]="C{0}".format(i+1)
+            elif kwargs[EIS_Cs[i]]=="C":
+                kwargs[EIS_Cs[i]]="C{0}".format(i+1)
+            elif kwargs[EIS_Cs[i]]=="CPE":
+                kwargs[EIS_Cs[i]]=("Q{0}".format(i+1), "alpha{0}".format(i+1))
+                if i==1 and "cpe_alpha_faradaic" not in params:
+                    raise ValueError("Need a cpe_alpha_faradaic param")
+                else:
+                    self.dim_dict["cpe_alpha_faradaic"]=params["cpe_alpha_faradaic"]
+                if i==0 and "cpe_alpha_cdl" not in params:
+                    raise ValueError("Need a cpe_alpha_cdl param")
+                else:
+                    self.dim_dict["cpe_alpha_cdl"]=params["cpe_alpha_cdl"]
+               
+            else:
+                raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element)".format(EIS_Cs[i]))
+            self.simulation_options[EIS_Cs[i]]= kwargs[EIS_Cs[i]]
+        self.Laviron_circuit={"z1":"R0", "z2":{"p1":kwargs["EIS_Cdl"], "p2":["R1", kwargs["EIS_Cf"]]}}
+        self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=False)
+        self.simulation_options["DC_pot"]=params["DC_pot"]
+        for key in ["k_0", "E_0", "alpha", "gamma","area", "Ru", "Cdl"]:
+            self.dim_dict[key]=params[key]
+        return self.simulate([], frequencies)
     def simulate(self, parameters, frequencies):
         if self.simulation_options["label"]=="cmaes":
             params=self.change_norm_group(parameters, "un_norm")
@@ -422,8 +471,8 @@ class Laviron_EIS(single_electron):
         area=self.dim_dict["area"]
         dc_pot=self.simulation_options["DC_pot"]
         ratio=np.exp(self.FRT*(e0-dc_pot))
-        red=gamma/(ratio+1)
-        ox=gamma-red
+        ox=gamma/(ratio+1)
+        red=gamma-ox
         Ra_coeff=(self.R*self.T)/((self.F**2)*area*k0)
         nu_1_alpha=np.exp((1-alpha)*self.FRT*(dc_pot-e0))
         nu_alpha=np.exp((-alpha)*self.FRT*(dc_pot-e0))
@@ -437,9 +486,9 @@ class Laviron_EIS(single_electron):
         
         if self.simulation_options["EIS_Cdl"]=="C1":
             EIS_params["C1"]=self.dim_dict["Cdl"]
-        else:
-            print(self.simulation_options["EIS_Cdl"])
-            raise NotImplementedError
+        elif self.simulation_options["EIS_Cdl"]==("Q1", "alpha1"):
+            EIS_params["Q1"]=self.dim_dict["Cdl"]
+            EIS_params["alpha1"]=self.dim_dict["cpe_alpha_cdl"]
         if self.simulation_options["EIS_Cf"]=="C2":
             EIS_params["C2"]=Cf
         elif self.simulation_options["EIS_Cf"]==("Q2", "alpha2"):
@@ -449,14 +498,24 @@ class Laviron_EIS(single_electron):
         #print(EIS_params)
         #.print(Ra_coeff)
         #EIS_params={'R0': 5, 'C1': 1e-06, 'R1': 59.27316911806477, 'C2': 2.4156737037803954e-05}
-
         Z_vals=self.simulator.test_vals(EIS_params, frequencies)
+        
         if self.simulation_options["test"]==True:
             fig, ax=plt.subplots()
             self.simulator.nyquist(Z_vals, ax=ax, orthonormal=False, s=1)
             self.simulator.nyquist(self.secret_data_EIS, ax=ax, orthonormal=False, s=1)
             plt.show()
-        return Z_vals
+        if self.simulation_options["data_representation"]=="nyquist": 
+            return Z_vals
+        elif self.simulation_options["data_representation"]=="bode":
+            return_arg=self.simulator.convert_to_bode(Z_vals)
+            if self.simulation_options["bode_split"]!=None:
+                if self.simulation_options["bode_split"]=="phase":
+                    return return_arg[:,0]
+                elif self.simulation_options["bode_split"]=="magnitude":
+                    return return_arg[:,1]
+            else:
+                return return_arg
 class PSV_harmonic_minimum(single_electron):
     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
         simulation_options["method"]="sinusoidal"

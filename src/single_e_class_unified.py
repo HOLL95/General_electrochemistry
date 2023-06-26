@@ -88,9 +88,13 @@ class single_electron:
         if self.simulation_options["experimental_fitting"]==True:
             self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
             self.secret_data_time_series=other_values["experiment_current"]
+            fft=np.fft.fft(other_values["experiment_current"])
+            abs_fft=np.abs(fft)
+            fft_freq=np.fft.fftfreq(len(other_values["experiment_current"]), self.t_nondim(other_values["experiment_time"][1]-other_values["experiment_time"][0]))
+            max_freq=abs(max(fft_freq[np.where(abs_fft==max(abs_fft))]))
+            self.init_freq=max_freq
         if isinstance(self.simulation_options["sample_times"], list):
             self.simulation_options["sample_times"]=np.divide(self.simulation_options["sample_times"],self.nd_param.c_T0)
-
     def calculate_times(self,):
             self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
             if self.simulation_options["experimental_fitting"]==True:
