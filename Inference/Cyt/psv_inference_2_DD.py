@@ -18,18 +18,18 @@ import numpy as np
 import pints
 
 data_loc="/home/user/Documents/Experimental_data/7_6_23/Text_files/PSV_text"
-file_name="PGE_50_mVs-1_DEC_cv_"
+file_name="PSV_500_100_DD_DEC_cv_"
 blank_file="Blank_PGE_50_mVs-1_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
 voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")
 volt_data=voltage_data_file[:, 1]
-blank_data_current=np.loadtxt(data_loc+"/"+blank_file+"current")
-h_class=harmonics(list(range(4, 9)),9.013630669831166, 0.05)
-h_class.plot_harmonics(current_data_file[:,0], farad_time_series=current_data_file[:,1], blank_time_series=blank_data_current[:,1], xaxis=volt_data, plot_func=np.imag)
+
+h_class=harmonics(list(range(4, 9)),8.8475, 0.1)
+h_class.plot_harmonics(current_data_file[:,0], farad_time_series=current_data_file[:,1],  xaxis=volt_data, plot_func=np.imag)
 plt.show()
 fig,ax =plt.subplots(1,1)
-h_class.plot_ffts(current_data_file[:,0], current_data_file[:,1], ax=ax, harmonics=h_class.harmonics, plot_func=np.real)
-h_class.plot_ffts(current_data_file[:,0], blank_data_current[:,1],ax=ax, harmonics=h_class.harmonics, plot_func=np.real)
+h_class.plot_ffts(current_data_file[:,0], current_data_file[:,1], ax=ax,  plot_func=abs)
+
 plt.show()
 param_list={
     "E_0":-0.3,
@@ -44,8 +44,8 @@ param_list={
     'CdlE1': 0,#0.000653657774506,
     'CdlE2': 0,#0.000245772700637,
     "CdlE3":0,
-    'gamma': 1e-12,
-    "original_gamma":1e-12,        # (surface coverage per unit area)
+    'gamma': 1e-10,
+    "original_gamma":1e-10,        # (surface coverage per unit area)
     'k_0': 1000, #(reaction rate s-1)
     'alpha': 0.5,
     "E0_mean":0.2,
@@ -93,10 +93,10 @@ param_bounds={
     'omega':[0.98*param_list['omega'],1.02*param_list['omega']],#8.88480830076,  #    (frequency Hz)
     'Ru': [0, 3e2],  #     (uncompensated resistance ohms)
     'Cdl': [0,5e-4], #(capacitance parameters)
-    'CdlE1': [-0.2,0.2],#0.000653657774506,
+    'CdlE1': [-0.3,0.3],#0.000653657774506,
     'CdlE2': [-0.1,0.1],#0.000245772700637,
     'CdlE3': [-0.05,0.05],#1.10053945995e-06,
-    'gamma': [0.1*param_list["original_gamma"],5*param_list["original_gamma"]],
+    'gamma': [0.1*param_list["original_gamma"],2.5*param_list["original_gamma"]],
     'k_0': [10, 7e3], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[0.8*3*math.pi/2, 1.2*3*math.pi/2],
@@ -117,10 +117,7 @@ cyt=single_electron(None, param_list, simulation_options, other_values, param_bo
 
 
 
-copied_other["experiment_current"]=blank_data_current[:,1]
-copied_other["experiment_time"]=blank_data_current[:,0]
-copied_other["experiment_voltage"]=volt_data
-blank=single_electron(None, copied_params, copied_sim, copied_other, param_bounds)
+
 del current_data_file
 del voltage_data_file
 time_results=cyt.other_values["experiment_time"]
@@ -135,7 +132,6 @@ cyt.dim_dict["alpha"]=0.5
 vals=[-0.3403576203057195, 0.03345299856337525, 26.62893724795758, 203.77762900790842, 9.505015320798037e-06, 0.09802559279315218, 0.09911932121943812, 0.0023921732975998727, 4.999999894560245e-11, 9.015294856429078, 4.390524760328755, 4.3613096488276915, 0.5999993611472638]
 vals=[-0.3322103735054666, 0.099999999968551, 106.99327954186367, 71.5634998596017, 1.9999998146645936e-05, -0.09999999947868252, -0.02399493062401674, -0.0008706974291918315, 1.164136551651557e-10, 9.015049902227965, 5.395798821699693, 5.210659866188017, 0.400000002693071]
 vals=[-0.3235422429210039, 0.0999999995574518, 96.66237266990319, 49.4141315707467, 9.999700576833107e-05, -0.1498437469686061, -0.007907806379936225, -0.00022932119418286184, 1.1943059048895418e-10, 9.015052044193897, 5.53225110499901, 5.273923188038943, 0.4000000312109022]
-#vals=[-0.2916764259015383, 0.0673696995878654, 6045.410782047898, 151.48111246608684, 0.00010226887730389487, -0.04147086371670844, -0.02155953745324922, 0.002858575637595541, 1.7256036773206496e-10, 9.01881763904783, 5.638261869170169, 5.140376071994409, 0.5999980936166261]
 
 
 test=cyt.test_vals(vals, "timeseries")
@@ -160,22 +156,16 @@ cyt.simulation_options["label"]="cmaes"
 cyt.simulation_options["test"]=False
 score = pints.SumOfSquaresError(cmaes_problem)
 CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
-num_runs=10
+num_runs=20
 for i in range(0, num_runs):
     x0=abs(np.random.rand(cyt.n_parameters()))#
     #x0=cyt.change_norm_group(vals, "norm")
     print(x0)
     print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
-    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0,cmaes_problem.n_parameters())], boundaries=CMAES_boundaries, method=pints.CMAES)
+    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.05 for x in range(0,cmaes_problem.n_parameters())], boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
     cmaes_fitting.set_parallel(True)
-    save_file="PSV_inference_modified_{0}.txt".format(i+1)
-    #cmaes_fitting.set_log_to_file(filename=save_file, csv=False)
     found_parameters, found_value=cmaes_fitting.run()
-    
     cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
-    #f=open(save_file, "a")
-    #f.write("["+(",").join([str(x) for x in cmaes_results])+"]")
-    #f.close()
     cmaes_time=cyt.test_vals(cmaes_results, likelihood="fourier", test=False)
     print(list(cmaes_results))
