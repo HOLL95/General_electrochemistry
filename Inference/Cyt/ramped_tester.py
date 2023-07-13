@@ -17,7 +17,7 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 
-data_loc="/home/user/Documents/Experimental_data/7_6_23/Text_files/FTV_text"
+data_loc="/home/henney/Documents/Oxford/Experimental_data/Henry/7_6_23/Text_files/FTV_text/"
 file_name="FTV_50mV_DD_600_100_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
 voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")

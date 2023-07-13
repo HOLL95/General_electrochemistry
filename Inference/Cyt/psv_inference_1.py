@@ -17,12 +17,13 @@ from harmonics_plotter import harmonics
 import numpy as np
 import pints
 
-data_loc="/home/user/Documents/Experimental_data/7_6_23/Text_files/PSV_text"
+data_loc="/home/henney/Documents/Oxford/Experimental_data/Henry/7_6_23/Text_files/PSV_text/"
 file_name="PGE_50_mVs-1_DEC_cv_"
 blank_file="Blank_PGE_50_mVs-1_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
 voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")
 volt_data=voltage_data_file[:, 1]
+
 blank_data_current=np.loadtxt(data_loc+"/"+blank_file+"current")
 h_class=harmonics(list(range(4, 9)),9.013630669831166, 0.05)
 h_class.plot_harmonics(current_data_file[:,0], farad_time_series=current_data_file[:,1], blank_time_series=blank_data_current[:,1], xaxis=volt_data, plot_func=np.imag)

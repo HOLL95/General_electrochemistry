@@ -455,12 +455,13 @@ class Laviron_EIS(single_electron):
         for key in ["k_0", "E_0", "alpha", "gamma","area", "Ru", "Cdl"]:
             self.dim_dict[key]=params[key]
         return self.simulate([], frequencies)
-    def simulate(self, parameters, frequencies):
+    def simulate(self, parameters, frequencies, print_circuit_params=False):
         if self.simulation_options["label"]=="cmaes":
             params=self.change_norm_group(parameters, "un_norm")
         else:
             params=parameters
         for i in range(0, len(self.optim_list)):
+
             self.dim_dict[self.optim_list[i]]=params[i]
         
         k0=self.dim_dict["k_0"]
@@ -495,6 +496,8 @@ class Laviron_EIS(single_electron):
             cpe_alpha=abs(1-self.dim_dict["cpe_alpha_faradaic"])
             EIS_params["Q2"]=1/(Cf**(cpe_alpha-1)*Ra**(-cpe_alpha))
             EIS_params["alpha2"]=self.dim_dict["cpe_alpha_faradaic"]
+        if print_circuit_params==True:
+            print(EIS_params)
         #print(EIS_params)
         #.print(Ra_coeff)
         #EIS_params={'R0': 5, 'C1': 1e-06, 'R1': 59.27316911806477, 'C2': 2.4156737037803954e-05}
@@ -509,12 +512,15 @@ class Laviron_EIS(single_electron):
             return Z_vals
         elif self.simulation_options["data_representation"]=="bode":
             return_arg=self.simulator.convert_to_bode(Z_vals)
+            if "phase" in self.optim_list:
+                return_arg[:,0]+=self.dim_dict["phase"]
             if self.simulation_options["bode_split"]!=None:
                 if self.simulation_options["bode_split"]=="phase":
                     return return_arg[:,0]
                 elif self.simulation_options["bode_split"]=="magnitude":
                     return return_arg[:,1]
             else:
+               
                 return return_arg
 class PSV_harmonic_minimum(single_electron):
     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):

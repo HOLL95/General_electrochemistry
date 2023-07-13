@@ -5,7 +5,7 @@ import copy
 import re
 from numpy import multiply, divide
 class params:
-    def __init__(self,param_dict, multi_flag=False):
+    def __init__(self,param_dict,multi_flag={}):
         SWV_set={"deltaE", "sampling_factor", "SW_amplitude", "scan_increment"}
         if len(set(param_dict.keys()).intersection(SWV_set))>0:
             warnings.warn("Using square-wave nondimensionalisation")
@@ -42,10 +42,11 @@ class params:
                                 }
             keys=sorted(param_dict.keys())
             
-            k_p=re.compile("^k(?:0|_0)?_[0-9]*(?:_scale)?$")
+            k_p=re.compile("^k(?:0|_0)*(?:_scale)?_[0-9]+$")
             if multi_flag==True:
                 e_match=re.compile("^E(?:0|_0|0_mean|0_std)_[0-9]*$")
             for i in range(0, len(keys)):
+                
                 if keys[i].lower() in self.method_switch:
                     self.non_dimensionalise(keys[i], param_dict[keys[i]])
                 elif k_p.match(keys[i])!=None or keys[i]=="k0_scale":

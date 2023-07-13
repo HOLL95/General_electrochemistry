@@ -26,6 +26,7 @@ class MCMC_plotting:
                         'CdlE3': "",#1.10053945995e-06,
                         'gamma': 'mol cm$^{-2}$',
                         'k_0': '$s^{-1}$', #(reaction rate s-1)
+                        "kcat":"$s^{-1}$",
                         'alpha': "",
                         'E0_skew':"",
                         "E0_mean":"V",
@@ -71,6 +72,7 @@ class MCMC_plotting:
                         "alpha_mean": "$\\alpha\\mu$",
                         "alpha_std": "$\\alpha\\sigma$",
                         'phase' : "$\\eta$",
+                        "kcat":"$k_{cat}$",
                         "sampling_freq":"Sampling rate",
                         "":"Experiment",
                         "noise":"$\sigma$",
@@ -80,6 +82,19 @@ class MCMC_plotting:
                         "cpe_alpha_cdl" :"$\\psi$ $(C_{dl})$",
                         "sigma":"$\\sigma$"
                         }
+        self.dispersion_symbols={
+                                "mean":"$\\mu$", 
+                                "std":"$\\sigma$", 
+                                "skew":"$\\kappa$", 
+                                "shape":"$\\mu$",
+                                "scale":"$\\sigma$",
+                                "upper":r"${_ub}$", 
+                                "lower":r"${_lb}$", 
+                                "logupper":r"${_ub}$", 
+                                "loglower":r"${_lb}$", 
+        }
+        self.nounits=["skew", "shape", "scale", "logupper", "loglower"]
+        self.dispersion_params=list(self.dispersion_symbols.keys())
     def det_subplots(self, value):
         if np.floor(np.sqrt(value))**2==value:
             return int(np.sqrt(value)), int(np.sqrt(value))
@@ -98,33 +113,67 @@ class MCMC_plotting:
                 return int(rows[idx_0[0][-1]]), int(value/rows[idx_0[0][-1]])
             value+=1
     def get_titles(self, titles, **kwargs):
+
         if "units" not in kwargs:
             kwargs["units"]=True
         if "positions" not in kwargs:
             kwargs["positions"]=range(0, len(titles))
         params=["" for x in kwargs["positions"]]
-       
+        self.plot_units={}
         for i in range(0, len(kwargs["positions"])):
             z=kwargs["positions"][i]
             if titles[z] in self.fancy_names:
+                self.plot_units[titles[z]]=self.unit_dict[titles[z]]
                 if kwargs["units"]==True and self.unit_dict[titles[z]]!="":
                     
                     params[i]=self.fancy_names[titles[z]]+" ("+self.unit_dict[titles[z]]+")" 
+                    
                 else:
                     params[i]=self.fancy_names[titles[z]]
             else:
-                for key in self.fancy_names.keys():
-                    if re.search(".*_[1-9]+", titles[z]) is not None:
-                        underscore_idx=[i for i in range(0, len(titles[z])) if titles[z][i]=="_"]
-                        true_name=titles[z][:underscore_idx[-1]]
-                        value=titles[z][underscore_idx[-1]+1:]
-                        if kwargs["units"]==True and self.unit_dict[true_name]!="":
-                            params[i]=self.fancy_names[true_name]+"$_{"+value +"}$"+" ("+self.unit_dict[true_name]+")" 
+                disped=False
+                
+                for q in range(0, len(self.dispersion_params)):
+                    if self.dispersion_params[q] in self.nounits:
+                        nounits=True
+                    else:
+                        nounits=False
+                    if "_"+self.dispersion_params[q] in titles[z]:
+                        disped=True
+                        if re.search(".*_[1-9]+", titles[z]) is not None:
+                            fname, true_name=self.numbered_title(titles[z], units=False)
                         else:
-                            params[i]=self.fancy_names[true_name]+"$_{"+value +"}$"
-                        break
-
+                            fname=re.findall(".*(?=_{0})".format(self.dispersion_params[q]), titles[z])[0]
+                            true_name=fname
+                        if nounits==True:
+                            self.plot_units[titles[z]]=""
+                        else:
+                            self.plot_units[titles[z]]=self.unit_dict[true_name]
+                        if kwargs["units"]==True and self.unit_dict[true_name]!="" and nounits==False:
+                            params[i]=self.fancy_names[fname]+self.dispersion_symbols[self.dispersion_params[q]] +" ("+self.unit_dict[true_name]+")" 
+                        else:
+                            params[i]=self.fancy_names[fname]+self.dispersion_symbols[self.dispersion_params[q]]
+                if disped==False:
+                    if re.search(".*_[1-9]+", titles) is not None:
+                        params[i],true_name=self.numbered_title(titles[z], kwargs["units"])
+                        self.plot_units[titles[z]]=self.unit_dict[true_name]
+                
         return params
+    def numbered_title(self, name, **kwargs):
+        for key in self.fancy_names.keys():
+            underscore_idx=[i for i in range(0, len(name)) if name[i]=="_"]
+            true_name=name[:underscore_idx[0]]
+            if len(underscore_idx)==1:
+                value=name[underscore_idx[0]+1:]
+            else:
+                value=name[underscore_idx[0]+1:underscore_idx[1]]
+            if kwargs["units"]==True and self.unit_dict[true_name]!="":
+
+                return_name=self.fancy_names[true_name]+"$_{"+value +"}$"+" ("+self.unit_dict[true_name]+")" 
+            else:
+                return_name=self.fancy_names[true_name]+"$_{"+value +"}$"
+            break
+        return return_name, true_name
     def format_values(self, value, dp=2):
         abs_val=abs(value)
         if abs_val<1000 and abs_val>0.01:
@@ -134,8 +183,8 @@ class MCMC_plotting:
     def get_units(self, titles, **kwargs):
         if "positions" not in kwargs:
             kwargs["positions"]=range(0, len(titles))
-        units=[self.unit_dict[titles[x]] for x in kwargs["positions"]]
-        return units
+        self.get_titles(titles, positions=kwargs["positions"])
+        return self.plot_units
     def change_param(self, params, optim_list, parameter, value):
         param_list=copy.deepcopy(params)
         param_list[optim_list.index(parameter)]=value

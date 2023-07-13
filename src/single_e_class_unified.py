@@ -64,6 +64,7 @@ class single_electron:
         self.num_harmonics=len(self.harmonic_range)
         self.nd_param=params(dim_parameter_dictionary)
         self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
+        self.nondim_flag_dict={}
         self.def_optim_list(self.simulation_options["optim_list"])
         self.boundaries=None
         if "square_wave" not in self.simulation_options["method"]:
@@ -414,7 +415,7 @@ class single_electron:
         frequencies=f
         top_hat=copy.deepcopy(Y)
         scale_flag=False
-        true_harm=self.nd_param.nd_param_dict["omega"]*self.nd_param.c_T0
+        true_harm=self.dim_dict["omega"]*self.nd_param.c_T0
         print(self.harmonic_range[-1], true_harm)
         if self.simulation_options["fourier_scaling"]!=None:
                 scale_flag=True
@@ -527,16 +528,17 @@ class single_electron:
         
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
-        self.nd_param=params(self.dim_dict)
+        self.nd_param=params(self.dim_dict, self.nondim_flag_dict)
     def return_distributions(self, bins):
         original_bins=self.simulation_options["dispersion_bins"]
         if type(bins) is not list:
             bins=[bins]
         self.simulation_options["dispersion_bins"]=bins
         if self.simulation_options["GH_quadrature"]==True:
-            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+            sim_params, values, weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
         else:
-            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+            sim_params, values, weights=self.disp_class.generic_dispersion(self.dim_dict)
+       
         self.simulation_options["dispersion_bins"]=original_bins
         return values, weights
     def SW_sampling(self,):
@@ -587,16 +589,23 @@ class single_electron:
         time_series=np.zeros(len(self.time_vec))
 
         if self.simulation_options["GH_quadrature"]==True:
-            sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+            sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
         else:
-            sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+            sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
         self.disp_test=[]
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
-                self.nd_param.nd_param_dict[sim_params[j]]=self.values[i][j]
-            start=time.time()
+                #print(sim_params[j],self.values[i][j])
+                
+                self.dim_dict[sim_params[j]]=self.values[i][j]
+                
+            #start=time.time()
+            if self.simulation_options["phase_only"]==True:
+                self.dim_dict["cap_phase"]=self.dim_dict["phase"]
+            self.nd_param=params(self.dim_dict, self.nondim_flag_dict)
+            #print([self.dim_dict[x] for x in ["E_0","gamma","k_0" , "Cdl", "alpha", "Ru", "phase", "cap_phase"]])
             time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
-            print(time.time()-start)
+            #print(time.time()-start)
             if self.simulation_options["dispersion_test"]==True:
                 self.disp_test.append(time_series_current)
             time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
@@ -668,6 +677,13 @@ class single_electron:
         with mp.Pool(processes=mp.cpu_count()) as P:
             P.map(para_func,param_enumerate_arg)
         return globals()["ts_arr"]  
+    def normalisation(self, parameters):
+        if self.simulation_options["label"]=="cmaes":
+            normed_params=self.change_norm_group(parameters, "un_norm")
+        else:
+            normed_params=copy.deepcopy(parameters)
+        return normed_params
+
     def simulate(self,parameters, frequencies):
        
         start=time.time()
@@ -675,11 +691,7 @@ class single_electron:
             print(self.optim_list)
             print(parameters)
             raise ValueError('Wrong number of parameters')
-        if self.simulation_options["label"]=="cmaes":
-            normed_params=self.change_norm_group(parameters, "un_norm")
-        else:
-            normed_params=copy.deepcopy(parameters)
-
+        normed_params=self.normalisation(parameters)
         
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.max_freq=0
@@ -704,7 +716,7 @@ class single_electron:
         if self.simulation_options["phase_only"]==True:
             self.dim_dict["cap_phase"]=self.dim_dict["phase"]
        
-        self.nd_param=params(self.dim_dict)
+        self.nd_param=params(self.dim_dict, self.nondim_flag_dict)
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.nd_param.nd_param_dict["time_end"]=5
             self.times()

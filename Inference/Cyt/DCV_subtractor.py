@@ -95,7 +95,7 @@ param_bounds={
     "all_phases":[0, 2*math.pi],
     "dcv_sep":[0, 0.5]
 }
-data_loc="/home/user/Documents/Experimental_data/7_6_23/Text_files/DCV_EIS_text/"
+data_loc="/home/henney/Documents/Oxford/Experimental_data/Henry/7_6_23/Text_files/DCV_EIS_text/"
 DCV_data=np.loadtxt(data_loc+"dcV_60mVs-1_100_uA_-0.5_to_0.1_V", skiprows=2)
 #DCV_data=np.loadtxt("25 exported.txt_4", skiprows=2)
 time=DCV_data[:,0]

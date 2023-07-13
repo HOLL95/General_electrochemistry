@@ -11,12 +11,13 @@ sys.path.append(source_loc)
 print(sys.path)
 from single_e_class_unified import single_electron
 from EIS_class import EIS
+from EIS_TD import EIS_TD
 import numpy as np
 def potential(amp,frequency, time, phase):
     return amp*np.sin(2*np.pi*frequency*time+phase)
 def current(cdl,frequency, time, phase):
     return (cdl)*frequency*np.cos(2*np.pi*frequency*time+phase)
-
+DC_val=0.3
 class eis_sim:
     def __init__(self, param_list, simulation_options, other_values, param_bounds, optim_list):
         
@@ -36,32 +37,30 @@ class eis_sim:
         self.sim_class=sim_class
         return sim_class.test_vals(params, "timeseries")
 param_list={
-        "E_0":0.001,
-        'E_start':  -5e-3, #(starting dc voltage - V)
-        'E_reverse':5e-3,
+       "E_0":0.3001,
+        'E_start':  DC_val-10e-3, #(starting dc voltage - V)
+        'E_reverse':DC_val+10e-3,
         'omega':10,  #    (frequency Hz)
         "original_omega":10,
-        'd_E': 5e-3,   #(ac voltage amplitude - V) freq_range[j],#
+        'd_E': 10e-3,   #(ac voltage amplitude - V) freq_range[j],#
         'area': 0.07, #(electrode surface area cm^2)
         'Ru': 100,  #     (uncompensated resistance ohms)
-        'Cdl':1e-5, #(capacitance parameters)
-        'CdlE1': 0.000653657774506*0,
-        'CdlE2': 0.000245772700637*0,
+        'Cdl': 1e-5, #(capacitance parameters)
+        'CdlE1': 0,
+        'CdlE2': 0,
         "CdlE3":0,
-        'gamma': 1e-10*0,
+        'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
         'k_0': 10, #(reaction rate s-1)
         'alpha': 0.55,
-        "E0_mean":0.2,
-        "E0_std": 0,
-    
-        "alpha_mean":0.45,
-        "alpha_std":1e-3,
-        'sampling_freq' : (1.0/2**8),
-        'phase' :0,
+        "sampling_freq":1/(2**8),
+        "cpe_alpha_faradaic":1,
+        "cpe_alpha_cdl":1,
+        "phase":0,
+        "E0_mean":DC_val,
+        "E0_std":0.02,
         "cap_phase":0,
-        "time_end": None,
-        'num_peaks': 5,
+        "num_peaks":5
     }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -115,7 +114,7 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
     frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
     freqs=[10**x for x in frequency_powers]
     Z=np.zeros((len(freqs), num_points), dtype="complex")
-    threshold=0.1
+    threshold=0.5
     phase=0
     impedances=np.zeros(len(freqs), dtype="complex")
     magnitudes=np.zeros(len(freqs))
@@ -130,16 +129,17 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
 
         nd_current=sim_class.simulate(parameters)#current(cdl, freqs[i], times,phase)
         conv_class=sim_class.sim_class
+        #print(conv_class.optim_list, parameters)
         I=conv_class.i_nondim(nd_current)
-        I=conv_class.add_noise(I, 0.01*max(I))
+        #I=conv_class.add_noise(I, 0.01*max(I))
         if i==0:
             print(conv_class.dim_dict["k_0"])
         V=conv_class.e_nondim(conv_class.define_voltages())[conv_class.time_idx]#
-
+        
 
         #V1=potential(amplitude, freqs[i], times1, phase)
         times=conv_class.t_nondim(conv_class.time_vec)[conv_class.time_idx]
-        
+   
         #plt.plot(abs(np.fft.fft(I)))
         #I+=+0.5*max(I)*np.random.rand(len(I))
         #I=np.add(I, max(I)*np.random.rand(len(I)))
@@ -156,14 +156,15 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
             
             fft=1/num_points*np.fft.fftshift(np.fft.fft(dataset))
             abs_fft=abs(fft)
-            fft[abs_fft<threshold*max(abs_fft[1:])]=1e-10
+            fft[abs_fft<threshold*max(abs_fft)]=1e-10
             ffts.append(fft)
 
      
 
         Z_f=np.divide(ffts[0], ffts[1])
-        #plt.plot(times,V)
+        #plt.plot(times, I)
         #plt.show()
+
 
         abs_fft=np.abs(Z_f)
         #abs_V=np.abs(fft_V)
@@ -206,58 +207,51 @@ max_f=6
 points_per_decade=10
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-param_val_scans={"k_0":[0.1,  125], 
+param_val_scans={"k_0":[10,  125], 
             "gamma":[7.5e-11,  1.25e-10],
             "Cdl":[2e-5, 5e-4],
             "Ru":[0.1,  500], 
-            "alpha":[0.4,0.7],
-            "phase":[0, 1]}
+            "cap_phase":[0, 1], 
+            "E0_std":[1e-3, 0.05]}
 num_steps=4
+td=EIS_TD(param_list,simulation_options,other_values, param_bounds)
+frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
+freqs=[10**x for x in frequency_powers]
+bd=td.simulate([], freqs)
+
 for key in param_val_scans.keys():
     param_range=param_val_scans[key]
     dist=param_range[1]-param_range[0]
     step=dist/num_steps
     param_val_scans[key]=np.arange(param_range[0], param_range[1], step)
-fig, ax=plt.subplots(2,3)
-fig2, ax2=plt.subplots(2,3)
+fig, ax=plt.subplots()
+twinx=ax.twinx()
 import copy
-param_names=list(param_val_scans.keys())
+sim_params=list(param_val_scans.keys())
+param_names=sim_params
 save_dict={}
+print(bd, "me")
+EIS().bode(bd, freqs, data_type="phase_mag", ax=ax, twinx=twinx)
+plt.show()
+for i in range(0, len(sim_params)):
 
-for i in range(0, len(param_names)):
-    axis=ax[i//3, i%3]
 
     
     key=param_names[i]
     save_dict[key]={}
-    axis.set_title(key)
-    twinx=axis.twinx()
+
 
     for j in range(0, len(param_val_scans[key])):
         save_dict[key][str(param_val_scans[key][j])]={}
-        """ if i==0:
-                if j==0:
-                    copy_list=copy.deepcopy(param_list)
-                    copy_list[key]=param_val_scans[key][j]
-                
-                    frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
-                    freqs=[10**x for x in frequency_powers]
-                    sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
-                    param_dict={key:copy_list[key] for key in param_names}
-                    param_dict["E_0"]=0.001
-                    m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
-                                        parameters=param_dict,sim_class=sim_class, 
-                                        sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )"""
 
-
-                
                
         copy_list=copy.deepcopy(param_list)
         copy_list[key]=param_val_scans[key][j]
     
         frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
         freqs=[10**x for x in frequency_powers]
-        sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
+        sim_class=eis_sim(param_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
+
         param_dict={key:copy_list[key] for key in param_names}
         param_dict["E_0"]=0.001
         m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
@@ -272,8 +266,8 @@ for i in range(0, len(param_names)):
 
         save_dict[key][str(param_val_scans[key][j])]["data"]=save_data
         save_dict[key][str(param_val_scans[key][j])]["freq"]=np.array(freqs)[index]
-        EIS().bode(np.column_stack((real, z.imag[index])), save_dict[key][str(param_val_scans[key][j])]["freq"], ax=axis, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
-        EIS().nyquist(np.column_stack((real, z.imag[index])), ax=ax2[i//3, i%3], orthonormal=False)
-#np.save("BV_param_scans_for_laviron_skipping",save_dict)
-plt.show()  
+        EIS().bode(np.column_stack((real, z.imag[index])), save_dict[key][str(param_val_scans[key][j])]["freq"], ax=ax, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
+        #EIS().nyquist(np.column_stack((real, z.imag[index])), ax=ax2[i//3, i%3], orthonormal=False)
+
+        plt.show()  
 

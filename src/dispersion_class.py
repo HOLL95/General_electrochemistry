@@ -34,7 +34,7 @@ class dispersion:
                     raise ValueError("Skewed normal distribution requires "+self.simulation_options["dispersion_parameters"][i]+"_loglower, "+ self.simulation_options["dispersion_parameters"][i]+"_loglower")
             else:
                 raise KeyError(self.simulation_options["dispersion_distributions"][i]+" distribution not implemented")
-    def generic_dispersion(self, nd_dict, GH_dict=None):
+    def generic_dispersion(self, dim_dict, GH_dict=None):
         weight_arrays=[]
         value_arrays=[]
         for i in range(0, len(self.simulation_options["dispersion_parameters"])):
@@ -42,8 +42,8 @@ class dispersion:
                     value_arrays.append(np.linspace(self.simulation_options["dispersion_parameters"][i]+"_lower", self.simulation_options["dispersion_parameters"][i]+"_upper", self.simulation_options["dispersion_bins"][i]))
                     weight_arrays.append([1/self.simulation_options["dispersion_bins"][i]]*self.simulation_options["dispersion_bins"][i])
             elif self.simulation_options["dispersion_distributions"][i]=="normal":
-                    param_mean=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
-                    param_std=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
+                    param_mean=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
+                    param_std=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
                     if type(GH_dict) is dict:
                         param_vals=[(param_std*math.sqrt(2)*node)+param_mean for node in GH_dict["nodes"]]
                         param_weights=GH_dict["normal_weights"]
@@ -63,8 +63,8 @@ class dispersion:
                     weight_arrays.append(param_weights)
             elif self.simulation_options["dispersion_distributions"][i]=="lognormal":
                     param_loc=0
-                    param_shape=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_shape"]
-                    param_scale=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_scale"]
+                    param_shape=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_shape"]
+                    param_scale=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_scale"]
                     print("shape, scale", param_shape, param_scale)
                     min_val=lognorm.ppf(1e-4, param_shape, loc=param_loc, scale=param_scale)
                     max_val=lognorm.ppf(1-1e-4, param_shape, loc=param_loc, scale=param_scale)
@@ -79,9 +79,9 @@ class dispersion:
                     value_arrays.append(param_midpoints)
                     weight_arrays.append(param_weights)
             elif self.simulation_options["dispersion_distributions"][i]=="skewed_normal":
-                    param_mean=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
-                    param_std=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
-                    param_skew=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_skew"]
+                    param_mean=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
+                    param_std=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
+                    param_skew=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_skew"]
                     min_val=skewnorm.ppf(1e-4, param_skew, loc=param_mean, scale=param_std)
                     max_val=skewnorm.ppf(1-1e-4, param_skew, loc=param_mean, scale=param_std)
                     param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
@@ -95,8 +95,8 @@ class dispersion:
                     value_arrays.append(param_midpoints)
                     weight_arrays.append(param_weights)
             elif self.simulation_options["dispersion_distributions"][i]=="log_uniform":
-                    param_upper=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_logupper"]
-                    param_lower=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_loglower"]
+                    param_upper=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_logupper"]
+                    param_lower=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_loglower"]
                     min_val=loguniform.ppf(1e-4, param_lower, param_upper, loc=0, scale=1)
                     max_val=loguniform.ppf(1-1e-4, param_lower,param_upper, loc=0, scale=1)
                     param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
