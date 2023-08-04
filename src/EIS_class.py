@@ -318,12 +318,12 @@ class EIS:
             if paralell==False:
                 def F(**kwargs):
                     #print(kwargs[param[0]]*np.power(kwargs["omega"]*1j, kwargs[param[1]]))
-                    return 1/(kwargs[param[0]]*np.power(kwargs["omega"]*1j, kwargs[param[1]]))
+                    return 1/(kwargs[param[0]]*(np.power(kwargs["omega"]*1j, kwargs[param[1]])))
             else:
                 def F(**kwargs):
                     #print(param[0], param[1], kwargs["omega"], np.float64(kwargs["omega"])*1j)
                     #print(kwargs[param[0]], kwargs[param[1]], np.power(kwargs["omega"]*1j, kwargs[param[1]]))
-                    return  (kwargs[param[0]]*np.power(kwargs["omega"]*1j, kwargs[param[1]]))
+                    return  (kwargs[param[0]]*(np.power(kwargs["omega"]*1j, kwargs[param[1]])))
 
         return F
 
@@ -368,12 +368,13 @@ class EIS:
             final_list=("+").join(final_list)
         print(final_list)
     def freq_simulate(self, **kwargs):
-
+        
         z=0j
         for key in self.circuit.keys():
+            
             if isinstance(self.circuit[key], dict):
                 flattened_list=self.flatten(self.circuit[key]).values()
-
+                
                 vals=[x(**kwargs) for x in flattened_list]
                 z+=1/np.sum(vals)
             else:
@@ -415,8 +416,18 @@ class EIS:
             spectra[i]=self.freq_simulate(**normed_params)
         if self.options["test"]==True:
             print(normed_params, sim_params, self.options["normalise"])
-            plt.plot(np.real(spectra), -np.imag(spectra))
-            plt.show()
+            print(self.options["data_representation"])
+            fig, ax=plt.subplots(1,1)
+            if self.options["data_representation"]=="nyquist":
+                self.nyquist(np.column_stack((np.real(spectra), np.imag(spectra))), orthonormal=False, ax=ax)
+                self.nyquist(self.secret_data, ax=ax)
+                plt.show()
+            elif self.options["data_representation"]=="bode":
+                twinx=ax.twinx()
+                self.bode(np.column_stack((np.real(spectra), np.imag(spectra))),frequencies, orthonormal=False, ax=ax, twinx=twinx)
+                #self.bode(self.secret_data,frequencies, ax=ax, twinx=twinx,data_type="phase_mag")
+                plt.show()
+            
         
         
         if self.options["data_representation"]=="nyquist":
@@ -462,25 +473,43 @@ class EIS:
             kwargs["colour"]=None
         if "orthonormal" not in kwargs:
             kwargs["orthonormal"]=True
-
+        if "lw" not in kwargs:
+            kwargs["lw"]=1.5
+        if "alpha" not in kwargs:
+            kwargs["alpha"]=1
+        if "line" not in kwargs:
+            kwargs["line"]=True
+        elif kwargs["line"]==False:
+            if kwargs["scatter"]==False:
+                raise ValueError(r"Need one of 'line' or 'scatter' to not be False")
+        if "markersize" not in kwargs:
+            kwargs["markersize"]=20
+        if "ylabel" not in kwargs or kwargs["ylabel"]==True:
+            kwargs["ylabel"]="$-Z_{Im}$ ($\\Omega$)"
+        if "xlabel" not in kwargs or kwargs["xlabel"]==True:
+            kwargs["xlabel"]="$Z_{Re}$ ($\\Omega$)"
         ax=kwargs["ax"]
         imag_spectra_mean=np.mean(spectra[:,1])
-        if imag_spectra_mean<0:
+        if kwargs["line"]==True:
+            if imag_spectra_mean<0:
 
-            ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
-        else:
-            ax.plot(spectra[:,0], spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"])
-        ax.set_xlabel("$Z_{Re}$ ($\\Omega$)")
-        ax.set_ylabel("$-Z_{Im}$ ($\\Omega$)")
+                ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            else:
+                warnings.warn("The imaginary portion of the data may be set to negative in your data!")
+                ax.plot(spectra[:,0], spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+        if kwargs["xlabel"]!=False:
+            ax.set_xlabel(kwargs["xlabel"])
+        if kwargs["ylabel"]!=False:
+            ax.set_ylabel(kwargs["ylabel"])
         total_max=max(np.max(spectra[:,0]), np.max(-spectra[:,1]))
         if kwargs["orthonormal"]==True:
             ax.set_xlim([0, total_max+0.1*total_max])
             ax.set_ylim([0, total_max+0.1*total_max])
         if kwargs["scatter"]!=0:
             if imag_spectra_mean<0:
-                ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
+                ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
             else:
-                ax.scatter(spectra[:,0][0::kwargs["scatter"]], spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"])
+                ax.scatter(spectra[:,0][0::kwargs["scatter"]], spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
 
     def bode(self, spectra,frequency, **kwargs):
         if "ax" not in kwargs:
@@ -501,8 +530,22 @@ class EIS:
             kwargs["alpha"]=1
         if "scatter" not in kwargs:
             kwargs["scatter"]=False
+        if "phase_correction" not in kwargs:
+            kwargs["phase_correction"]=False
+        if "no_labels" not in kwargs:
+            kwargs["no_labels"]=False
+        if "markersize" not in kwargs:
+            kwargs["markersize"]=20
+        if "line" not in kwargs:
+            kwargs["line"]=True
+        elif kwargs["line"]==False:
+            if kwargs["scatter"]==False:
+                raise ValueError(r"Need one of 'line' or 'scatter' to not be False")
         if kwargs["data_type"]=="complex":
+            if kwargs["phase_correction"] is not False:
+                spectra[:,0]=np.subtract(spectra[:,0],kwargs["phase_correction"])
             spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
+            
             phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
             #print(np.divide(spectra[:,1], spectra[:,0]))
             magnitude=np.log10(np.abs(spectra))#np.add(np.square(spectra[:,0]), np.square(spectra[:,1]))
@@ -520,18 +563,19 @@ class EIS:
         x_freqs=np.log10(frequency)
         if kwargs["type"]=="both":
             twinx=kwargs["twinx"]
-            ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
-            
-            if kwargs["compact_labels"]==False:
-                ax.set_ylabel("-Phase")
-                twinx.set_ylabel("Magnitude")
-            else:
-                ax.text(x=-0.05, y=1.05, s="$-\\psi$", fontsize=12, transform=ax.transAxes)
-                ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
-            twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"])
+            if kwargs["line"]==True:
+                ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+                if kwargs["no_labels"]!=True:
+                    if kwargs["compact_labels"]==False:
+                        ax.set_ylabel("-Phase")
+                        twinx.set_ylabel("Magnitude")
+                    else:
+                        ax.text(x=-0.05, y=1.05, s="$-\\psi$", fontsize=12, transform=ax.transAxes)
+                        ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
+                twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"])
             if kwargs["scatter"] is not False:
-                ax.scatter(x_freqs, -phase)
-                twinx.scatter(x_freqs, magnitude, marker="v")
+                ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"])
+                twinx.scatter(x_freqs[0::kwargs["scatter"]], magnitude[0::kwargs["scatter"]], marker="v", s=kwargs["markersize"])
             
         elif kwargs["type"]=="phase":
             if kwargs["compact_labels"]==False:

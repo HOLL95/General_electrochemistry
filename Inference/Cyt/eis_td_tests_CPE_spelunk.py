@@ -53,8 +53,12 @@ param_list={
         "E0_std":0.02,
         "cap_phase":0,
         "num_peaks":20,
-        "Cdl_std":1e-5,
-        "Cdl_mean":1e-5
+        "Cdl_logm":1e-5,
+        "Cdl_logc":1e-5,
+        "cap_phase_logm":0,
+        "cap_phase_logc":0,
+        "cap_phase_m":0,
+        "cap_phase_c":10,
     }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -100,6 +104,10 @@ param_bounds={
     "cap_phase":[0, 2*math.pi],
     "k0_shape":[0,100],
     "k0_scale":[0,2],
+    "Cdl_logm":[-100, 100],
+    "Cdl_logc":[-100, 100],
+    "cap_phase_logc":[-100, 100],
+    "cap_phase_c":[-100,100]
     
 }
 for key in param_list.keys():
@@ -109,19 +117,27 @@ num_peaks=[20]
 
 
 
-vals=[(2.218816227173815e-06,), (3.0578358938160653e-06,), (4.0495736232709174e-06,), (5.041311352725769e-06,), (6.033049082180621e-06,), (7.0247868116354735e-06,), (8.016524541090324e-06,), (9.008262270545177e-06,), (1.000000000000003e-05,), (1.099173772945488e-05,), (1.1983475458909733e-05,), (1.2975213188364586e-05,), (1.3966950917819437e-05,), (1.495868864727429e-05,), (1.595042637672914e-05,), (1.6942164106183993e-05,)]
 
-for val in vals:
-        td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
-        freqs=td.define_frequencies(-1,6)
-        td.def_optim_list(["E_0","gamma","k_0" , "Cdl", "alpha", "Ru", "phase", "cap_phase"])
-        sim_vals=[0, 1e-10*0, 100, 1.000000000000003e-05, 0.55, 250, 0, 0]
 
-    
-        sim=td.simulate(sim_vals, freqs)
-        fig, ax=plt.subplots(1,1)
-        twinx=ax.twinx()
-        EIS().bode(sim, freqs, ax=ax, twinx=twinx, data_type="phase_mag")
-        plt.show()
+td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
+freqs=td.define_frequencies(-1,6)
+td.def_optim_list(["E_0","gamma","k_0" , "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+sim_vals=[0, 1e-10*0, 100, 1.000000000000003e-05, 0.55, 250, 0, 0]
+
+
+sim=td.simulate(sim_vals, freqs)
+fig, ax=plt.subplots(1,1)
+twinx=ax.twinx()
+EIS().bode(sim, freqs, ax=ax, twinx=twinx, data_type="phase_mag")
+td.def_optim_list(["E_0","gamma","k_0" , "Cdl_logm", "Cdl_logc","alpha", "Ru", "phase", "cap_phase_logm", "cap_phase_logc"])
+sim_vals=[0, 1e-10*0, 100, 1.000000000000003e-06, 1e-6, 0.55, 250, 0,0.1, 0.1]
+
+
+sim2=td.simulate(sim_vals, freqs)
+
+EIS().bode(sim2, freqs, ax=ax, twinx=twinx, data_type="phase_mag")
+
+
+plt.show()
     
 

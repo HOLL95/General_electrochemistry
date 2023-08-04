@@ -23,36 +23,34 @@ data=np.loadtxt(data_loc+"/"+data_file, skiprows=10)
 fitting_data=np.column_stack((np.flip(data[:,0]), np.flip(data[:,1])))
 
 frequencies=np.flip(data[:,2])*2*np.pi
-circuit={"z1":"R0", "z2":{"p_1":[("Q2", "alpha2"), ("Q3", "alpha3")], "p_2":["R1", ("Q1", "alpha1")]}}
-vals={'R0': 100.18458704315661, 'R1': 717261.5848789338, 'Q1': 6.984560646442896e-05,"alpha1":1, 'Q2': 6.656403132020056e-06, "alpha2":1} 
-vals={'R0': 95.59209978737974, 'R1': 411.84647153196534, 'Q1': 5.60970405238147e-05, 'alpha1': 0.6525309089285137, 'Q2': 0.00018957824554479482, 'alpha2': 0.8726813960101358}
+circuit={"z1":"R0", "z2":{"p_1":{"p_1":"C2", "p_2":"R2"}, "p_2":["R1", ("Q1", "alpha1")]}}
+#vals={'R0': 100.18458704315661, 'R1': 717261.5848789338, 'Q1': 6.984560646442896e-05,"alpha1":1, 'Q2': 6.656403132020056e-06, "alpha2":1} 
+#vals={'R0': 95.59209978737974, 'R1': 411.84647153196534, 'Q1': 5.60970405238147e-05, 'alpha1': 0.6525309089285137, 'Q2': 0.00018957824554479482, 'alpha2': 0.8726813960101358}
 
 boundaries={"R0":[1e-3, 1e3,],
             "R1":[1e-3, 1e6,], 
             "R2":[0, 1e6,], 
-            "Q2":[0,1], 
-            "alpha2":[0,1],
             "C2":[0,1],
             "Q1":[0,1],
             "alpha1":[0,1]}
 
-boundaries={key:[0.1*vals[key], 10*vals[key]] for key in vals.keys()}
-boundaries["Q3"]=[0,1]
-boundaries["alpha3"]=[0,1]
+#boundaries={key:[0.1*vals[key], 10*vals[key]] for key in vals.keys()}
+#boundaries["Q3"]=[0,1]
+#boundaries["alpha3"]=[0,1]
 sim_class=EIS(circuit=circuit, fitting=True, parameter_bounds=boundaries, normalise=True)
-#best={'R0': 93.8751449937169, 'R1': 426.57522762509535, 'C2': 0.00018098264633571246, 'alpha2': 0.9017743689145461, 'Q1': 5.75131567495785e-05, 'alpha1': 0.6456615312839018}
-
-#sim_data=sim_class.test_vals(best, frequencies)
-
+best={'R0': 93.8751449937169, 'R1': 426.57522762509535, 'C2': 0.00018098264633571246, "R2":100, 'Q1': 5.75131567495785e-05, 'alpha1': 0.6456615312839018}
 names=sim_class.param_names
 print(names)
+sim_data=sim_class.test_vals(best, frequencies)
+
+
 
 
 
 fig, ax=plt.subplots(1,1)
 twinx=ax.twinx()
 EIS().bode(fitting_data, frequencies, ax=ax, twinx=twinx)
-#EIS().bode(sim_data, frequencies,ax=ax, twinx=twinx)
+EIS().bode(sim_data, frequencies,ax=ax, twinx=twinx)
 plt.show()
 data_to_fit=sim_class.convert_to_bode(fitting_data)
 sim_class.options["data_representation"]="bode"

@@ -84,7 +84,7 @@ simulation_options={
     "numerical_method": solver_list[1],
     "label": "MCMC",
     "optim_list":[],
-    "EIS_Cf":"CPE",
+    "EIS_Cf":"C",
     "EIS_Cdl":"C",
     "DC_pot":0,
     "data_representation":"bode",
@@ -131,7 +131,7 @@ plt.show()"""
 circs=[mark_circuit]
 plot="both"
             
-current_file=np.load("BV_param_scans_for_laviron_skipping.npy", allow_pickle=True).item()
+current_file=np.load("BV_param_scans_for_laviron_skipping_2.npy", allow_pickle=True).item()
 keys=list(current_file.keys())
 keys=['k_0', 'gamma', 'Cdl', 'Ru', 'alpha']
 results_dict={key:{"scale":[], "error":[], "value":[]} for key in keys}
@@ -146,7 +146,7 @@ for i in range(0, len(keys)):
         #        twinx[i,z].set_axis_off()
     key=keys[i]
     param_vals=list(current_file[key].keys())
-    for j in range(0, len(param_vals)):
+    for j in range(12, len(param_vals)):
             """ax=axis[i,j]
             if "both" in plot:
                 twinx=twinxis[i][j]
@@ -184,11 +184,11 @@ for i in range(0, len(keys)):
                 counter+=1
 
                 if found_value>best_score:
-                    
+                    print(copy_params)
                     dim_params=laviron.change_norm_group(found_parameters[:-2], "un_norm")
                     fitted_vals=dict(zip(laviron.optim_list, dim_params))
                     print(fitted_vals)
-                    sim=laviron.simulate(found_parameters[:-2], freq)
+                    sim=laviron.simulate(found_parameters[:-2], freq, print_circuit_params=True)
                     best_score=found_value
                     fig1, ax1=plt.subplots()
                     twinx1=ax1.twinx()

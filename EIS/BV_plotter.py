@@ -48,7 +48,7 @@ param_list={
         'CdlE1': 0.000653657774506*0,
         'CdlE2': 0.000245772700637*0,
         "CdlE3":0,
-        'gamma': 1e-10*0,
+        'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
         'k_0': 10, #(reaction rate s-1)
         'alpha': 0.55,

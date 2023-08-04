@@ -55,7 +55,8 @@ param_list={
         'alpha': 0.55,
         "E0_mean":0.001,
         "E0_std": 1e-3,
-    
+        "k0_shape":0.5,
+        "k0_scale":10,
         "alpha_mean":0.45,
         "alpha_std":1e-3,
         'sampling_freq' : (1.0/2**8),
@@ -210,12 +211,12 @@ max_f=6
 points_per_decade=10
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-param_val_scans={"k_0":[0.1,  125], 
+param_val_scans={"k0_shape":[0.01, 1],
+            "k0_scale":[0.1, 125],
             "gamma":[7.5e-11,  1.25e-10],
             "Cdl":[2e-5, 5e-4],
             "Ru":[0.1,  500], 
-            "cap_phase":[0, 1], 
-            "E0_std":[1e-3, 0.05]}
+            "cap_phase":[0, 1]}
 num_steps=4
 td=EIS_TD(param_list,simulation_options,other_values, param_bounds)
 frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
@@ -233,7 +234,8 @@ fig, ax=plt.subplots(2,3)
 fig2, ax2=plt.subplots(2,3)
 import copy
 sim_params=list(param_val_scans.keys())
-param_names=sim_params+["E0_mean"]
+param_names=sim_params
+#param_names=sim_params+["E0_mean"]
 save_dict={}
 
 for i in range(0, len(sim_params)):

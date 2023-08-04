@@ -302,7 +302,13 @@ class single_electron:
         else:
             self.simulation_options["dispersion"]=False
         if "phase" in optim_list and "cap_phase" not in optim_list:
-            self.simulation_options["phase_only"]=True
+            phase_only=True
+            for i in range(0, len(optim_list)):
+                if "cap_phase" in optim_list[i]:
+                    phase_only=False
+                    break
+            if phase_only==True:
+                self.simulation_options["phase_only"]=True
         if self.simulation_options["method"]=="sum_of_sinusoids":
             if len(optim_list)==0:
                 if len(self.dim_dict["freq_array"])==0:

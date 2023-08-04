@@ -46,6 +46,8 @@ param_list={
         "sampling_freq":1/(2**8),
         "cpe_alpha_faradaic":1,
         "cpe_alpha_cdl":1,
+        "k0_shape":0.4,
+        "k0_scale":10,
         "phase":0,
         "E0_mean":DC_val,
         "E0_std":0.02,
@@ -78,7 +80,7 @@ other_values={
 }
 param_bounds={
     'E_0':[-0.1, 0.1],
-    'E0_mean':[-0.4, -0.1],
+    'E0_mean':[-0.05, 0.05],
     'E0_std':[1e-3, 0.1],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
     'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
@@ -93,11 +95,13 @@ param_bounds={
     "cpe_alpha_faradaic":[0,1],
     "cpe_alpha_cdl":[0,1],
     "phase":[0, 2*math.pi],
+    "k0_shape":[0,2],
+    "k0_scale":[0,1e4],
     "cap_phase":[0, 2*math.pi],
 }
 
 td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
-td.def_optim_list(["E0_std","gamma","k_0",  "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+td.def_optim_list(["E0_mean", "E0_std","gamma","k_0",  "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 #sim_class=EIS(circuit=circuit, fitting=True, parameter_bounds=boundaries, normalise=True)
 #best={'R0': 93.8751449937169, 'R1': 426.57522762509535, 'Q2': 0.00018098264633571246, 'alpha2': 0.9017743689145461, 'Q1': 5.75131567495785e-05, 'alpha1': 0.6456615312839018}
 
@@ -111,8 +115,8 @@ vals={'E_0': 0.06402002478772581, 'gamma': 9.610657703479629e-09, 'k_0': 2.90079
 fig,ax=plt.subplots()
 twinx=ax.twinx()
 EIS().bode(fitting_data, frequencies, ax=ax, twinx=twinx)
-for k0 in [7.350150390584221, 15, 20]:
-    vals={'E0_std': 0.07302817320569106, 'gamma': 3.1143856228599335e-09, 'k_0': k0, 'Cdl': 6.816905229705668e-05, 'alpha': 0.3500000044804436, 'Ru': 108.85079519283647, 'phase': 5.749299141832945, 'cap_phase': 5.77388626067403}
+for k0 in [7.350150390584221]:
+    vals={"E0_mean":DC_val, 'E0_std': 0.07302817320569106, 'gamma': 3.1143856228599335e-09, 'k_0': k0, 'Cdl': 6.816905229705668e-05, 'alpha': 0.3500000044804436, 'Ru': 108.85079519283647, 'phase': 5.749299141832945, 'cap_phase': 5.77388626067403}
     sim_vals=[vals[x] for x in td.optim_list]
     
     k0_vars=td.simulate(sim_vals,  frequencies)
@@ -133,10 +137,12 @@ EIS().nyquist(practice, ax=ax[1], orthonormal=False)
 EIS().nyquist(fitting_data, ax=ax[1], orthonormal=False)
 EIS().nyquist(equiv_fit, ax=ax[1], orthonormal=False)
 plt.show()
+td.def_optim_list(["E0_mean", "E0_std","gamma", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+
 data_to_fit=EIS().convert_to_bode(fitting_data)
 td.simulation_options["label"]="cmaes"
 all_data=np.column_stack((fitting_data, data_to_fit))
-td.other_values["secret_data"]=fitting_data
+td.other_values["secret_data"]=data_to_fit
 cmaes_problem=pints.MultiOutputProblem(td,frequencies,data_to_fit)
 
 
@@ -145,6 +151,7 @@ lower_bound=np.append(np.zeros(len(td.optim_list)), [0]*td.n_outputs())
 upper_bound=np.append(np.ones(len(td.optim_list)), [50]*td.n_outputs())
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
 for i in range(0, 10):
+    print(td.simulation_options["dispersion_parameters"]*20)
     x0=list(np.random.rand(len(td.optim_list)))+[5]*td.n_outputs()
     #x0=td.change_norm_group(sim_vals, "norm")+[5]*td.n_outputs()
     print(len(x0), len(td.optim_list), cmaes_problem.n_parameters())
@@ -156,7 +163,7 @@ for i in range(0, 10):
     real_params=td.change_norm_group(found_parameters[:-td.n_outputs()], "un_norm")
     #real_params=sim_class.change_norm_group(dict(zip(names, found_parameters[:-2])), "un_norm", return_type="dict" )
     print(dict(zip(td.optim_list, list(real_params))))
-
+    
 sim_data=td.simulate(found_parameters[:-td.n_outputs()], frequencies)
 
 

@@ -35,23 +35,55 @@ class EIS_TD(single_electron):
     def n_parameters(self,):
         return len(self.optim_list)
     def def_optim_list(self, parameters):
+        coefficients=["_exponent", "_c", "_logm"]
+        types=["exponential", "linear", "loglinear"]
+        types_dict=dict(zip(coefficients, types))
+        m_match=[re.compile(".+(?={0}$)".format(x))for x in coefficients]
+        
+        for i in range(0, len(parameters)):
+            for j in range(0, len(types)):
+                if coefficients[j] in parameters[i]:
+                    try:
+                        match_param=m_match[j].match(parameters[i]).group(0)
+                    except:
+                        raise ValueError("Rewrite {0} so that it either does not include or ends with {1}".format(parameters[i], coefficients[j]))
+                    if isinstance(self.simulation_options["frequency_dispersion"], dict) is False:
+                        self.simulation_options["frequency_dispersion"]={match_param:types_dict[coefficients[j]]}
+                    else:
+                        self.simulation_options["frequency_dispersion"][match_param]=types_dict[coefficients[j]]
+                    for z in range(0, len(parameters)):
+                        if match_param==parameters[z]:
+                            raise ValueError("Cannot have both {0} and {1} for optimisation".format(parameters[i], parameters[z]))
+                    self.simulation_options["frequency_dispersion_type"]=list(self.simulation_options["frequency_dispersion"].keys())          
         if self.simulation_options["frequency_dispersion"] is False:
             super().def_optim_list(parameters)
         else:
-            matches=[re.compile("{0}_[0-9]+".format(x)) for x in self.simulation_options["frequency_dispersion"]]
+            if isinstance(self.simulation_options["frequency_dispersion"], dict) is False:
+                if self.simulation_options["frequency_dispersion"][0]+"_1" in parameters:
+                    self.simulation_options["frequency_dispersion_type"]="individual"
+                    matches=[re.compile("{0}_[0-9]+".format(x)) for x in self.simulation_options["frequency_dispersion"]]
+                    self.disp_idx=[0 for x in range(0, len(self.simulation_options["frequency_dispersion"]))]
+                    for i in range(0, len(self.simulation_options["frequency_dispersion"])):
+                        self.disp_idx[i]=parameters.index(self.simulation_options["frequency_dispersion"][i])
+                    for i in range(0, len(parameters)):
 
-            for i in range(0, len(parameters)):
-                for j in range(0, len(matches)):
-                    matched_number=matches[j].match(parameters[i])
-                    if matched_number is not None:
-                        self.param_bounds[parameters[i]]=self.param_bounds[self.simulation_options["frequency_dispersion"][j]]
-                        self.dim_dict[parameters[i]]=None
+                        for j in range(0, len(matches)):
+                            matched_number=matches[j].match(parameters[i])
+                            if matched_number is not None:
+                                self.param_bounds[parameters[i]]=self.param_bounds[self.simulation_options["frequency_dispersion"][j]]
+                                self.dim_dict[parameters[i]]=None
+               
+            
             super().def_optim_list(parameters)
+    def de_normalise(self, parameters, values):
+        de_normed=np.zeros(len(parameters))
+        for i in range(0, len(parameters)):
+            de_normed=self.un_normalise(values[i], self.param_bounds[parameters[i]])
     def simulate(self,parameters, freqs):
         sf=1/self.dim_dict["sampling_freq"]
         if (np.log2(sf)%2)!=0:
             sf=2**np.ceil(np.log2(sf))
-        
+        noneg_params=["Cdl"]
         self.dim_dict["sampling_freq"]=1/sf
         num_points=int((self.dim_dict["num_peaks"])*sf)
         int_sf=int(sf)
@@ -60,24 +92,39 @@ class EIS_TD(single_electron):
         impedances=np.zeros(len(freqs), dtype="complex")
         magnitudes=np.zeros(len(freqs))
         phases=np.zeros(len(freqs))
-        nu=self.dim_dict["E_0"]
         orig_time_vec=self.time_vec
         copy_list=copy.deepcopy(self.optim_list)
         save_list=copy.deepcopy(self.optim_list)
         p_dict=dict(zip(copy_list, parameters))
         if self.simulation_options["frequency_dispersion"] is not False:
-            freq_disp_params=self.simulation_options["frequency_dispersion"]
-            dispersion_array=np.zeros((len(freq_disp_params), len(freqs)))
-            for j in range(0, len(freq_disp_params)):
-                for i in range(0, len(freqs)):
-                    param_name="{0}_{1}".format(freq_disp_params[j],i)
-                    dispersion_array[j, i]=p_dict[param_name]
-                    idx=copy_list.index(param_name)
-                    copy_list.pop(idx)
-            sim_params=copy_list+freq_disp_params
-            super().def_optim_list(sim_params)
+
+            if self.simulation_options["frequency_dispersion_type"]=="individual":
+                freq_disp_params=self.simulation_options["frequency_dispersion"]
+                dispersion_array=np.zeros((len(freq_disp_params), len(freqs)))
+                for j in range(0, len(freq_disp_params)):
+                    for i in range(0, len(freqs)):
+                        param_name="{0}_{1}".format(freq_disp_params[j],i)
+                        dispersion_array[j, i]=p_dict[param_name]
+                        idx=copy_list.index(param_name)
+                        copy_list.pop(idx)
+                sim_params=copy_list+freq_disp_params
+            elif isinstance(self.simulation_options["frequency_dispersion_type"], list) is True:
+                freq_disp_params=self.simulation_options["frequency_dispersion_type"]
+                dispersion_array=np.zeros((len(freq_disp_params), len(freqs)))
+
+                for j in range(0, len(freq_disp_params)):
+                    if self.simulation_options["frequency_dispersion"][freq_disp_params[j]]=="linear":
+                        dispersion_array[j,:]=np.multiply(freqs, p_dict[freq_disp_params[j]+"_m"])+p_dict[freq_disp_params[j]+"_c"]
+                    elif self.simulation_options["frequency_dispersion"][freq_disp_params[j]]=="exponential":
+                        dispersion_array[j,:]=p_dict[freq_disp_params[j]+"_exp_coeff"]*np.exp(np.multiply(freqs, p_dict[freq_disp_params[j]+"_exponent"]))+p_dict[freq_disp_params[j]+"_c"]
+                    elif self.simulation_options["frequency_dispersion"][freq_disp_params[j]]=="loglinear":
+                        dispersion_array[j,:]=p_dict[freq_disp_params[j]+"_logm"]*np.log(freqs)+p_dict[freq_disp_params[j]+"_logc"]
+                    if freq_disp_params[j] in noneg_params:
+                       dispersion_array[j,:]=abs(dispersion_array[j,:])
+            #super().def_optim_list(sim_params)
 
         for i in range(0, len(freqs)):
+            
             problem_child=False
             self.time_vec=orig_time_vec
             for j in range(0,2):
@@ -102,10 +149,17 @@ class EIS_TD(single_electron):
                 self.dim_dict["omega"]=freqs[i]
                 self.dim_dict["original_omega"]=freqs[i]
                 if self.simulation_options["frequency_dispersion"] is not False:
-                    parameters=[p_dict[x] for x in copy_list]+[dispersion_array[x, i] for x in range(0, len(freq_disp_params))]
+                    if self.simulation_options["frequency_dispersion_type"]=="individual":
+                        for q in range(0, len(freq_disp_params)):
+                            parameters[self.disp_idx[q]]=dispersion_array[q,i]
+                    else:
+                        for q in range(0, len(freq_disp_params)):
+                            self.dim_dict[freq_disp_params[q]]=dispersion_array[q,i]
+                            print(self.dim_dict[freq_disp_params[q]], freq_disp_params[q])
                     #print(parameters)
+                start=time.time()
                 nd_current=super().simulate(parameters, [])#current(cdl, freqs[i], times,phase)
-                
+                #print(freqs[i], self.simulation_options["frequency_dispersion"], time.time()-start)
                 I=self.i_nondim(nd_current)[int_sf:]
                 V=self.e_nondim(self.define_voltages())[int_sf:]#
                 times=self.t_nondim(self.time_vec)[int_sf:]
@@ -200,8 +254,6 @@ class EIS_TD(single_electron):
             imag=impedances.imag
         #real[index]=0
         #imag[index]=0
-        if self.simulation_options["frequency_dispersion"] is not False:
-            self.optim_list=save_list
         if self.simulation_options["eis_test"]==True:
             fig, ax=plt.subplots(1,2)
             twinx=ax[0].twinx()

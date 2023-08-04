@@ -403,7 +403,8 @@ class Laviron_EIS(single_electron):
             
         if "DC_pot" not in simulation_options:
             raise ValueError("Please define a DC EIS potential")
-     
+        if "Rct_only" not in simulation_options:
+            simulation_options["Rct_only"]=False
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
@@ -492,12 +493,18 @@ class Laviron_EIS(single_electron):
             EIS_params["alpha1"]=self.dim_dict["cpe_alpha_cdl"]
         if self.simulation_options["EIS_Cf"]=="C2":
             EIS_params["C2"]=Cf
+            if self.simulation_options["Rct_only"]==True:
+                EIS_params["C2"]=self.dim_dict["Cfarad"]
         elif self.simulation_options["EIS_Cf"]==("Q2", "alpha2"):
             cpe_alpha=abs(1-self.dim_dict["cpe_alpha_faradaic"])
             EIS_params["Q2"]=1/(Cf**(cpe_alpha-1)*Ra**(-cpe_alpha))
+            if self.simulation_options["Rct_only"]==True:
+                #print("*"*40)
+                EIS_params["Q2"]=self.dim_dict["Cfarad"]
             EIS_params["alpha2"]=self.dim_dict["cpe_alpha_faradaic"]
         if print_circuit_params==True:
             print(EIS_params)
+        
         #print(EIS_params)
         #.print(Ra_coeff)
         #EIS_params={'R0': 5, 'C1': 1e-06, 'R1': 59.27316911806477, 'C2': 2.4156737037803954e-05}

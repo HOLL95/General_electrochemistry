@@ -10,6 +10,7 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 from single_e_class_unified import single_electron
+import matplotlib.animation as animation
 from EIS_class import EIS
 import numpy as np
 def potential(amp,frequency, time, phase):
@@ -50,7 +51,7 @@ param_list={
         "CdlE3":0,
         'gamma': 1e-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
-        'k_0': 10, #(reaction rate s-1)
+        'k_0': 75.03999999999999, #(reaction rate s-1)
         'alpha': 0.55,
         "E0_mean":0.2,
         "E0_std": 0,
@@ -61,7 +62,7 @@ param_list={
         'phase' :0,
         "cap_phase":0,
         "time_end": None,
-        'num_peaks': 20,
+        'num_peaks': 30,
     }
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
@@ -108,6 +109,16 @@ param_bounds={
     "k0_range":[1e2, 1e4],
     'phase' : [math.pi, 2*math.pi],
 }
+
+
+import itertools
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+
+
 def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_class, sf=200, amplitude=5e-3):
     if (np.log2(sf)%2)!=0:
         sf=2**np.ceil(np.log2(sf))
@@ -122,6 +133,12 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
     phases=np.zeros(len(freqs))
     parameters=sim_class.param_list
     problem_child=False
+    potentials=[]
+    currents=[]
+    time_arrays=[]
+    frequencies=[]
+    iffts=[]
+    vffts=[]
     for i in range(0, len(frequency_powers)):
         time_end=num_osc/freqs[i]
         times1=np.linspace(0, time_end, num_points, endpoint=False)
@@ -148,7 +165,7 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         #plt.show()
         ffts=[]
         #plt.plot(times1, V1)
-        
+
       
         #plt.plot(times, V)
         #plt.show()
@@ -160,7 +177,10 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
             ffts.append(fft)
 
      
+        potentials.append(V)
 
+        currents.append(I)
+        time_arrays.append(times)
         Z_f=np.divide(ffts[0], ffts[1])
         #plt.plot(times,V)
         #plt.show()
@@ -173,6 +193,9 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         #plt.loglog(fft_freq[plt_idx], abs_fft[plt_idx])
         subbed_f=abs(np.subtract(fft_freq, freqs[i]))
         freq_idx=np.where(subbed_f==min(subbed_f))
+        iffts.append(abs(ffts[1]))
+        vffts.append(abs(ffts[0]))
+        frequencies.append(fft_freq)
         #plt.axvline(fft_freq[freq_idx], linestyle="--")
         
         impedances[i]=Z_f[freq_idx][0]
@@ -198,82 +221,110 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         #plt.plot(np.angle(fft, deg=True))
         #plt.show()
         magnitudes[i]=abs_fft[freq_idx][0]
-    return magnitudes, phases,impedances
+    return magnitudes, phases,impedances, potentials, currents, frequencies, iffts, vffts, time_arrays
 #plt.show()
-cdl=1e-3
-min_f=-3
+
+min_f=-2
 max_f=6
 points_per_decade=10
-fig, ax=plt.subplots()
-twinx=ax.twinx()
-param_val_scans={"k_0":[0.1,  125], 
-            "gamma":[7.5e-11,  1.25e-10],
-            "Cdl":[2e-5, 5e-4],
-            "Ru":[0.1,  500], 
-            "alpha":[0.4,0.7],}
-num_steps=20
-for key in param_val_scans.keys():
-    param_range=param_val_scans[key]
-    dist=param_range[1]-param_range[0]
-    step=dist/num_steps
-    param_val_scans[key]=np.arange(param_range[0], param_range[1], step)
-fig, ax=plt.subplots(2,3)
+
+
 import copy
-param_names=list(param_val_scans.keys())
-save_dict={}
-ax[-1, -1].set_axis_off()
-for i in range(0, len(param_names)):
-    axis=ax[i//3, i%3]
 
-    
-    key=param_names[i]
-    save_dict[key]={}
-    axis.set_title(key)
-    twinx=axis.twinx()
+frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
+freqs=[10**x for x in frequency_powers]
+param_dict={'k_0': 75.03999999999999, 'Ru': 100, 'Cdl': 1e-5, 'gamma': 1e-10, 'E_0': 0.001, 'alpha': 0.55, 'area': 0.07, 'DC_pot': 0}
+param_names=["gamma", "k_0", "Cdl", "alpha", "Ru"]
+sim_class=eis_sim(copy.deepcopy(param_list), simulation_options,other_values, param_bounds, param_names+["omega"] )
 
-    for j in range(0, len(param_val_scans[key])):
-        save_dict[key][str(param_val_scans[key][j])]={}
-        """ if i==0:
-                if j==0:
-                    copy_list=copy.deepcopy(param_list)
-                    copy_list[key]=param_val_scans[key][j]
-                
-                    frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
-                    freqs=[10**x for x in frequency_powers]
-                    sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
-                    param_dict={key:copy_list[key] for key in param_names}
-                    param_dict["E_0"]=0.001
-                    m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
-                                        parameters=param_dict,sim_class=sim_class, 
-                                        sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )"""
+param_dict["E_0"]=0.001
+m, p, z, potentials, currents, frequencies, iffts, vffts, time_arrays=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
+                    parameters=param_dict,sim_class=sim_class, 
+                    sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
+
+index=np.where(np.isnan(p)==False)
+
+real=z.real[index]
 
 
-                
-               
-        copy_list=copy.deepcopy(param_list)
-        copy_list[key]=param_val_scans[key][j]
-    
-        frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
-        freqs=[10**x for x in frequency_powers]
-        sim_class=eis_sim(copy_list, simulation_options,other_values, param_bounds, param_names+["omega"] )
-        param_dict={key:copy_list[key] for key in param_names}
-        param_dict["E_0"]=0.001
-        m, p, z=impedance_response(min_f=min_f, max_f=max_f, points_per_decade=points_per_decade, num_osc=param_list["num_peaks"], 
-                            parameters=param_dict,sim_class=sim_class, 
-                            sf=1/param_list["sampling_freq"],amplitude=param_list["d_E"] )
+spectra=np.column_stack((real, z.imag[index]))
+lav_circuit={"z1":"R0", "z2":{"p1":"C1", "p2":["R1", "C2"]}}
+lav_ec=EIS(circuit=lav_circuit)
+save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+ec_data=lav_ec.test_vals({'R0': 100.89130827528389, 'R1': 985.4168864168606, 'C1': 7.246044133637491e-07, 'C2': 6.522158184501145e-06}, np.multiply(freqs,2*math.pi))
+#fig, ax=plt.subplots()
+#twinx=ax.twinx()
+#EIS().bode(save_data, freqs, data_type="phase_mag", ax=ax, twinx=twinx)
+#EIS().bode(ec_data, freqs, twinx=twinx,ax=ax)
 
-        index=np.where(np.isnan(p)==False)
-        print(len(p[index]))
-        real=z.real[index]
-        print(len(real), len(z.imag[index]))
-        save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+class plot_class:
+    def __init__(self, potentials, currents,times,frequencies, fft_V, fft_I, circuit_impedance, td_impedance):
+        self.times=times
+        self.frequencies=frequencies
+        self.potential=potentials
+        self.current=currents
+        self.fft_V=fft_V
+        self.fft_I=fft_I
+        self.circuit_impedance=circuit_impedance
+        self.td_impedance=td_impedance
+        self.fig,self.ax=plt.subplots(2,2)
+        
+        self.twinx3=self.ax[1,1].twinx()
+        self.twinx2=self.ax[1,0].twinx()
+        #self.twinx1=self.ax[0].twinx()
+        #plt.plot(self.potential[0])
+        self.p_line,=self.ax[0,0].plot(self.times[0], self.potential[0])
+        self.ax[0,0].set_xlabel("Time (s)")
+        self.ax[0,0].set_ylabel("Potential (V)")
+        self.ax[0,1].set_xlabel("Time (s)")
+        self.ax[0,1].set_ylabel("Current (A)")
+        self.ax[1,0].set_xlabel("Frequency (Hz)")
+        self.ax[1,0].set_ylabel("Magnitude")
+        self.twinx2.set_ylabel("Magnitude")
+        self.c_line,=self.ax[0,1].plot(self.times[0], self.current[0], color="Red")
+        
+        self.vfft_line,=self.ax[1,0].loglog(self.frequencies[0], self.fft_V[0], label="FFT(Potential)")
+        self.ax[1,0].plot(0,0, label="FFT(Current)", linestyle="--", color="red")
+        self.ifft_line,=self.twinx2.loglog(self.frequencies[0], self.fft_I[0], color="Red", linestyle="--")
+        self.ax[1,0].legend(loc="upper left")
+        self.current_t_end=self.times[0][-1]
+        self.ax[1,1].plot(0,0, color="orange",  label="Time domain")
+        EIS().bode(circuit_impedance, freqs, ax=self.ax[1,1], twinx=self.twinx3, compact_labels=True, label="Equivalent circuit")
+        self.ax[1,1].legend(loc="upper right")
+    def animate(self,i):
+        if self.current_t_end/2>(self.times[i][-1]):
+            self.ax[0,0].set_xlim([0, self.times[i][-1]])
+            self.ax[0,1].set_xlim([0, self.times[i][-1]])
+            self.current_t_end=self.times[i][-1]
+        self.ax[0,0].set_ylim([1.05*min(self.potential[i]), 1.05*max(self.potential[i])])
+        self.ax[0,1].set_ylim([1.05*min(self.current[i]), 1.05*max(self.current[i])])
+        self.p_line.set_xdata(self.times[i])
+        self.c_line.set_xdata(self.times[i])
+        self.p_line.set_ydata(self.potential[i])
+        self.c_line.set_ydata(self.current[i])
+        self.ax[1,0].set_xlim([0, self.frequencies[i][-1]])
+        self.ifft_line.set_xdata(self.frequencies[i])
+        self.vfft_line.set_xdata(self.frequencies[i])
+        self.ifft_line.set_ydata(self.fft_I[i])
+        self.vfft_line.set_ydata(self.fft_V[i])
+        print(1.15*max(self.fft_I[i]), 1.15*max(self.fft_V[i]))
+        self.twinx2.set_ylim([0, 1.35*max(self.fft_I[i])])
+        self.ax[1,0].set_ylim([0, 1.35*max(self.fft_V[i])])
+        self.ax[1,1].scatter(np.log10(freqs[i]), -self.td_impedance[i,0], color="orange", marker="v")
+        self.twinx3.scatter(np.log10(freqs[i]), self.td_impedance[i,1], color="orange", marker="o")
+td=plot_class( potentials, currents, time_arrays, frequencies, iffts, vffts,ec_data, save_data)
+td.fig.set_size_inches(8, 8)
+plt.subplots_adjust(left=0.108,
+                    bottom=0.11, 
+                    right=0.91,
+                    top=0.88,
+                    wspace=0.527,
+                    hspace=0.305)
 
-        save_dict[key][str(param_val_scans[key][j])]["data"]=save_data
-        save_dict[key][str(param_val_scans[key][j])]["freq"]=np.array(freqs)[index]
-        #fig, axis=plt.subplots()
-        #twinx=axis.twinx()
-        #EIS().bode(np.column_stack((real, z.imag[index])), save_dict[key][str(param_val_scans[key][j])]["freq"], ax=axis, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
-        #plt.show()  
-np.save("BV_param_scans_for_laviron_skipping_2",save_dict)
+ani = animation.FuncAnimation(
+    td.fig, td.animate, interval=300, blit=True)
 
+
+
+plt.show()
 
