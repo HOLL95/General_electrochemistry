@@ -27,17 +27,13 @@ class EIS:
                 raise ValueError("Need to define parameter bounds when fitting")
             else:
                 self.param_bounds=kwargs["parameter_bounds"]
-                if "parameter_names" not in kwargs:
-                    warnings.warn("Setting the keys of the boundary dictionary as names - be wary!")
-                    self.param_names=self.param_bounds.keys()
-                else:
-                    self.param_names=kwargs["parameter_names"]
-        elif "parameter_names" not in kwargs:
+        if "parameter_names" not in kwargs:
             warnings.warn("Trying to extract parameter names from provided circuit - behaviour will be more consistent if these names are manually inputted")
             self.param_names=[]
             circuit=copy.deepcopy(kwargs["circuit"])
             self.construct_circuit(circuit, func=self.get_param_names_from_dict)
-
+        else:
+            self.param_names=kwargs["parameter_names"]
         if self.options["integrated_circuit"]==True:
             circuit=copy.deepcopy(kwargs["circuit"])
             self.circuit=self.construct_circuit(circuit, func=self.define_z_func)
@@ -388,11 +384,15 @@ class EIS:
     def un_normalise(self, norm, boundaries):
         return (norm*(boundaries[1]-boundaries[0]))+boundaries[0]
     def RMSE(self, y, y_data):
-        return np.mean(np.sqrt(np.square(np.subtract(y, y_data))))
+        return np.mean(np.sqrt(np.square(np.subtract(y, y_data))), axis=0)
     def n_outputs(self):
-        return 2
+        if self.options["data_representation"]!="both":
+
+            return 2
+        else:
+            return 4
     def n_parameters(self):
-        return len(self.param_bounds.keys())
+        return len(self.param_names)
     def change_norm_group(self, param_list, method, return_type="list"):
         if method=="un_norm":
             if return_type=="dict":
@@ -400,6 +400,7 @@ class EIS:
             elif return_type=="list":
                 normed_params=[self.un_normalise(param_list[x], self.param_bounds[self.param_names[x]]) for x in range(0, len(self.param_names))]
         return normed_params
+    
     def simulate(self, parameters, frequencies):
         sim_params=dict(zip(self.param_names, parameters))
 
@@ -425,7 +426,7 @@ class EIS:
             elif self.options["data_representation"]=="bode":
                 twinx=ax.twinx()
                 self.bode(np.column_stack((np.real(spectra), np.imag(spectra))),frequencies, orthonormal=False, ax=ax, twinx=twinx)
-                #self.bode(self.secret_data,frequencies, ax=ax, twinx=twinx,data_type="phase_mag")
+                self.bode(self.secret_data,frequencies, ax=ax, twinx=twinx,data_type="phase_mag")
                 plt.show()
             
         
@@ -436,6 +437,7 @@ class EIS:
             else:
                 return np.column_stack((np.real(spectra), np.imag(spectra)))
         else:
+            
 
             real=np.real(spectra)
             imag=np.imag(spectra)
@@ -451,7 +453,12 @@ class EIS:
             #if self.options["test"]==True:
             #self.bode(np.column_stack((real, imag)), frequencies)
             #plt.show()
-            return return_arg
+            if self.options["data_representation"]=="bode":
+
+                return return_arg
+            elif self.options["data_representation"]=="bode":
+                return np.column_stack((real, imag, phase, magnitude))
+
     def convert_to_bode(self,spectra):
         spectra=[complex(x, y) for x,y in zip(spectra[:,0], spectra[:,1])]
         phase=np.angle(spectra, deg=True)#np.arctan(np.divide(-spectra[:,1], spectra[:,0]))*(180/math.pi)
@@ -538,6 +545,8 @@ class EIS:
             kwargs["markersize"]=20
         if "line" not in kwargs:
             kwargs["line"]=True
+        if "colour" not in kwargs:
+            kwargs["colour"]=None
         elif kwargs["line"]==False:
             if kwargs["scatter"]==False:
                 raise ValueError(r"Need one of 'line' or 'scatter' to not be False")
@@ -564,7 +573,7 @@ class EIS:
         if kwargs["type"]=="both":
             twinx=kwargs["twinx"]
             if kwargs["line"]==True:
-                ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+                ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
                 if kwargs["no_labels"]!=True:
                     if kwargs["compact_labels"]==False:
                         ax.set_ylabel("-Phase")
@@ -572,27 +581,27 @@ class EIS:
                     else:
                         ax.text(x=-0.05, y=1.05, s="$-\\psi$", fontsize=12, transform=ax.transAxes)
                         ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
-                twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"])
+                twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
             if kwargs["scatter"] is not False:
-                ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"])
-                twinx.scatter(x_freqs[0::kwargs["scatter"]], magnitude[0::kwargs["scatter"]], marker="v", s=kwargs["markersize"])
+                ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"], color=kwargs["colour"])
+                twinx.scatter(x_freqs[0::kwargs["scatter"]], magnitude[0::kwargs["scatter"]], marker="v", s=kwargs["markersize"], color=kwargs["colour"])
             
         elif kwargs["type"]=="phase":
             if kwargs["compact_labels"]==False:
                 ax.set_ylabel("Phase")
             else:
                  ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
-            ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
 
         elif kwargs["type"]=="magnitude":
             
-            ax.plot(x_freqs, magnitude, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+            ax.plot(x_freqs, magnitude, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
             if kwargs["compact_labels"]==False:
                 ax.set_ylabel("Magnitude")
             else:
                  ax.text(x=-0.05, y=1.05, s="$|Z|$", fontsize=12, transform=ax.transAxes)
-        if kwargs["label"]!=None:
-            kwargs["ax"].legend()
+        #if kwargs["label"]!=None:
+        #    kwargs["ax"].legend()
 
     def test_vals(self, parameters, frequencies):
         normalise=self.options["normalise"]

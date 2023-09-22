@@ -124,7 +124,7 @@ class EIS_TD(single_electron):
             #super().def_optim_list(sim_params)
 
         for i in range(0, len(freqs)):
-            
+            print(freqs[i])
             problem_child=False
             self.time_vec=orig_time_vec
             for j in range(0,2):
@@ -155,9 +155,9 @@ class EIS_TD(single_electron):
                     else:
                         for q in range(0, len(freq_disp_params)):
                             self.dim_dict[freq_disp_params[q]]=dispersion_array[q,i]
-                            print(self.dim_dict[freq_disp_params[q]], freq_disp_params[q])
+                            #print(self.dim_dict[freq_disp_params[q]], freq_disp_params[q])
                     #print(parameters)
-                start=time.time()
+                #start=time.time()
                 nd_current=super().simulate(parameters, [])#current(cdl, freqs[i], times,phase)
                 #print(freqs[i], self.simulation_options["frequency_dispersion"], time.time()-start)
                 I=self.i_nondim(nd_current)[int_sf:]

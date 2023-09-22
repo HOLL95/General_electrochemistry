@@ -92,6 +92,8 @@ SWV_surface_EXTERNAL_OBJECTS =
 
 SWV_surface.cpython-310-x86_64-linux-gnu.so: CMakeFiles/SWV_surface.dir/src/surface_process_SWV.cpp.o
 SWV_surface.cpython-310-x86_64-linux-gnu.so: CMakeFiles/SWV_surface.dir/build.make
+SWV_surface.cpython-310-x86_64-linux-gnu.so: /usr/lib64/libgsl.so
+SWV_surface.cpython-310-x86_64-linux-gnu.so: /usr/lib64/libgslcblas.so
 SWV_surface.cpython-310-x86_64-linux-gnu.so: CMakeFiles/SWV_surface.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/henney/Documents/Oxford/General_electrochemistry/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared module SWV_surface.cpython-310-x86_64-linux-gnu.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/SWV_surface.dir/link.txt --verbose=$(VERBOSE)

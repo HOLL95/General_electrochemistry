@@ -212,8 +212,6 @@ class harmonics:
             kwargs["hanning"]=False
         if "xaxis" not in kwargs:
             kwargs["xaxis"]=times
-        if "alpha_increment" not in kwargs:
-            kwargs["alpha_increment"]=0
         if "plot_func" not in kwargs:
             kwargs["plot_func"]=np.real
         if "fft_func" not in kwargs:
@@ -227,6 +225,14 @@ class harmonics:
             kwargs["legend"]={"loc":"center"}
         if "axes_list" not in kwargs:
             define_axes=True
+        if "h_num" not in kwargs:
+            kwargs["h_num"]=True
+        if "colour" not in kwargs:
+            kwargs["colour"]=None
+        if "lw" not in kwargs:
+            kwargs["lw"]=1
+        if "alpha" not in kwargs:
+            kwargs["alpha"]=1
         else:
             if len(kwargs["axes_list"])!=self.num_harmonics:
                 raise ValueError("Wrong number of axes for harmonics")
@@ -257,17 +263,17 @@ class harmonics:
                 ax=plt.gca()
             else:
                 ax=kwargs["axes_list"][i]
-
-            ax2=ax.twinx()
-            ax2.set_yticks([])
-            ax2.set_ylabel(self.harmonics[i], rotation=0)
+            if kwargs["h_num"]!=False:
+                ax2=ax.twinx()
+                ax2.set_yticks([])
+                ax2.set_ylabel(self.harmonics[i], rotation=0)
             plot_counter=0
             for plot_name in label_list:
                 if i==0:
                     print(plot_name)
-                    ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), label=plot_name, alpha=1-(plot_counter*kwargs["alpha_increment"]))
+                    ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), label=plot_name, alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 else:
-                    ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]),  alpha=1-(plot_counter*kwargs["alpha_increment"]))
+                    ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 plot_counter+=1
             if i==((num_harms)//2):
                 ax.set_ylabel(kwargs["ylabel"])

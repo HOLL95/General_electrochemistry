@@ -1,1 +1,1 @@
-/usr/lib64/ccache/c++ -fPIC -flto -shared  -o isolver_martin_brent.cpython-310-x86_64-linux-gnu.so CMakeFiles/isolver_martin_brent.dir/src/surface_process_brent.cpp.o 
+/usr/lib64/ccache/c++ -fPIC -flto -shared  -o isolver_martin_brent.cpython-310-x86_64-linux-gnu.so CMakeFiles/isolver_martin_brent.dir/src/surface_process_brent.cpp.o  /usr/lib64/libgsl.so /usr/lib64/libgslcblas.so 

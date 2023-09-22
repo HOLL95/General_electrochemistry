@@ -7,11 +7,58 @@
 #include <math.h>
 #include <iostream>
 #include <exception>
+#include <gsl/gsl_integration.h>
 namespace py = pybind11;
 using namespace std;
 template <typename V>
 V get(py::dict m, const std::string &key, const V &defval) {
     return m[key.c_str()].cast<V>();
+}
+struct Integration_parameters {
+    double Upper_lambda;
+    double Normalised_E;
+};
+double Marcus_integral_reduction(double x, void * params){
+    
+    struct Integration_parameters *p = (struct Integration_parameters *) params;
+    double Upper_lambda = p->Upper_lambda;
+    double Normalised_E=p->Normalised_E;
+    double numerator=exp(-(Upper_lambda/4)*pow(1-((Normalised_E+x)/Upper_lambda),2));  
+    double f = numerator/(1+exp(x));
+return f;
+}
+double Marcus_integral_oxidation(double x,void * params){
+    struct Integration_parameters  *p = (struct Integration_parameters  *) params;
+    double Upper_lambda = p->Upper_lambda;
+    double Normalised_E=p->Normalised_E;
+    double numerator=exp(-(Upper_lambda/4)*pow(1+((Normalised_E+x)/Upper_lambda),2));  
+    double f = numerator/(1+exp(-x));
+return f;
+}
+double Marcus_kinetics(double Normalised_E,double Upper_lambda, int flag){
+    gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+    gsl_function F;
+    struct Integration_parameters params;
+    params.Upper_lambda=Upper_lambda;
+    params.Normalised_E=Normalised_E;
+    if (flag==0){
+        F.function = &Marcus_integral_oxidation;
+    }
+    else if (flag==1){
+        F.function = &Marcus_integral_reduction;
+    }
+    F.params=&params;
+    //F.params = &params; // Pass a pointer to the struct
+
+    double result, error;
+    gsl_integration_qag(&F, -50, 50, 0, 1e-7, 1000,5, w, &result, &error);
+
+    //onst gsl_function *f, double a, double b, double epsabs, double epsrel, size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abse
+    //const gsl_function *f, double a, double b, double epsabs, double epsrel, size_t limit, gsl_integration_workspace *workspace, double *result, double *abserr)
+    //TODO:1)add integral0 and lambda to C++ 2) compile 3)test 4) check single sinewave int calculations
+    gsl_integration_workspace_free(w);
+
+    return result;
 }
 struct e_surface_fun {
     double E,dE;
@@ -29,6 +76,10 @@ struct e_surface_fun {
     double u1n1;
     double du1n1;
     double Cdlp;
+    double Upper_lambda;
+    double integral_0_oxidation;
+    double integral_0_reduction;
+    bool Marcus_flag;
 
     e_surface_fun (
                     const double E,
@@ -45,10 +96,18 @@ struct e_surface_fun {
                     const double In0,
                     const double u1n0,
                     const double dt,
-                    const double gamma
-
+                    const double gamma,
+                    const double Upper_lambda,
+                    const double integral_0_oxidation,
+                    const double integral_0_reduction,
+                    const bool Marcus_flag
                     ) :
-        E(E),dE(dE),cap_E(cap_E),Cdl(Cdl),CdlE(CdlE),CdlE2(CdlE2),CdlE3(CdlE3),E0(E0),Ru(Ru),k0(k0),alpha(alpha),In0(In0),u1n0(u1n0),dt(dt),gamma(gamma) { }
+        E(E),dE(dE),cap_E(cap_E),Cdl(Cdl),
+        CdlE(CdlE),CdlE2(CdlE2),CdlE3(CdlE3),E0(E0),Ru(Ru),
+        k0(k0),alpha(alpha),In0(In0),u1n0(u1n0),dt(dt),gamma(gamma), 
+        Upper_lambda(Upper_lambda),integral_0_oxidation(integral_0_oxidation),
+        integral_0_reduction(integral_0_reduction),Marcus_flag(Marcus_flag)
+         { }
   //boost::math::tuple<double,double> operator()(const double In1) {
         //update_temporaries(In1);
         //return boost::math::make_tuple(residual(In1),residual_gradient(In1));
@@ -62,10 +121,12 @@ struct e_surface_fun {
         return Cdlp*(dt*dE-Ru*(In1-In0)) - dt*In1 + gamma*(u1n1-u1n0);
         //return Cdlp*(dt*dE) - dt*In1 + (u1n1-u1n0) + Ru*E*dt;
     }
+
     double residual_gradient(const double In1) const {
         return -Cdlp*Ru - dt + gamma*du1n1;
         //return -Cdlp*Ru - dt + du1n1;
     }
+
 
     void update_temporaries(const double In1) {
         const double Ereduced = E - Ru*In1;
@@ -74,22 +135,26 @@ struct e_surface_fun {
         const double Ereduced2 = pow(cER,2);
         const double Ereduced3 = cER*Ereduced2;
         const double expval1 = Ereduced - E0;
-        exp11 = std::exp((1.0-alpha)*expval1);
-        exp12 = std::exp(-alpha*expval1);
+        //exp11 = std::exp((1.0-alpha)*expval1);
+        //exp12 = std::exp(-alpha*expval1);
+        
+        if (Marcus_flag==true){
 
-        dexp11 = -Ru*(1.0-alpha)*exp11;
-        dexp12 = Ru*alpha*exp11;
-
+            exp11 = Marcus_kinetics(expval1,Upper_lambda, 1)/integral_0_reduction;//std::exp((1.0-alpha)*expval1);
+            exp12 = Marcus_kinetics(expval1,Upper_lambda, 0)/integral_0_oxidation;//std::exp(-alpha*expval1);
+        }
+        else if (Marcus_flag==false){
+            exp11 = std::exp((1.0-alpha)*expval1);
+            exp12 = std::exp(-alpha*expval1);
+        }
+        
         const double u1n1_top = dt*k0*exp11 + u1n0;
-        const double du1n1_top = dt*k0*dexp11;
         const double denom = (dt*k0*exp11 +dt*k0*exp12 + 1);
-        const double ddenom = dt*k0*(dexp11 + dexp12);
         const double tmp = 1.0/denom;
         const double tmp2 = pow(tmp,2);
         u1n1 = u1n1_top*tmp;
-        du1n1 = -(u1n1_top*ddenom + du1n1_top*denom)*tmp2;
         Cdlp = Cdl*(1.0 + CdlE*cER + CdlE2*Ereduced2 + CdlE3*Ereduced3);
-        //Cdlp = Cdl*(1.0 + CdlE*Edc+ CdlE2*pow(Edc,2)+ CdlE3*pow(Edc,3));
+    
     }
 };
 double et(double E_start, double omega, double phase, double delta_E,double t){
@@ -190,7 +255,7 @@ std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, d
 }
 
 
-py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10) {
+py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10, const bool Marcus_flag=false) {
     const double v=1;
     const int digits_accuracy = std::numeric_limits<double>::digits;
     const double max_iterations = 100;
@@ -236,7 +301,14 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     double CdlE = get(params,std::string("CdlE1"),0.0);
     double CdlE2 = get(params,std::string("CdlE2"),0.0);
     double CdlE3 = get(params,std::string("CdlE3"),0.0);
-    
+    double integral_0_reduction=0;
+    double integral_0_oxidation=0;
+    double Upper_lambda=0;
+    if (Marcus_flag==true){
+      Upper_lambda=get(params,std::string("Upper_lambda"),0.0);
+      integral_0_reduction=Marcus_kinetics(0, Upper_lambda, 1);
+      integral_0_oxidation=Marcus_kinetics(0, Upper_lambda, 0);
+    }
     
     
     const double sf= get(params,std::string("sampling_freq"),0.1);
@@ -299,7 +371,9 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               dE=sum_of_sinusoids_dE(amp_vector, freq_vector, phase_vector, num_frequencies, t1);;
               cap_E=E;
             }
-            e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
+
+
+            e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma, Upper_lambda, integral_0_oxidation, integral_0_reduction, Marcus_flag);
             boost::uintmax_t max_it = max_iterations;
             //Itot1 = boost::math::tools::newton_raphson_iterate(bc, Itot0,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
             std::pair <double, double> sol=boost::math::tools::brent_find_minima(bc,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);

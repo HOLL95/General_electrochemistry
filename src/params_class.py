@@ -38,7 +38,8 @@ class params:
                                 'ru':self.ru,
                                 'gamma':self.Gamma,
                                 'sampling_freq':self.sf,
-                                "dcv_sep":self.d_sep
+                                "dcv_sep":self.d_sep,
+                                "upper_lambda":self.upper_lambda,
                                 }
             keys=sorted(param_dict.keys())
             
@@ -84,6 +85,9 @@ class params:
             if "E0_std" in self.param_dict:
                 self.param_dict["E0_std"]=self.param_dict["E0_std"]/self.c_E0
                 self.param_dict["E0_mean"]=self.param_dict["E0_mean"]/self.c_E0
+    def upper_lambda(self, value,flag):
+        if flag == 'non_dim':
+            self.param_dict["Upper_lambda"]=value/self.c_E0
     def k0(self, value, flag):
         if flag=='re_dim':
             self.param_dict["k_0"]=value/self.c_T0

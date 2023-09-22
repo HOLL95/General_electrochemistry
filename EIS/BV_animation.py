@@ -148,7 +148,7 @@ def impedance_response(min_f, max_f, points_per_decade, num_osc, parameters,sim_
         nd_current=sim_class.simulate(parameters)#current(cdl, freqs[i], times,phase)
         conv_class=sim_class.sim_class
         I=conv_class.i_nondim(nd_current)
-        I=conv_class.add_noise(I, 0.01*max(I))
+        #I=conv_class.add_noise(I, 0.01*max(I))
         if i==0:
             print(conv_class.dim_dict["k_0"])
         V=conv_class.e_nondim(conv_class.define_voltages())[conv_class.time_idx]#
@@ -256,6 +256,8 @@ ec_data=lav_ec.test_vals({'R0': 100.89130827528389, 'R1': 985.4168864168606, 'C1
 #twinx=ax.twinx()
 #EIS().bode(save_data, freqs, data_type="phase_mag", ax=ax, twinx=twinx)
 #EIS().bode(ec_data, freqs, twinx=twinx,ax=ax)
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 300
 
 class plot_class:
     def __init__(self, potentials, currents,times,frequencies, fft_V, fft_I, circuit_impedance, td_impedance):
@@ -322,7 +324,14 @@ plt.subplots_adjust(left=0.108,
                     hspace=0.305)
 
 ani = animation.FuncAnimation(
-    td.fig, td.animate, interval=300, blit=True)
+    td.fig, td.animate, interval=1500, blit=False)
+writer = animation.PillowWriter(fps=3,
+                                 metadata=dict(artist='Me'),
+                                 bitrate=1800)
+#writer.setup(fig, "animation.gif", dpi = 300) 
+
+# May or may not need to specify dpi argument
+ani.save("2D_Schrodinger_Equation.gif", writer = writer, dpi = "figure")
 
 
 

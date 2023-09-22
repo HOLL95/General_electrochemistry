@@ -3,7 +3,6 @@ try:
     import isolver_martin_brent
 except:
     warnings.warn("C++ single electron solver not found, did you compile it?")
-import isolver_martin_brent
 import SWV_surface
 from scipy.stats import norm, lognorm
 import math
@@ -224,6 +223,7 @@ class single_electron:
             dE=1
         return (dE/self.nd_param.nd_param_dict["Ru"])-(current/(self.nd_param.nd_param_dict["Ru"]*self.nd_param.nd_param_dict["Cdl"]))
     def def_optim_list(self, optim_list):
+        #print("hello",optim_list)
         keys=list(self.dim_dict.keys())
         for i in range(0, len(optim_list)):
             if optim_list[i] in keys:
@@ -273,7 +273,6 @@ class single_electron:
                         except:
                             print(self.optim_list[i], all_disp_flags[j])
                             continue
-
             distribution_names=["normal", "lognormal", "uniform", "skewed_normal", "log_uniform"]
             distribution_dict=dict(zip(distribution_names, disp_flags))
 
@@ -333,6 +332,11 @@ class single_electron:
                             sinusoid_count+=1
 
                 self.param_positions=list(set(range(0, len(optim_list)))-set(sinusoid_positions))
+        if "Upper_lambda" in optim_list:
+            self.simulation_options["Marcus_kinetics"]=True
+        if self.simulation_options["Marcus_kinetics"]==True:
+            if "alpha" in optim_list:
+                raise ValueError("Currently Marcus kinetics are symmetric, so Alpha in meaningless")
     def add_noise(self, series, sd, **kwargs):
         if "method" not in kwargs:
             kwargs["method"]="simple"
@@ -598,6 +602,7 @@ class single_electron:
             sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
         else:
             sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
+
         self.disp_test=[]
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
@@ -610,7 +615,7 @@ class single_electron:
                 self.dim_dict["cap_phase"]=self.dim_dict["phase"]
             self.nd_param=params(self.dim_dict, self.nondim_flag_dict)
             #print([self.dim_dict[x] for x in ["E_0","gamma","k_0" , "Cdl", "alpha", "Ru", "phase", "cap_phase"]])
-            time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
+            time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
             #print(time.time()-start)
             if self.simulation_options["dispersion_test"]==True:
                 self.disp_test.append(time_series_current)
@@ -623,7 +628,7 @@ class single_electron:
         return 1-(residual_sq/ss_tot)
     def numerical_plots(self, solver):
         self.debug_time=self.simulation_options["numerical_debugging"]
-        time_series=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], self.debug_time, self.bounds_val)
+        time_series=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], self.debug_time, self.bounds_val, self.simulation_options["Marcus_kinetics"])
         current=time_series[0]
         residual=time_series[1]
         residual_gradient=time_series[2]
@@ -764,7 +769,7 @@ class single_electron:
             else:
                 if self.simulation_options["numerical_method"]=="pybamm":
                     try:
-                        time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                        time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
                     except:
 
                         time_series=np.zeros(len(self.time_vec))
@@ -772,7 +777,7 @@ class single_electron:
                     
                     
                     
-                    time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                    time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
         if self.simulation_options["numerical_method"]=="Kalman_simulate":
             self.nd_param.nd_param_dict["Cdl"]=cdl_record
             time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])
@@ -782,17 +787,18 @@ class single_electron:
             print(len(time_series))
         elif self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
+
         if self.simulation_options["psv_copying"]==True:
             if self.simulation_options["no_transient"]==False:
                 multiply_num=int(self.dim_dict["num_peaks"]/2)-1
             else:
                 multiply_num=self.dim_dict["num_peaks"]-1-int(self.simulation_options["no_transient"]/self.nd_param.c_T0)
             time_series=np.append(time_series, [time_series for x in range(0, multiply_num)])[:-1]
+      
         if self.simulation_options["method"]=="square_wave":
             if self.simulation_options["square_wave_return"]=="net":
                 _, _, net, _=self.SW_peak_extractor(time_series)
                 time_series=net
-
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
@@ -831,6 +837,8 @@ class single_electron:
             simulation_options["numerical_debugging"]=False
         if "experimental_fitting" not in simulation_options:
             raise KeyError("Experimental fitting option not found - please define")
+        if "Marcus_kinetics" not in simulation_options:
+            simulation_options["Marcus_kinetics"]=False
         if "test" not in simulation_options:
             simulation_options["test"]=False
         if "method" not in simulation_options:

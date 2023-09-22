@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 import copy
 import math
+import matplotlib.pyplot as plt
 class dispersion:
     def __init__(self, simulation_options, optim_list):
         self.simulation_options=simulation_options
@@ -65,10 +66,10 @@ class dispersion:
                     param_loc=0
                     param_shape=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_shape"]
                     param_scale=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_scale"]
-                    print("shape, scale", param_shape, param_scale)
-                    min_val=lognorm.ppf(1e-4, param_shape, loc=param_loc, scale=param_scale)
-                    max_val=lognorm.ppf(1-1e-4, param_shape, loc=param_loc, scale=param_scale)
-                    param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
+                    value_range=np.linspace(1e-4, 1-(1e-4), self.simulation_options["dispersion_bins"][i])
+                    #min_val=lognorm.ppf(1e-4, param_shape, loc=param_loc, scale=param_scale)
+                    #max_val=lognorm.ppf(1-1e-4, param_shape, loc=param_loc, scale=param_scale)
+                    param_vals=np.array([lognorm.ppf(x, param_shape, loc=param_loc, scale=param_scale) for x in value_range])#
                     param_weights=np.zeros(self.simulation_options["dispersion_bins"][i])
                     param_weights[0]=lognorm.cdf(param_vals[0],param_shape, loc=param_loc, scale=param_scale)
                     param_midpoints=np.zeros(self.simulation_options["dispersion_bins"][i])

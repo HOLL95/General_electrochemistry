@@ -56,7 +56,7 @@ concentrations=list(results_file.keys())
 number_list=[float(x) for x in concentrations]
 enumerated_list=sorted(enumerate(number_list), key=lambda x:x[1])
 concentrations=[concentrations[x[0]] for x in enumerated_list]
-
+concentrations=[concentrations[1]]
 num_repeats=3
 
 modes=["bode", "nyquist"]
@@ -65,6 +65,7 @@ repeat_dict={"2023-07-14_SPE-P-DS_1":"1",
             "2023-07-27_SPE-P-DS_1":"2",
             "2023-07-27_SPE-P-DS_5":"3"}
 repeat_dict={v: k for k, v in repeat_dict.items()}
+colours=["#9700CB", "#52AA5E", "#FF8547", "#02B2C9"]
 for model in ["CPE", "2CPE"]:
     for mode in modes:
         plots=plt.subplots(num_repeats, 2)
@@ -93,16 +94,16 @@ for model in ["CPE", "2CPE"]:
                 repeat_str=str(repeat+1)
                 fitting_data=simulated_data=results_file[concentrations[i]][repeat_str]["Data"]
                 plot_frequencies=simulated_data=results_file[concentrations[i]][repeat_str]["Frequencies"]
-                plot_class.bode(fitting_data, plot_frequencies, compact_labels=True, ax=bode_axes, twinx=bode_twinx, lw=1, no_labels=no_labels, alpha=0.75, scatter=1, markersize=10, line=False)
-                plot_class.nyquist(fitting_data, ax=nyquist_axes, label=text, orthonormal=False, lw=1, alpha=0.75, scatter=1, markersize=10, line=False)
+                plot_class.bode(fitting_data, plot_frequencies, compact_labels=True, ax=bode_axes, twinx=bode_twinx, lw=1, no_labels=no_labels, alpha=0.75, scatter=1, markersize=10, line=False, colour=colours[i])
+                plot_class.nyquist(fitting_data, ax=nyquist_axes, label=text, orthonormal=False, lw=1, alpha=0.75, scatter=1, markersize=10, line=False, colour=colours[i])
                 bode_axes.set_title(repeat_dict[repeat_str])
                 nyquist_axes.set_title(repeat_dict[repeat_str])
-
+                
                 #sim_class=EIS(circuit=model_dict[model], fitting=True, parameter_bounds=boundaries, normalise=True)
                 simulated_data=results_file[concentrations[i]][repeat_str][model][mode]["Fit"]
                 #print(simulated_data)
-                plot_class.bode(simulated_data, plot_frequencies, compact_labels=True, ax=bode_axes, twinx=bode_twinx, no_labels=no_labels)
-                plot_class.nyquist(simulated_data, ax=nyquist_axes, orthonormal=False, label=text)
+                plot_class.bode(simulated_data, plot_frequencies, compact_labels=True, ax=bode_axes, twinx=bode_twinx, no_labels=no_labels, colour=colours[i])
+                plot_class.nyquist(simulated_data, ax=nyquist_axes, orthonormal=False, label=text, colour=colours[i])
         plots[1][0, -1].legend()
         plots[0].set_size_inches(9, 9)
         plots[0].subplots_adjust(left  = 0.09,

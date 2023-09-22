@@ -6,12 +6,17 @@ import time
 from params_class import params
 from scipy.optimize import curve_fit
 from scipy.integrate import simpson
+from dispersion_class import dispersion
 from decimal import Decimal
 from matplotlib.widgets import Slider, Button, RadioButtons
 from numpy.lib.stride_tricks import sliding_window_view
+from EIS_class import EIS
 class DCVTrumpet(single_electron):
     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
-
+        if simulation_options["method"]!="dcv":
+            raise ValueError("Trumpet plots are a DCV experiment")
+        if simulation_options["likelihood"]!="timeseries":
+            raise ValueError("Trumpet plots take place in the time domain")
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
         if "trumpet_method" not in self.simulation_options:
             self.simulation_options["trumpet_method"]="both"
@@ -21,6 +26,8 @@ class DCVTrumpet(single_electron):
             self.simulation_options["synthetic_noise"]=0
         if "record_exps" not in self.simulation_options:
             self.simulation_options["record_exps"]=False
+        if "invert_positions" not in self.simulation_options:
+            self.simulation_options["invert_positions"]=False
         if "omega" in dim_parameter_dictionary:
             if dim_parameter_dictionary["omega"]!=0:
                 dim_parameter_dictionary["omega"]==0
@@ -31,12 +38,15 @@ class DCVTrumpet(single_electron):
             self.simulation_options["potentials"]={}
 
         self.saved_sims={"current":[], "voltage":[]}
-    def trumpet_positions(self, current, voltage):
+    def trumpet_positions(self, current, voltage, dim_flag=True):
         volts=np.array(voltage)
         amps=np.array(current)
 
         if self.simulation_options["find_in_range"]!=False:
-            dim_volts=self.e_nondim(volts)
+            if dim_flag==True:
+                dim_volts=self.e_nondim(volts)
+            else:
+                dim_volts=voltage
             search_idx=tuple(np.where((dim_volts>self.simulation_options["find_in_range"][0])&(dim_volts<self.simulation_options["find_in_range"][1])))
             #fig, ax=plt.subplots(1,1)
             #ax.plot(dim_volts, amps)
@@ -169,7 +179,20 @@ class DCVTrumpet(single_electron):
         data=self.simulate(parameters, scan_rates)
         self.simulation_options["synthetic_noise"]=0
         return data
+    def get_all_voltages(self, scan_rates):
+        potentials=[]
+        times=[]
+        for i in range(0, len(scan_rates)):
+            
+            self.dim_dict["v"]=scan_rates[i]
+            self.nd_param=params(self.dim_dict)
+            self.calculate_times()
+            
+            potentials.append(self.define_voltages())
+            times.append(self.t_nondim(self.time_vec))
+        return np.array(times),  np.array(potentials)
     def simulate(self, parameters, scan_rates, optimise_flag=True):
+        
         forward_sweep_pos=np.zeros(len(scan_rates))
         reverse_sweep_pos=np.zeros(len(scan_rates))
         sim_time=0
@@ -182,14 +205,14 @@ class DCVTrumpet(single_electron):
             if optimise_flag==True:
                 if scan_rates[i] not in self.simulation_options["potentials"]:
                     self.simulation_options["potentials"][scan_rates[i]]=self.define_voltages()
+                
                 volts=self.simulation_options["potentials"][scan_rates[i]]
             else:
                 volts=self.define_voltages()
             start=time.time()
+           
             current=super().simulate(parameters, [])
-
-            #sim_time+=(time.time()-start)
-            #print(time.time()-start, "sim_time", len(current))
+            
             if self.simulation_options["synthetic_noise"]!=0:
                 current=self.add_noise(current, self.simulation_options["synthetic_noise"]*max(current))
 
@@ -207,6 +230,7 @@ class DCVTrumpet(single_electron):
         if self.simulation_options["trumpet_method"]=="both":
             if self.simulation_options["trumpet_test"]==True:
                 print(parameters)
+                print(self.change_norm_group(parameters, "un_norm"))
                 log10_scans=np.log10(scan_rates)
                 fig, ax=plt.subplots(1,1)
                 ax.scatter(log10_scans, forward_sweep_pos)
@@ -214,7 +238,10 @@ class DCVTrumpet(single_electron):
                 ax.scatter(log10_scans, self.secret_data_trumpet[:,0])
                 ax.scatter(log10_scans, self.secret_data_trumpet[:,1])
                 plt.show()
-            return np.column_stack((forward_sweep_pos, reverse_sweep_pos))
+            if self.simulation_options["invert_positions"]==True:
+                return np.column_stack((reverse_sweep_pos, forward_sweep_pos))
+            else:
+                return np.column_stack((forward_sweep_pos, reverse_sweep_pos))
         elif self.simulation_options["trumpet_method"]=="concatenated":
             return np.append(forward_sweep_pos, reverse_sweep_pos)
         elif self.simulation_options["trumpet_method"]=="forward":
@@ -223,14 +250,17 @@ class DCVTrumpet(single_electron):
             return reverse_sweep_pos
 class DCV_peak_area():
     
-    def __init__(self, times, potential, current, area):
+    def __init__(self, times, potential, current, area, func_order="3"):
         
        self.times=times
        self.area=area
        self.current=current
        self.potential=potential
-       self.func_switch={"2":self.poly_2, "3":self.poly_3, "4":self.poly_4}
+       self.func_switch={"1":self.poly_1, "2":self.poly_2, "3":self.poly_3, "4":self.poly_4}
+       self.func_order=func_order
        self.middle_idx=list(potential).index(max(potential))
+    def poly_1(self, x, a, b):
+        return a*x+b
     def poly_2(self, x, a, b, c):
         return (a*x**2)+b*x+c
     def poly_3(self, x, a, b, c, d):
@@ -238,6 +268,14 @@ class DCV_peak_area():
     def poly_4(self, x, a, b, c, d, e):
         return (a*x**4)+(b*x**3)+(c*x**2)+d*x+e
     def background_subtract(self, params):
+        #1Lower intersting section sweep1
+        #2Upper interesting section sweep1
+        #3Lower intersting section sweep2
+        #4Upper interesting section sweep2
+        #5 start of first sweep
+        #6end of first sweep
+        #7 start of second sweep
+        #8end of second sweep
         func=self.func_switch[self.func_order]
         half_len=len(self.potential[self.middle_idx:])
         first_idx=np.where(self.potential>params[4])[0][0]
@@ -263,13 +301,20 @@ class DCV_peak_area():
         for i in range(0, 2):
             current_half=current_results[idx_1[i]:idx_2[i]]
             time_half=time_results[idx_1[i]:idx_2[i]]
+         
+            
+            
             volt_half=self.potential[idx_1[i]:idx_2[i]]
+            #plt.plot(volt_half, current_half)
+            #print(volt_half)
+            #print(interesting_section[i][0], interesting_section[i][1])
             noise_idx=np.where((volt_half<interesting_section[i][0]) | (volt_half>interesting_section[i][1]))
             signal_idx=np.where((volt_half>interesting_section[i][0]) & (volt_half<interesting_section[i][1]))
             noise_voltages=volt_half[noise_idx]
             noise_current=current_half[noise_idx]
             noise_times=time_half[noise_idx]
-
+            #plt.plot(noise_voltages, noise_current)
+            #plt.show()
             popt, pcov = curve_fit(func, noise_times, noise_current)
             fitted_curve=[func(t, *popt) for t in time_half]
             return_arg["poly_{0}".format(i)]=[volt_half, fitted_curve]
@@ -285,14 +330,7 @@ class DCV_peak_area():
             gamma=abs(area/(self.area*96485.3321))
             return_arg["gamma_{0}".format(i)]="{:.3E}".format(Decimal(gamma))
         return return_arg
-            #print(gamma)
-    #def update_lines(self, poly_lines, subtracted_lines, params):
-    #    get_vals=self.background_subtract(params)
-    #    for i in range(0,2):
-    #        print(poly_lines)
-    #        print(subtracted_lines)
-    #        poly_lines[i].set_data(get_vals["poly_{0}".format(i)][0], get_vals["poly_{0}".format(i)][1])
-    #        subtracted_lines[i].set_data(get_vals["subtract_{0}".format(i)][0], get_vals["subtract_{0}".format(i)][1])
+
     def update(self, value):
         params=[self.slider_array[key].val for key in self.slider_array.keys() ] 
         get_vals=self.background_subtract(params)
@@ -384,7 +422,7 @@ class Laviron_EIS(single_electron):
             self.simulation_options={"data_representation":"nyquist"}
             self.dim_dict={}
             return
-        from EIS_class import EIS
+        
         EIS_Cs=["EIS_Cdl", "EIS_Cf"]
         for i in range(0, len(EIS_Cs)):
             if EIS_Cs[i] not in simulation_options:
@@ -397,22 +435,47 @@ class Laviron_EIS(single_electron):
                 raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element)".format(EIS_Cs[i]))
         if "data_representation" not in simulation_options:
             simulation_options["data_representation"]="nyquist"  
+            simulation_options["bode_split"]=None
         elif simulation_options["data_representation"]=="bode":
             if "bode_split" not in simulation_options:
                 simulation_options["bode_split"]=None
-            
+        elif simulation_options["data_representation"]=="nyquist":
+            simulation_options["bode_split"]=None
         if "DC_pot" not in simulation_options:
             raise ValueError("Please define a DC EIS potential")
         if "Rct_only" not in simulation_options:
             simulation_options["Rct_only"]=False
+        if "invert_imaginary" not in simulation_options:
+            simulation_options["invert_imaginary"]=False
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
+        if "v" not in dim_parameter_dictionary or "original_omega" not in dim_parameter_dictionary:
+            dim_parameter_dictionary["v"]=1
+            dim_parameter_dictionary["omega"]=1
+        if "E_start" not in dim_parameter_dictionary:
+            dim_parameter_dictionary["E_start"]=-10e-3
+            dim_parameter_dictionary["E_reverse"]=10e-3
+            
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
     def n_outputs(self):
         if self.simulation_options["bode_split"]==None:
             return 2     
         else:
             return 1
+    def def_optim_list(self, parameters):
+        super().def_optim_list(parameters)
+        if self.simulation_options["dispersion"]==True:
+            total_elements=np.prod(self.simulation_options["dispersion_bins"])
+            electrochem_dict={"p1":self.simulation_options["EIS_Cdl"]}
+            for i in range(0,int(total_elements)):
+                electrochem_dict["p{0}".format(i+2)]=["R{0}".format(i+1), "C{0}".format(i+2)]
+            
+            self.Laviron_circuit={"z1":"R0", "z2":electrochem_dict}
+            self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=self.simulation_options["invert_imaginary"])
+            self.all_names=self.simulator.param_names
+        else:
+            self.Laviron_circuit={"z1":"R0", "z2":{"p1":self.simulation_options["EIS_Cdl"], "p2":["R1", self.simulation_options["EIS_Cf"]]}}
+            self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=self.simulation_options["invert_imaginary"])
     def synthetic_noise(self, parameters, frequencies, noise, flag="proportional"):
 
         sim=self.simulate(parameters, frequencies)
@@ -421,7 +484,16 @@ class Laviron_EIS(single_electron):
         else:
             return_arg=np.column_stack((self.add_noise(sim[:,0], noise*np.mean(sim[:,0])), self.add_noise(sim[:,1], noise*np.mean(-sim[:,1]))))   
         
-        return return_arg
+        return return_ar
+    def get_all_voltages(self, frequencies, oscillations=2):
+        potentials=[]
+        times=[]
+        freqs=np.multiply(frequencies, 2*np.pi)
+        for i in range(0, len(frequencies)):
+            
+            times.append(np.linspace(0, oscillations/frequencies[i]))
+            potentials.append(5e-3*np.sin(times[i]*freqs[i]))
+        return np.array(times), np.array(potentials)
     def clean_simulate(self,params,frequencies, **kwargs):
         from EIS_class import EIS
         self.optim_list=[]
@@ -456,15 +528,7 @@ class Laviron_EIS(single_electron):
         for key in ["k_0", "E_0", "alpha", "gamma","area", "Ru", "Cdl"]:
             self.dim_dict[key]=params[key]
         return self.simulate([], frequencies)
-    def simulate(self, parameters, frequencies, print_circuit_params=False):
-        if self.simulation_options["label"]=="cmaes":
-            params=self.change_norm_group(parameters, "un_norm")
-        else:
-            params=parameters
-        for i in range(0, len(self.optim_list)):
-
-            self.dim_dict[self.optim_list[i]]=params[i]
-        
+    def calculate_circuit_parameters(self,print_circuit_params):
         k0=self.dim_dict["k_0"]
         e0=self.dim_dict["E_0"]
         alpha=self.dim_dict["alpha"]
@@ -481,6 +545,7 @@ class Laviron_EIS(single_electron):
         Ra=Ra_coeff*((alpha*ox*nu_alpha)+((1-alpha)*red*nu_1_alpha))**-1
         sigma=k0*Ra*(nu_alpha+nu_1_alpha)
         Cf=1/sigma
+        #print(Cf)
 
         EIS_params={}
         EIS_params["R0"]=self.dim_dict["Ru"]
@@ -504,11 +569,64 @@ class Laviron_EIS(single_electron):
             EIS_params["alpha2"]=self.dim_dict["cpe_alpha_faradaic"]
         if print_circuit_params==True:
             print(EIS_params)
+        return EIS_params
+    def simulate(self, parameters, frequencies, print_circuit_params=False):
+        if self.simulation_options["label"]=="cmaes":
+            params=self.change_norm_group(parameters, "un_norm")
+        else:
+            params=parameters
+        for i in range(0, len(self.optim_list)):
+
+            self.dim_dict[self.optim_list[i]]=params[i]
+
+        
         
         #print(EIS_params)
         #.print(Ra_coeff)
         #EIS_params={'R0': 5, 'C1': 1e-06, 'R1': 59.27316911806477, 'C2': 2.4156737037803954e-05}
-        Z_vals=self.simulator.test_vals(EIS_params, frequencies)
+        if self.simulation_options["dispersion"]==True:
+            
+            self.disp_test=[]
+            Z_vals=np.zeros((len(frequencies),self.n_outputs()))
+            if self.simulation_options["GH_quadrature"]==True:
+                sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
+            else:
+                sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
+            #print(self.values, "LAV")
+
+            for i in range(0, len(self.weights)):
+                for j in range(0, len(sim_params)):   
+                    self.dim_dict[sim_params[j]]=self.values[i][j]
+                    #self.dim_dict[sim_params[j]]=
+                    #print(self.values[i][j])
+                simulation_params=self.calculate_circuit_parameters(print_circuit_params)
+                
+                current_weight=np.prod(self.weights[i])
+                if i==0:
+                   EIS_params=simulation_params
+                else:
+                    EIS_params["C{0}".format(i+2)]=simulation_params["C2"]
+                    EIS_params["R{0}".format(i+1)]=simulation_params["R1"]
+                #print(self.Laviron_circuit)
+                #print(EIS_params)
+                EIS_params["C{0}".format(i+2)]*=current_weight
+                EIS_params["R{0}".format(i+1)]/=current_weight
+                """if i==0:
+                    simulation_params={key:EIS_params[key]*np.prod(self.weights[i]) for key in EIS_params}
+                else:
+                    current_weight=np.prod(self.weights[i])
+                    for key in simulation_params.keys():
+                        simulation_params[key]+=EIS_params[key]*current_weight"""
+                #sim_vals=self.simulator.test_vals(EIS_params, frequencies)
+                if self.simulation_options["dispersion_test"]==True:
+                    self.disp_test.append(sim_vals)
+                #current_z_val=np.multiply(sim_vals, np.prod(self.weights[i]))
+                #Z_vals=np.add(Z_vals, current_z_val)
+            Z_vals=self.simulator.test_vals(EIS_params, frequencies)
+        else:       
+            EIS_params=self.calculate_circuit_parameters(print_circuit_params)
+            print(EIS_params, "Normal")
+            Z_vals=self.simulator.test_vals(EIS_params, frequencies)
         
         if self.simulation_options["test"]==True:
             fig, ax=plt.subplots()
@@ -541,6 +659,8 @@ class PSV_harmonic_minimum(single_electron):
             simulation_options["num_steps"]=100
         if "E_step_range" not in simulation_options:
             simulation_options["E_step_range"]=100e-3
+        if "return_magnitudes" not in simulation_options:
+            simulation_options["return_magnitudes"]=False
         if "E_step_start" not in simulation_options:
             raise ValueError("Please define the initial step")
         simulation_options["max_even_harm"]=other_values["harmonic_range"][-1]//2
@@ -569,17 +689,28 @@ class PSV_harmonic_minimum(single_electron):
         data=self.simulate(parameters, scan_rates, rolling_window=True)
         self.simulation_options["synthetic_noise"]=0
         return data
+    
     def rolling_mean(self, x, window):
         
         return np.convolve(x, np.ones(window)/window, mode='same')
-
-
+    def define_potentials(self,):
+        return  self.simulation_options["E_step_start"]+ np.multiply(self.simulation_options["E_step"],np.arange(0, self.simulation_options["num_steps"]))
+    def get_all_voltages(self, ):
+        E_start_vals=self.define_potentials()
+        potentials=[]
+        times=[]
+        for i in range(0, self.simulation_options["num_steps"]):
+            self.dim_dict["E_start"]=E_start_vals[i]
+            self.update_params([self.dim_dict[x] for x in self.optim_list])
+            potentials.append(self.define_voltages())
+            times.append(self.t_nondim(self.time_vec))
+        return np.array(times), np.array(potentials)
     def simulate(self, parameters, frequencies, rolling_window=False):
         magnitudes=np.zeros((self.simulation_options["num_even_harms"], self.simulation_options["num_steps"]))
-        E_start_vals=self.simulation_options["E_step_start"]+ np.multiply(self.simulation_options["E_step"],np.arange(0, self.simulation_options["num_steps"]))
+        E_start_vals=self.define_potentials()
         for i in range(0, self.simulation_options["num_steps"]):
             self.dim_dict["E_start"]=E_start_vals[i]#(i*self.simulation_options["E_step"])
-
+            
             current=super().simulate(parameters, frequencies)
             if self.simulation_options["synthetic_noise"]!=0:
                 current=self.add_noise(current, self.simulation_options["synthetic_noise"]*max(current))
@@ -587,11 +718,13 @@ class PSV_harmonic_minimum(single_electron):
             #plt.show()
             magnitudes[:, i]=self.get_even_amplitudes(self.simulation_times, current)
         minima=np.zeros(self.simulation_options["num_even_harms"])
-        
+        if self.simulation_options["return_magnitudes"]==True:
+            return magnitudes
         for i in range(0, self.simulation_options["num_even_harms"]):
             if rolling_window==True:
                 magnitudes[i,:]=self.rolling_mean(magnitudes[i,:], window=4)
             
             minima[i]=E_start_vals[np.where(magnitudes[i,:]==min(magnitudes[i,:]))]/self.nd_param.c_E0
+        
         return minima
         

@@ -21,7 +21,7 @@ data_loc="/home/henney/Documents/Oxford/Experimental_data/Henry/7_6_23/Text_file
 data_file="EIS_modified.txt"
 
 data=np.loadtxt(data_loc+"/"+data_file, skiprows=10)    
-window=10
+window=0
 DC_val=-0.2850
 
 if window!=0:
@@ -75,7 +75,7 @@ simulation_options={
     "DC_pot":DC_val,
     "data_representation":"bode",
     "invert_imaginary":False,
-    "Rct_only":True,
+    "Rct_only":False,
 }
 other_values={
     "filter_val": 0.5,
@@ -99,7 +99,11 @@ param_bounds={
     "cpe_alpha_cdl":[0,1],
     "phase":[-180, 180],
 }
-
+fig, ax=plt.subplots(1,3)
+EIS().nyquist(fitting_data, ax=ax[0], scatter=1)
+EIS().nyquist(fitting_data, ax=ax[1], scatter=1, orthonormal=False)
+EIS().bode(fitting_data, frequencies, ax=ax[2], twinx=ax[2].twinx(), compact_labels=True)
+plt.show()
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 laviron.def_optim_list(["gamma","k_0",  "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #sim_class=EIS(circuit=circuit, fitting=True, parameter_bounds=boundaries, normalise=True)
@@ -139,7 +143,7 @@ for window_val in window_params.keys():
     EIS().bode(sim_data, frequencies,ax=ax, twinx=twinx, data_type="phase_mag", scatter=1, label=window)
 EIS().bode(fitting_data, frequencies, ax=ax, twinx=twinx, lw=5, alpha=0.75, label="Data")
 plt.show()
-laviron.def_optim_list(["gamma","k_0",  "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic", "Cfarad"])
+laviron.def_optim_list(["gamma","k_0",  "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 names=laviron.optim_list
 
 print(names)

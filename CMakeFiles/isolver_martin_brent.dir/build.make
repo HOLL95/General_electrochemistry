@@ -92,6 +92,8 @@ isolver_martin_brent_EXTERNAL_OBJECTS =
 
 isolver_martin_brent.cpython-310-x86_64-linux-gnu.so: CMakeFiles/isolver_martin_brent.dir/src/surface_process_brent.cpp.o
 isolver_martin_brent.cpython-310-x86_64-linux-gnu.so: CMakeFiles/isolver_martin_brent.dir/build.make
+isolver_martin_brent.cpython-310-x86_64-linux-gnu.so: /usr/lib64/libgsl.so
+isolver_martin_brent.cpython-310-x86_64-linux-gnu.so: /usr/lib64/libgslcblas.so
 isolver_martin_brent.cpython-310-x86_64-linux-gnu.so: CMakeFiles/isolver_martin_brent.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/henney/Documents/Oxford/General_electrochemistry/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared module isolver_martin_brent.cpython-310-x86_64-linux-gnu.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/isolver_martin_brent.dir/link.txt --verbose=$(VERBOSE)

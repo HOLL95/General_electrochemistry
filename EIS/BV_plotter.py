@@ -274,6 +274,12 @@ for i in range(0, len(param_names)):
         save_dict[key][str(param_val_scans[key][j])]["freq"]=np.array(freqs)[index]
         EIS().bode(np.column_stack((real, z.imag[index])), save_dict[key][str(param_val_scans[key][j])]["freq"], ax=axis, twinx=twinx, data_type="complex", compact_labels=True, label=key+"="+str(param_val_scans[key][j]))
         EIS().nyquist(np.column_stack((real, z.imag[index])), ax=ax2[i//3, i%3], orthonormal=False)
+writer = animation.PillowWriter(fps=15,
+                                 metadata=dict(artist='Me'),
+                                 bitrate=1800)
+                                
+ani.save('scatter.gif', writer=writer)
+
 #np.save("BV_param_scans_for_laviron_skipping",save_dict)
 plt.show()  
 

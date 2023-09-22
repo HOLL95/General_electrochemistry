@@ -45,7 +45,8 @@ class MCMC_plotting:
                         "sep":"V",
                         "cpe_alpha_faradaic" :"",
                         "cpe_alpha_cdl" :"",
-                        "sigma":""
+                        "sigma":"",
+                        "dcv_sep":"V"
                         }
         self.fancy_names={
                         "E_0": '$E^0$',
@@ -80,7 +81,8 @@ class MCMC_plotting:
                         "sep":"Seperation",
                         "cpe_alpha_faradaic" :"$\\psi$ $(\\Gamma)$",
                         "cpe_alpha_cdl" :"$\\psi$ $(C_{dl})$",
-                        "sigma":"$\\sigma$"
+                        "sigma":"$\\sigma$",
+                        "dcv_sep":"Separation"
                         }
         self.dispersion_symbols={
                                 "mean":"$\\mu$", 
@@ -154,9 +156,11 @@ class MCMC_plotting:
                         else:
                             params[i]=self.fancy_names[fname]+self.dispersion_symbols[self.dispersion_params[q]]
                 if disped==False:
-                    if re.search(".*_[1-9]+", titles) is not None:
-                        params[i],true_name=self.numbered_title(titles[z], kwargs["units"])
+                    if re.search(".*_[1-9]+", titles[z]) is not None:
+                        params[i],true_name=self.numbered_title(titles[z], units=kwargs["units"])
                         self.plot_units[titles[z]]=self.unit_dict[true_name]
+                    
+
                 
         return params
     def numbered_title(self, name, **kwargs):
@@ -189,10 +193,26 @@ class MCMC_plotting:
         param_list=copy.deepcopy(params)
         param_list[optim_list.index(parameter)]=value
         return param_list
-    def chain_appender(self, chains, param):
-        new_chain=chains[0, self.options["burn"]:, param]
+    def chain_appender(self, chains, param, burn=True):
+        if burn==True:
+            burnlen=self.options["burn"]
+        else:
+            burnlen=0
+        new_chain=chains[0, burnlen:, param]
         for i in range(1, len(chains)):
-            new_chain=np.append(new_chain, chains[i, self.options["burn"]:, param])
+            new_chain=np.append(new_chain, chains[i, burnlen:, param])
+        return new_chain
+    def convert_to_zscore(self, chains):
+        if self.options["burn"]==0:
+            new_chain=copy.deepcopy(chains)
+        else:
+            new_chain=np.zeros((chains.shape[0], chains.shape[1]-self.options["burn"], chains.shape[2]))
+        for i in range(0, len(chains)):
+            for j in range(0, len(chains[i,0,:])):
+                current_samples=chains[i, self.options["burn"]:, j]
+                mean=np.mean(current_samples)
+                std=np.std(current_samples)
+                new_chain[i, :, j]=np.subtract(current_samples, mean)/std
         return new_chain
     def concatenate_all_chains(self, chains):
         return [self.chain_appender(chains, x) for x in range(0, len(chains[0, 0, :]))]
@@ -214,31 +234,48 @@ class MCMC_plotting:
             kwargs["alpha"]=1
         if "pool" not in kwargs:
             kwargs["pool"]=True
+        if "burn_remove" not in kwargs:
+            kwargs["burn_remove"]=True
         if "Rhat_title" not in kwargs:
             kwargs["Rhat_title"]=False
-
+        if "log" not in kwargs:
+            kwargs["log"]=False
         if "true_values" not in kwargs:
             kwargs["true_values"]=False        
-        titles=self.get_titles(titles, units=True, positions=kwargs["positions"])
+        if "title_debug" not in kwargs:
+            kwargs["title_debug"]=False
+        if kwargs["title_debug"] is False:
+            titles=self.get_titles(titles, units=True, positions=kwargs["positions"])
         for i in range(0, len(titles)):
-            axes=ax[i//col, i%col]
-            plot_chain=self.chain_appender(set_chain, kwargs["positions"][i])#axes.set_title()
+            if len(ax.shape)!=1:
+                axes=ax[i//col, i%col]
+            else:
+                axes=ax[i]
+            plot_chain=self.chain_appender(set_chain, kwargs["positions"][i], burn=kwargs["burn_remove"])#axes.set_title()
+            if kwargs["log"]==True:
+               
+                plot_chain=np.log10(plot_chain)
             if abs(np.mean(plot_chain))<1e-5:
                 axes.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2e'))
             elif abs(np.mean(plot_chain))<0.001:
                 axes.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
             else:
-                order=np.log10(np.std(plot_chain))
+                
+                order=np.log10(np.std(np.abs(plot_chain)))
+
                 if order>1:
                     axes.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
                 else:
-                    order_val=abs(int(np.ceil(order)))+1
+                    
+                    order_val=abs(int(np.ceil(np.abs(order))))+1
                     axes.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.{0}f'.format(order_val)))
             if kwargs["pool"]==True:
                 axes.hist(plot_chain,bins=20, stacked=True, label=kwargs["label"], alpha=kwargs["alpha"])
-            else:
+            elif kwargs["pool"]==False:
                 for j in range(0, len(set_chain[:, 0, 0])):
                     axes.hist(set_chain[j, self.options["burn"]:, i],bins=20, stacked=True, label="Chain {0}".format(i+1), alpha=kwargs["alpha"])
+            elif kwargs["pool"]=="pre_pooled":
+                 axes.hist(set_chain,bins=20, stacked=True, label=kwargs["label"], alpha=kwargs["alpha"])
             if kwargs["Rhat_title"]==True:
                 rhat_val=rhat(set_chain[:, self.options["burn"]:, i])
                 axes.set_title(round(rhat_val, 3))
@@ -253,10 +290,11 @@ class MCMC_plotting:
             #axes.set_title(graph_titles[i])
         return  ax
     def axes_legend(self, label_list,  ax,**kwargs):
-        
+        if "colours" not in kwargs:
+            kwargs["colours"]=[None for x in range(0, len(label_list))]
             
         for i in range(0, len(label_list)):
-            ax.plot(0, 0, label=label_list[i])
+            ax.plot(0, 0, label=label_list[i], color=kwargs["colours"][i])
         if "bbox" not in kwargs:
             ax.legend()
         else:
@@ -330,14 +368,29 @@ class MCMC_plotting:
             kwargs["nbins"]=None
         if "log" not in kwargs:
             kwargs["log"]=False
+        if "twinx" not in kwargs:
+            kwargs["twinx"]=None
         if "axis" not in kwargs:
             fig, ax=plt.subplots(n_param, n_param)
+        if "alpha" not in kwargs:
+            kwargs["alpha"]=1
+        if "colour" not in kwargs:
+            kwargs["colour"]=None
         elif len(kwargs["axis"])!=n_param:
             return ValueError("Axis length must be {0}".format(n_param))
         else:
-            ax=kwargs["axis"]    
+            ax=kwargs["axis"]   
+        if "title_debug" not in kwargs:
+            kwargs["title_debug"]=False
+
+        if kwargs["title_debug"] is False:
+           labels=self.get_titles(params, units=True)
+        else:
+            labels=params
+
+
         chain_results=chains
-        labels=self.get_titles(params, units=True)
+        
         twinx=[]
         for i in range(0,n_param):
            
@@ -356,14 +409,16 @@ class MCMC_plotting:
             #chain_i=np.multiply(chain_i, values[i])
             
             for j in range(0, n_param):
-                
                 m=kwargs["order"][j]
                 if i==j:
                     axes=ax[i,j]
                     axes.set_yticks([])
-                    ax1=axes.twinx()
+                    if kwargs["twinx"] is None:
+                        ax1=axes.twinx()
+                    else:
+                        ax1=kwargs["twinx"][j]
                     for z in range(0, len(chain_i)):
-                        ax1.hist(chain_i[z], density=kwargs["density"], bins=kwargs["nbins"], log=kwargs["log"])
+                        ax1.hist(chain_i[z], density=kwargs["density"], bins=kwargs["nbins"], log=kwargs["log"],  color=kwargs["colour"])
                     twinx.append(ax1)
                     #ticks=axes.get_yticks()
                     #axes.set_yticks([])
@@ -378,11 +433,15 @@ class MCMC_plotting:
                     ax[i,j].axis('off')
                 else:
                     axes=ax[i,j]
+                    if kwargs["log"] is True:
+                        axes.set_yscale('log')
+                        axes.set_xscale('log')
                     chain_j=[chain_results[x, burn:, m] for x in range(0, 3)]
                     if kwargs["pooling"]==True: 
                         chain_j=[np.concatenate(chain_j)]
                     for z in range(0, len(chain_i)):
-                        axes.scatter(chain_j[z], chain_i[z], s=0.5)
+                        axes.scatter(chain_j[z], chain_i[z], s=0.5, alpha=kwargs["alpha"], color=kwargs["colour"])
+                    
                 if kwargs["true_values"] is not None:
                     
                     if params[j] in kwargs["true_values"] and params[i] in kwargs["true_values"]:
@@ -413,7 +472,7 @@ class MCMC_plotting:
                     if np.mean(np.abs(chain_i))<1e-4:
                         ax[i, 0].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
                     
-        print("++", len(twinx))     
+        #print("++", len(twinx))     
         return ax, twinx
     def convert_idata_to_pints_array(self,idata):
         chains=idata.to_dict()

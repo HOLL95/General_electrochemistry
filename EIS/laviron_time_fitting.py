@@ -188,7 +188,9 @@ for i in range(0, len(keys)):
                     dim_params=laviron.change_norm_group(found_parameters[:-2], "un_norm")
                     fitted_vals=dict(zip(laviron.optim_list, dim_params))
                     print(fitted_vals)
+                    print(fitted_vals["Cdl"]/0.07)
                     sim=laviron.simulate(found_parameters[:-2], freq, print_circuit_params=True)
+
                     best_score=found_value
                     fig1, ax1=plt.subplots()
                     twinx1=ax1.twinx()
@@ -201,9 +203,9 @@ for i in range(0, len(keys)):
                     #print(sim)
                     fig1, ax1=plt.subplots()
                     twinx1=ax1.twinx()
-                    print(list(found_parameters))
-                    print(key, val)
-                    print(list(dim_params))
+                    print(list(found_parameters), "2")
+                    print(key, val, "3")
+                    print(list(dim_params), "4")
                     print(laviron.optim_list)
                     EIS().bode( fitting_data,freq, data_type="phase_mag", data_is_log=True, ax=ax1, twinx=twinx1)
                     EIS().bode( sim,freq, data_type="phase_mag", ax=ax1, twinx=twinx1)
