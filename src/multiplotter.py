@@ -60,7 +60,7 @@ class multiplot:
         if kwargs["orientation"] =="landscape":
             total_axes=[]
             axes=["row" +str(x) for x in range(1, num_rows+1)]
-            print(kwargs)
+            
             for i in range(0, num_rows):
                 row_axes=[]
                 if i in kwargs["harmonic_position"]:
@@ -150,7 +150,6 @@ class multiplot:
                         loc=(j*((kwargs["num_harmonics"]*kwargs["plot_height"])+kwargs["row_spacing"]),i*(kwargs["plot_width"]+kwargs["col_spacing"]))
                         rowspan=kwargs["num_harmonics"]*kwargs["plot_height"]
                         colspan=kwargs["plot_width"]
-                        print(loc, colspan, rowspan)
                         subplotspec=gridspecification.new_subplotspec(loc, rowspan, colspan)
                         ax=plt.subplot(subplotspec)
                         row_axes.append(ax)

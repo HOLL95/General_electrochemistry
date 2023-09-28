@@ -117,7 +117,7 @@ big_ol_dict={"ramped":{"params":{"E_start":-500e-3, "E_reverse":200e-3, "v":22.5
             "dcv":{"params":{"E_start":-500e-3, "E_reverse":200e-3, "v":10000e-3, "omega":0,"d_E":0,}, "options":{"method":"dcv"},"ax":ax2, "pot_ax":pot_ax3},
             "eis":{"params":{"Cdl":param_list["Cdl"]*param_list["area"]}, "options":{"EIS_Cf":"C", "EIS_Cdl":"C", "DC_pot":param_list["E_0"]-0.005, "data_representation":"bode"}, "ax":ax6, "twinx":ax6.twinx(), "pot_ax":pot_ax6},
             "trumpet_plot":{"params":{"E_start":-500e-3, "E_reverse":200e-3, "v":50e-3, "omega":0,"d_E":0,"Ru":0, "dcv_sep":0.5, "sampling_freq":1/50}, "options":{"method":"dcv"}, "ax":ax5, "pot_ax":pot_ax5},
-            "harmonic_minimum":{"params":{"E_start":param_list["E_0"]-300e-3, "E_reverse":200e-3, "d_E":300e-3, "omega":10, "original_omega":10,}, "options":{"E_step_start":param_list["E_0"]-300e-3-50e-3, "num_steps":100,"E_step_range":150e-3,"return_magnitudes":True}, "ax":ax3, "pot_ax":pot_ax4},
+            "harmonic_minimum":{"params":{"E_start":param_list["E_0"]-300e-3, "E_reverse":200e-3, "d_E":300e-3, "omega":10, "original_omega":10,}, "options":{"E_step_start":param_list["E_0"]-300e-3-50e-3, "num_steps":150,"E_step_range":150e-3,"return_magnitudes":True}, "ax":ax3, "pot_ax":pot_ax4},
 
 }
  
@@ -241,9 +241,7 @@ for j in range(0, num_draws):
             h_class=harmonics(current_other["harmonic_range"], current_params["omega"], 0.5)
             times=current_class.t_nondim(current_class.time_vec)
             t=times[current_class.time_idx]
-            potential=current_class.e_nondim(current_class.define_voltages())
-            if j==0:
-                pot_axis.plot(times, potential, color="black")
+            
             data=current_class.i_nondim(current_class.test_vals(sim_params, "timeseries"))
             if key=="sinusoidal":
                 xvals=current_class.e_nondim(current_class.define_voltages())[current_class.time_idx]
@@ -254,6 +252,10 @@ for j in range(0, num_draws):
                 hanning=True
                 plot_func=np.abs
             
+            if j==num_draws-1:
+                current_class.nd_param.nd_param_dict["nd_omega"]=1.5
+                potential=current_class.e_nondim(current_class.define_voltages())
+                pot_axis.plot(times, potential, color="black")
             h_class.plot_harmonics(t, reference_time_series=data, xaxis=xvals, hanning=hanning, plot_func=plot_func, axes_list=axis, legend=None, h_num=False,colour=plot_args["color"], lw=plot_args["lw"], alpha=plot_args["alpha"])
             for element in axis:
                 element.set_axis_off()
@@ -309,14 +311,22 @@ for j in range(0, num_draws):
             
             vals=current_class.test_vals(sim_params, "timeseries")
             xaxis=current_class.define_potentials()
-            if j==0:
+            
+            axis.semilogy(xaxis, vals[2,:], **plot_args)
+            axis.set_axis_off()
+            if j==num_draws-1:
+               
+                current_class.dim_dict["omega"]=20
+                current_class.simulation_options["E_step"]=0.1
+                current_class.simulation_options["num_steps"]=5
+                current_class.calculate_times()
+                vals=current_class.test_vals(sim_params, "timeseries")
+                
                 all_times, all_potentials=current_class.get_all_voltages()
                 plot_potentials=current_class.e_nondim(all_potentials.ravel())
                 dt=all_times[0][1]-all_times[0][0]
                 plot_times=np.linspace(0, all_times[0][-1]*len(all_times), len(plot_potentials))
                 pot_axis.plot(plot_times, plot_potentials, color="black")
-            axis.semilogy(xaxis, vals[2,:], **plot_args)
-            axis.set_axis_off()
 fig.set_size_inches(9, 7)
 plt.show()
 fig.savefig("bigfig.png", dpi=500)

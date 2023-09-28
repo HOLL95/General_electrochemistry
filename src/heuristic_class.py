@@ -694,7 +694,9 @@ class PSV_harmonic_minimum(single_electron):
         
         return np.convolve(x, np.ones(window)/window, mode='same')
     def define_potentials(self,):
-        return  self.simulation_options["E_step_start"]+ np.multiply(self.simulation_options["E_step"],np.arange(0, self.simulation_options["num_steps"]))
+        vals= self.simulation_options["E_step_start"]+ np.multiply(self.simulation_options["E_step"],np.arange(0, self.simulation_options["num_steps"]))
+       
+        return vals
     def get_all_voltages(self, ):
         E_start_vals=self.define_potentials()
         potentials=[]
