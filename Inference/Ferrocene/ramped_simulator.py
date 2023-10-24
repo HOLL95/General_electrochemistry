@@ -121,19 +121,20 @@ current_results=ferro.other_values["experiment_current"]
 voltage_results=ferro.other_values["experiment_voltage"]
 ferro.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru"])
 
-cpe_both={'E_0': 0.2580873519476527, 'k_0': 400.826795806107176, 'gamma': 1.0819057106697644e-09, 'Cdl': 0.00014209665648665912/param_list["area"], 'alpha': 0.4927399067944382, 'Ru': 116.65937541075522, 'cpe_alpha_cdl': 0.6018831645359057, 'cpe_alpha_faradaic': 0.8387369804518475}
-vals=[cpe_both[x] for x in ferro.optim_list]
+cpe_both={'E_0': 0.24973418891564086, 'k_0': 40.0836335638347, 'gamma': 1.2641498960640705e-10, 'Cdl': 4.6263514007055425e-05/param_list["area"], 'alpha': 0.4888807987098013, 'Ru': 116.83438715058305, 'cpe_alpha_cdl': 0.6038787155261925, 'cpe_alpha_faradaic': 0.8281817909445726}
+cdl_only={'E_0': 0.24664324205647736, 'k_0': 1.994718355230308, 'gamma': 3.759801157409028e-09, 'Cdl': 3.4463434909037714e-06/param_list["area"], 'alpha': 0.3710871009927439, 'Ru': 150.6110608145238, 'cpe_alpha_cdl': 0.8182725135590561, 'cpe_alpha_faradaic': 0.7115624686878474}
+vals=[cdl_only[x] for x in ferro.optim_list]
 
 sim=ferro.i_nondim(ferro.test_vals(vals, "timeseries"))
 #plt.plot(sim)
-plot_args=dict(EIS_Cdl_time_series=sim, hanning=True, plot_func=abs)
-for cdl_val in np.flip([1e-5, 5e-5, 1e-4]):
+plot_args=dict(data_time_series=ferro.i_nondim(current_results),EIS_time_series=sim, hanning=True, plot_func=abs)
+"""for cdl_val in np.flip([1e-5, 5e-5, 1e-4]):
     cpe_both["Cdl"]=cdl_val
     vals=[cpe_both[x] for x in ferro.optim_list]
     sim=ferro.test_vals(vals, "timeseries")
     key="Cdl={0}_time_series".format(cdl_val)
     plot_args[key]=ferro.i_nondim(sim)
-    #plt.plot(plot_args[key])
+    #plt.plot(plot_args[key])"""
 h_class.plot_harmonics(ferro.t_nondim(time_results), **plot_args)
 #h_class.plot_harmonics(ferro.t_nondim(time_results), current_time_series=current_results,simulated_time_series=sim, hanning=True, plot_func=abs)
 plt.show()

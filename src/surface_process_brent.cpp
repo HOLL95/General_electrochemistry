@@ -79,7 +79,9 @@ struct e_surface_fun {
     double Upper_lambda;
     double integral_0_oxidation;
     double integral_0_reduction;
+    double aoo, arr, aor, k0_ap, E0_ap, S, G; 
     bool Marcus_flag;
+    bool interaction_flag;
 
     e_surface_fun (
                     const double E,
@@ -100,13 +102,22 @@ struct e_surface_fun {
                     const double Upper_lambda,
                     const double integral_0_oxidation,
                     const double integral_0_reduction,
-                    const bool Marcus_flag
+                    const bool Marcus_flag,
+                    const double aoo,
+                    const double arr,
+                    const double aor, 
+                    const double k0_ap, 
+                    const double E0_ap, 
+                    const double S,
+                    const double G,
+                    const bool interaction_flag
                     ) :
         E(E),dE(dE),cap_E(cap_E),Cdl(Cdl),
         CdlE(CdlE),CdlE2(CdlE2),CdlE3(CdlE3),E0(E0),Ru(Ru),
         k0(k0),alpha(alpha),In0(In0),u1n0(u1n0),dt(dt),gamma(gamma), 
         Upper_lambda(Upper_lambda),integral_0_oxidation(integral_0_oxidation),
-        integral_0_reduction(integral_0_reduction),Marcus_flag(Marcus_flag)
+        integral_0_reduction(integral_0_reduction),Marcus_flag(Marcus_flag),
+        aoo(aoo), arr(arr), k0_ap(k0_ap), E0_ap(E0_ap), S(S), G(G), interaction_flag(interaction_flag)
          { }
   //boost::math::tuple<double,double> operator()(const double In1) {
         //update_temporaries(In1);
@@ -147,12 +158,17 @@ struct e_surface_fun {
             exp11 = std::exp((1.0-alpha)*expval1);
             exp12 = std::exp(-alpha*expval1);
         }
-        
+        if (interaction_flag==true){
+
+        }
+        else if (interaction_flag==false){
         const double u1n1_top = dt*k0*exp11 + u1n0;
         const double denom = (dt*k0*exp11 +dt*k0*exp12 + 1);
         const double tmp = 1.0/denom;
         const double tmp2 = pow(tmp,2);
         u1n1 = u1n1_top*tmp;
+        }
+        
         Cdlp = Cdl*(1.0 + CdlE*cER + CdlE2*Ereduced2 + CdlE3*Ereduced3);
     
     }
@@ -255,7 +271,7 @@ std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, d
 }
 
 
-py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10, const bool Marcus_flag=false) {
+py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10, const bool Marcus_flag=false, const bool interaction_flag==false) {
     const double v=1;
     const int digits_accuracy = std::numeric_limits<double>::digits;
     const double max_iterations = 100;
@@ -304,10 +320,22 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     double integral_0_reduction=0;
     double integral_0_oxidation=0;
     double Upper_lambda=0;
+    double aoo, aor, arr;
     if (Marcus_flag==true){
       Upper_lambda=get(params,std::string("Upper_lambda"),0.0);
       integral_0_reduction=Marcus_kinetics(0, Upper_lambda, 1);
       integral_0_oxidation=Marcus_kinetics(0, Upper_lambda, 0);
+    }
+    if (interaction_flag==true){
+      aoo=get(params,std::string("aoo"),0.0);
+      aor=get(params,std::string("aor"),0.0);
+      arr=get(params,std::string("arr"),0.0);
+      const double S=arr-aoo;
+      const double G=aoo+arr-(2*aor);
+      const double k0_ap=k0*exp(-2*gamma*aoo)
+      const double E0_ap=get(params,std::string("E0_ap"),0.0);
+
+
     }
     
     
