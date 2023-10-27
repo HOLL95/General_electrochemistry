@@ -1,5 +1,10 @@
 
+
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import pints
+
 import math
 import os
 import sys
@@ -15,9 +20,8 @@ from EIS_class import EIS
 from EIS_optimiser import EIS_genetics
 from harmonics_plotter import harmonics
 import numpy as np
-import pints
 
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_PSV_GC-Green_Fc_cv_"
 blank_file="Blank_PGE_50_mVs-1_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
@@ -76,34 +80,35 @@ simulation_options={
     "test": False,
     "method": "sinusoidal",
     "phase_only":False,
-    "likelihood":likelihood_options[0],
+    "likelihood":likelihood_options[1],
     "numerical_method": solver_list[1],
+    "top_hat_return":"composite",
     "label": "MCMC",
     "optim_list":[]
 }
 
 other_values={
     "filter_val": 0.5,
-    "harmonic_range":list(range(3,9,1)),
+    "harmonic_range":list(range(4,12,1)),
     "experiment_time": current_data_file[0::dec_amount,0],
     "experiment_current": current_data_file[0::dec_amount, 1],
     "experiment_voltage":volt_data,
     "bounds_val":20000,
 }
 param_bounds={
-    'E_0':[0, 0.4],
+    'E_0':[0.15, 0.32],
     'omega':[0.9*param_list['omega'],1.1*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-    'Ru': [0, 3e2],  #     (uncompensated resistance ohms)
+    'Ru': [0, 500],  #     (uncompensated resistance ohms)
     'Cdl': [0,5e-4], #(capacitance parameters)
-    'CdlE1': [-0.2,0.2],#0.000653657774506,
-    'CdlE2': [-0.1,0.1],#0.000245772700637,
-    'CdlE3': [-0.05,0.05],#1.10053945995e-06,
-    'gamma': [0.1*param_list["original_gamma"],5*param_list["original_gamma"]],
+    'CdlE1': [-0.1,0.1],#0.000653657774506,
+    'CdlE2': [-5e-4,5e-4],#0.000245772700637,
+    'CdlE3': [-1e-4,1e-4],#1.10053945995e-06,
+    'gamma': [0.1*param_list["original_gamma"],10*param_list["original_gamma"]],
     'k_0': [10, 7e3], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[0.8*3*math.pi/2, 1.2*3*math.pi/2],
-    "E0_mean":[0, 0.4],
-    "E0_std": [1e-4,  0.15],
+    "E0_mean":[0.15, 0.3],
+    "E0_std": [1e-4,  0.08],
     "E0_skew": [-10, 10],
     "alpha_mean":[0.4, 0.65],
     "alpha_std":[1e-3, 0.3],
@@ -158,7 +163,7 @@ ferro.simulation_options["label"]="cmaes"
 ferro.simulation_options["test"]=False
 score = pints.SumOfSquaresError(cmaes_problem)
 CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(ferro.optim_list))), list(np.ones(len(ferro.optim_list))))
-num_runs=10
+num_runs=8
 for i in range(0, num_runs):
     x0=abs(np.random.rand(ferro.n_parameters()))#
     #x0=ferro.change_norm_group(vals, "norm")
