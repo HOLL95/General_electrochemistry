@@ -11,7 +11,7 @@ import itertools
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 from scipy_solver_class import scipy_funcs
 from scipy.stats import pearsonr
 import multiprocessing
@@ -526,6 +526,58 @@ class single_electron:
             self.simulation_options["label"]=orig_label
             self.simulation_options["test"]=orig_test
             return current_range, gradient
+
+    def get_input_freq(self, time, current):
+        fft=np.fft.fft(current)
+        abs_fft=np.abs(fft)
+        fft_freq=np.fft.fftfreq(len(current),time[1]-time[0])
+        max_freq=abs(max(fft_freq[np.where(abs_fft==max(abs_fft))]))
+        print("Input frequency best guess is {0}".format(max_freq))
+        return max_freq
+    def potential_fmin(self,params, exp_potential, time):
+        print(params)
+        if self.simulation_options["method"]=="ramped":
+            v, E_start, E_reverse, omega, phase=params
+            v=abs(v)
+            sinusoid=self.dim_dict["d_E"]*np.sin(((2*math.pi*omega)*time)+phase)
+            half_way_point=len(time)//2
+            ramp=E_start+(v*time)
+            ramp[half_way_point:]=E_reverse-(v*(time[half_way_point:]-time[half_way_point]))
+            sim_potential=ramp+sinusoid
+        elif self.simulation_options["method"]=="sinusoidal":
+            E_start, E_reverse, omega, phase=params
+            sinusoid=self.dim_dict["d_E"]*np.sin(((2*math.pi*omega)*time)+phase)
+            sim_potential=sinuosid
+        elif self.simulation_options["method"]=="dcv":
+            v, E_start, E_reverse=params
+            half_way_point=len(time)//2
+            ramp=E_start+(v*time)
+            ramp[half_way_point:]=E_reverse-(v*(time[half_way_point:]-time[half_way_point]))
+            sim_potential=ramp
+        else:
+            raise ValueError("Only implemented for core voltammetry methods")
+        residual=self.RMSE(sim_potential, exp_potential)
+        return residual
+        
+    def get_input_params(self, experimental_voltage, experimental_time):
+        if self.simulation_options["method"]=="ramped":
+            self.relevant_params=["v","E_start", "E_reverse", "omega", "phase"] 
+        elif self.simulation_options["method"]=="sinusoidal":
+            self.relevant_params=["E_start", "E_reverse", "omega", "phase"]
+        elif self.simulation_options["method"]=="dcv":
+            self.relevant_params=["v","E_start", "E_reverse"]
+        else:
+            raise ValueError("Only implemented for core voltammetry methods")
+        initial_guess=[self.dim_dict[x] for x in self.relevant_params]
+        result=minimize(self.potential_fmin, initial_guess, args=(experimental_voltage, experimental_time),method = 'Nelder-Mead')
+        if result.success:
+            fitted_params = result.x
+            result_dict=dict(zip(self.relevant_params, fitted_params))
+            for key in result_dict:
+                print(key, result_dict[key])
+        else:
+            raise ValueError(result.message)
+        return result_dict
     def update_params(self, param_list):
         if len(param_list)!= len(self.optim_list):
             print(self.optim_list)

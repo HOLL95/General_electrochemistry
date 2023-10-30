@@ -79,7 +79,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":True,
     "dispersion":False,
-    "dispersion_bins":[32],
+    "dispersion_bins":[20],
     "GH_quadrature":True,
     "test": False,
     "method": "ramped",
@@ -149,7 +149,7 @@ time_series_params2=[0.25722005928627006, 0.06349029977195912, 40.62521741991397
 #cpe_both={'E_0': 0.24973418891564086, 'k_0': 40.0836335638347, 'gamma': 1.2641498960640705e-10, 'Cdl': 4.6263514007055425e-05/param_list["area"], 'alpha': 0.4888807987098013, 'Ru': 116.83438715058305, 'cpe_alpha_cdl': 0.6038787155261925, 'cpe_alpha_faradaic': 0.8281817909445726}
 #cdl_only={'E_0': 0.24664324205647736, 'k_0': 1.994718355230308, 'gamma': 3.759801157409028e-09, 'Cdl': 3.4463434909037714e-06/param_list["area"], 'alpha': 0.3710871009927439, 'Ru': 150.6110608145238, 'cpe_alpha_cdl': 0.8182725135590561, 'cpe_alpha_faradaic': 0.7115624686878474}
 #vals=[cdl_only[x] for x in ferro.optim_list]
-
+psv_best_dict=dict(zip(ferro.optim_list, time_series_params))
 sim=ferro.i_nondim(ferro.test_vals(time_series_params, "timeseries"))
 sim2=ferro.i_nondim(ferro.test_vals(time_series_params2, "timeseries"))
 #plt.plot(sim)
@@ -158,4 +158,38 @@ plot_args=dict(sim_time_series=sim, sim2_time_series=sim2,data_time_series=ferro
 h_class.plot_harmonics(ferro.t_nondim(time_results), **plot_args)
 #h_class.plot_harmonics(ferro.t_nondim(time_results), current_time_series=current_results,simulated_time_series=sim, hanning=True, plot_func=abs)
 plt.show()
+optim_params=["E0_mean", "E0_std","k_0","Ru","gamma","omega"]
+for i in range(0, len(optim_params)):
+    ferro.param_bounds[optim_params[i]]=[0.9*psv_best_dict[optim_params[i]], 1.1*psv_best_dict[optim_params[i]]]
+ferro.def_optim_list(optim_params)
+fourier_arg=ferro.top_hat_filter(current_results)
+if simulation_options["likelihood"]=="timeseries":
+    cmaes_problem=pints.SingleOutputProblem(ferro, time_results, current_results)
+elif simulation_options["likelihood"]=="fourier":
+    dummy_times=np.linspace(0, 1, len(fourier_arg))
+    cmaes_problem=pints.SingleOutputProblem(ferro, dummy_times, fourier_arg)
 
+ferro.simulation_options["label"]="cmaes"
+
+score = pints.SumOfSquaresError(cmaes_problem)
+CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(ferro.optim_list))), list(np.ones(len(ferro.optim_list))))
+num_runs=5
+ferro.simulation_options["test"]=False
+init_vals=[psv_best_dict[x] for x in ferro.optim_list]
+for i in range(0, num_runs):
+    
+    x0=ferro.change_norm_group(init_vals, "norm")
+    print(x0)
+    print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
+    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0,cmaes_problem.n_parameters())], boundaries=CMAES_boundaries, method=pints.CMAES)
+    cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
+    cmaes_fitting.set_parallel(True)
+    #cmaes_fitting.set_log_to_file(filename=save_file, csv=False)
+    found_parameters, found_value=cmaes_fitting.run()
+    
+    cmaes_results=ferro.change_norm_group(found_parameters[:], "un_norm")
+    #f=open(save_file, "a")
+    #f.write("["+(",").join([str(x) for x in cmaes_results])+"]")
+    #f.close()
+    cmaes_time=ferro.test_vals(cmaes_results, likelihood="fourier", test=False)
+    print(list(cmaes_results))
