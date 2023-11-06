@@ -46,10 +46,10 @@ for i in range(0, len(dec_amounts)):
 
 param_list={
     "E_0":-0.3,
-    'E_start':  -225*1e-3, #(starting dc voltage - V)
-    'E_reverse':  675*1e-3,
+    'E_start':  -0.2255903087049669, #(starting dc voltage - V)
+    'E_reverse': 0.6665871839451643,
     'omega':9.349514676883269, #8.88480830076,  #    (frequency Hz)
-    "v":0.03353,#0.0338951299038171,#0.03348950985573435,
+    "v":0.0338951299038171,#0.03348950985573435,
     'd_E': 150*1e-3,   #(ac voltage amplitude - V) freq_range[j],#
     'area': 0.07, #(electrode surface area cm^2)
     'Ru': 1.0,  #     (uncompensated resistance ohms)
@@ -90,13 +90,12 @@ simulation_options={
     "likelihood":likelihood_options[1],
     "numerical_method": solver_list[1],
     "label": "MCMC",
-    "optim_list":[],
-    "top_hat_return":"abs"
+    "optim_list":[]
 }
 
 other_values={
     "filter_val": 0.5,
-    "harmonic_range":list(range(4,11,1)),
+    "harmonic_range":list(range(1,9,1)),
     "experiment_time": curr_dict["time"],
     "experiment_current": curr_dict["current"],
     "experiment_voltage":curr_dict["potential"],
@@ -104,24 +103,24 @@ other_values={
 }
 param_bounds={
     'E_0':[-0.1, 0.1],
-    'omega':[0.85*param_list['omega'],1.15*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-    'Ru': [50, 110],  #     (uncompensated resistance ohms)
+    'omega':[0.98*param_list['omega'],1.02*param_list['omega']],#8.88480830076,  #    (frequency Hz)
+    'Ru': [0, 3e2],  #     (uncompensated resistance ohms)
     'Cdl': [0,1e-3], #(capacitance parameters)
     'CdlE1': [-0.3,0.3],#0.000653657774506,
     'CdlE2': [-0.1,0.1],#0.000245772700637,
     'CdlE3': [-0.05,0.05],#1.10053945995e-06,
-    'gamma': [4.5e-11, 8e-11],
-    'k_0': [50, 200], #(reaction rate s-1)
+    'gamma': [0.1*param_list["original_gamma"],2.5*param_list["original_gamma"]],
+    'k_0': [10, 7e3], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[0.8*3*math.pi/2, 1.2*3*math.pi/2],
-    "E0_mean":[0.2115, 0.2585],
-    "E0_std": [0.05,  0.075],
+    "E0_mean":[-0.35, -0.25],
+    "E0_std": [1e-4,  0.15],
     "E0_skew": [-10, 10],
     "alpha_mean":[0.4, 0.65],
     "alpha_std":[1e-3, 0.3],
     "k0_shape":[0,1],
     "k0_scale":[0,1e4],
-    'phase' : [0, 2*math.pi],
+    'phase' : [0.8*3*math.pi/2, 1.2*3*math.pi/2],
 }
 import copy
 copied_other=copy.deepcopy(other_values)
@@ -138,9 +137,9 @@ current_results=ferro.other_values["experiment_current"]
 voltage_results=ferro.other_values["experiment_voltage"]
 ferro.get_input_freq(ferro.t_nondim(time_results), current_results)
 #ferro.get_input_params(ferro.e_nondim(voltage_results), ferro.t_nondim(time_results))
-plt.plot(time_results, ferro.e_nondim(voltage_results))
-plt.plot(time_results, ferro.e_nondim(ferro.define_voltages(no_transient=True)))
-plt.show()
+#plt.plot(time_results, voltage_results)
+#plt.plot(time_results, ferro.define_voltages(no_transient=True))
+#plt.show()
 
 
 
@@ -155,59 +154,24 @@ fac=1e-2
 #0.215
 #0.209
 time_series_params=[0.235, 0.0674086382052161, 177.04633092062943, 88.31972285297374, 0.000342081409583126, 0.02292512550909509*0, -0.0004999993064740369*0, 2.5653514370132974e-05*0, 6.037508022415195e-11, 8.794196510802587, 0, 0, 0.5999998004431891]
-time_series_params2=[0.2535789476618048, 0.058273117992579615, 75.8915855182773, 69.9957171218355, 0.00022729766251380196, -0.012269766049442632*0, -0.0004973333110912874*0, 3.582339061809169e-05*0, 5.878346854035305e-11, 8.794196510802587, 0, 0,0.5999998714347011]
-#time_series_params2=[0.235, 0.0674086382052161, 177.04633092062943, 88.31972285297374, 0.000342081409583126, 0.02292512550909509*0, -0.0004999993064740369*0, 2.5653514370132974e-05*0, 6.037508022415195e-11, 8.794196510802587, 0, 0, 0.5999998004431891]
-#time_series_params=[0.2591910307724134, 0.0674086382052161, 74.04633092062943, 88.31972285297374, 0.000342081409583126, 0.02292512550909509*fac, -0.0004999993064740369*fac, 2.5653514370132974e-05*fac, 6.037508022415195e-11, 8.794196510802587, 0, 0, 0.5999998004431891]
-#time_series_params2=[0.25722005928627006, 0.06349029977195912, 40.62521741991397, 6.398882388982527, 0.00033901089088824246, -0.09634378924422059*0, -0.00046147096602321033*0, 2.0914895093075516e-05*0, 6.018367690406668e-11, 8.794196510802587, 0, 0, 0.5999999930196368]
-#time_series_params2=[0.26529520788795874, 0.07380041402223325, 170.55569944276579, 82.90357514867121, 5.5758437147010745e-11, 8.796288136294965]
-#timeseries_params2=[0.25919950037331174, 0.06805648311088913, 198.75368572912876, 88.07303113568388, 0.00034823891990810207, 0.02420675936492858, -0.0004999982190308525, 2.561143319297091e-05, 6.061113052117431e-11, 9.01505671602343, 5.5965024217788315, 4.957512738068864, 0.5999999603113891]
-
+#C
+EIS_params={'E_0': 0.23708843969139082, 'k_0': 4.028523388682444, 'gamma': 7.779384163661676e-10, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
+#CPE
+EIS_params={'E_0': 0.3047451457126534, 'k_0': 39.40663787158313, 'gamma': 1.0829517784499947e-10, 'Cdl': 8.7932554621096e-06, 'alpha': 0.5394294479538084, 'Ru': 80.76397847517714,"omega":8.794196510802587}
+#Cfarad
+EIS_params={'E_0': 0.2161051668499098, 'k_0': 106.6602436491309, 'gamma': 2.5360979030661595e-11, 'Cdl': 8.751614540745486e-06, 'alpha': 0.47965820103670564, 'Ru': 80.92159716231082,"omega":8.794196510802587}
+ferro.def_optim_list(["E_0","k_0", "gamma", "Cdl", "alpha", "Ru", "omega"])
+vals=[EIS_params[x] for x in ferro.optim_list]
 
 psv_best_dict=dict(zip(ferro.optim_list, time_series_params))
-sim=ferro.i_nondim(ferro.test_vals(time_series_params, "timeseries"))
+sim=ferro.i_nondim(ferro.test_vals(vals, "timeseries"))
 #optim_params=["E0_mean", "E0_std","k_0","Ru","gamma","omega"]
 #ferro.def_optim_list(optim_params)
 
-sim2=ferro.i_nondim(ferro.test_vals(time_series_params2, "timeseries"))
-#plt.plot(sim), 
-plot_args=dict(data_time_series=ferro.i_nondim(current_results),sim_time_series=sim ,sim2_time_series=sim2  ,hanning=True, plot_func=abs, )#xaxis=voltage_results, DC_component=True
+#sim2=ferro.i_nondim(ferro.test_vals(time_series_params2, "timeseries"))
+#plt.plot(sim), ,sim2_time_series=sim2
+plot_args=dict(data_time_series=ferro.i_nondim(current_results),sim_time_series=sim   ,hanning=True, plot_func=abs, )#xaxis=voltage_results, DC_component=True
 
 h_class.plot_harmonics(ferro.t_nondim(time_results), **plot_args)
 #h_class.plot_harmonics(ferro.t_nondim(time_results), current_time_series=current_results,simulated_time_series=sim, hanning=True, plot_func=abs)
 plt.show()
-optim_params=["E0_mean", "E0_std","k_0","Ru","gamma","omega","phase"]
-
-    
-ferro.def_optim_list(optim_params)
-fourier_arg=ferro.top_hat_filter(current_results)
-if simulation_options["likelihood"]=="timeseries":
-    cmaes_problem=pints.SingleOutputProblem(ferro, time_results, current_results)
-elif simulation_options["likelihood"]=="fourier":
-    dummy_times=np.linspace(0, 1, len(fourier_arg))
-    cmaes_problem=pints.SingleOutputProblem(ferro, dummy_times, fourier_arg)
-
-ferro.simulation_options["label"]="cmaes"
-
-score = pints.SumOfSquaresError(cmaes_problem)
-CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(ferro.optim_list))), list(np.ones(len(ferro.optim_list))))
-num_runs=5
-ferro.simulation_options["test"]=False
-init_vals=[psv_best_dict[x] for x in ferro.optim_list]
-print(init_vals)
-for i in range(0, num_runs):
-    
-    x0=ferro.change_norm_group(init_vals, "norm")
-    print(x0)
-    print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
-    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.15 for x in range(0,cmaes_problem.n_parameters())], boundaries=CMAES_boundaries, method=pints.CMAES)
-    cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-    cmaes_fitting.set_parallel(True)
-    #cmaes_fitting.set_log_to_file(filename=save_file, csv=False)
-    found_parameters, found_value=cmaes_fitting.run()
-    
-    cmaes_results=ferro.change_norm_group(found_parameters[:], "un_norm")
-    #f=open(save_file, "a")
-    #f.write("["+(",").join([str(x) for x in cmaes_results])+"]")
-    #f.close()
-    cmaes_time=ferro.test_vals(cmaes_results, likelihood="fourier", test=False)
-    print(list(cmaes_results))

@@ -83,9 +83,9 @@ class dispersion:
                     param_mean=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
                     param_std=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
                     param_skew=dim_dict[self.simulation_options["dispersion_parameters"][i]+"_skew"]
-                    min_val=skewnorm.ppf(1e-4, param_skew, loc=param_mean, scale=param_std)
-                    max_val=skewnorm.ppf(1-1e-4, param_skew, loc=param_mean, scale=param_std)
-                    param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
+                    value_range=np.linspace(1e-4, 1-(1e-4), self.simulation_options["dispersion_bins"][i])
+                    #param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
+                    param_vals=np.array([skewnorm.ppf(x,  param_skew,loc=param_mean, scale=param_std) for x in value_range])#
                     param_weights=np.zeros(self.simulation_options["dispersion_bins"][i])
                     param_weights[0]=skewnorm.cdf(param_vals[0],param_skew, loc=param_mean, scale=param_std)
                     param_midpoints=np.zeros(self.simulation_options["dispersion_bins"][i])

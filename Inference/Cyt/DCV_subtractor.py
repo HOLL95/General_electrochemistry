@@ -101,6 +101,9 @@ DCV_data=np.loadtxt(data_loc+"dcV_60mVs-1_100_uA_-0.5_to_0.1_V", skiprows=2)
 time=DCV_data[:,0]
 current=DCV_data[:,2]
 potential=DCV_data[:,1]
-subtractor=DCV_peak_area(time,potential, current, param_list["area"])
+
+plt.plot(time, potential)
+plt.show()
+subtractor=DCV_peak_area(time,potential, current, param_list["area"], data_filename="dcV_60mVs-1_100_uA_-0.5_to_0.1_V")
 subtractor.draw_background_subtract()
 plt.show()

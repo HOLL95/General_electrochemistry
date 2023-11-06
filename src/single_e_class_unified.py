@@ -854,7 +854,9 @@ class single_electron:
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
-                self.variable_returner()
+                print(list(normed_params))
+                print(self.simulation_options["method"])
+               
                 plt.plot(self.secret_data_fourier, label="data")
                 plt.plot(filtered , alpha=0.7, label="numerical")
                 plt.legend()

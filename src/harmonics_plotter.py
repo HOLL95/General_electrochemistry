@@ -95,18 +95,40 @@ class harmonics:
             kwargs["alpha"]=1
         if "ax" not in kwargs:
             kwargs["ax"]=plt.subplots()
-        end_time=int(times[-1]//1)-1
-        start_time=3
+        if "start_time" not in kwargs:
+            start_time=3
+        else:
+            start_time=kwargs["start_time"]
+        if "end_time" not in kwargs:
+            end_time=int(times[-1]//1)-1
+        else:
+            end_time=kwargs["end_time"]
+        if isinstance(end_time, int) and isinstance(start_time, int):
+            step=1
+        else:
+            if "oscillation_frequency" not in kwargs:
+                raise ValueError("Need to define an oscillation_frequency")
+            else:
+                step=kwargs["oscillation_frequency"]
+        full_range=np.arange(start_time, end_time, step)
 
-        for i in range(start_time, end_time):
-            data_plot=data[np.where((times>=i) & (times<(i+1)))]
+        for i in range(0, len(full_range)-1):
+            data_plot=data[np.where((times>=full_range[i]) & (times<(i+full_range[i+1])))]
             time_plot=np.linspace(0, 1, len(data_plot))
             if i==start_time:
                 line=kwargs["ax"].plot(time_plot, data_plot, color=kwargs["colour"], label=kwargs["label"], alpha=kwargs["alpha"])
             else:
                 line=kwargs["ax"].plot(time_plot, data_plot, color=kwargs["colour"], alpha=kwargs["alpha"])
         return line
-    def inv_objective_fun(self, time_series, dt=None,func=None):
+    def inv_objective_fun(self, time_series,**kwargs):
+        if "func" not in kwargs:
+            func=None
+        else:
+            func=kwargs["func"]
+        if "dt" not in kwargs:
+            dt=None
+        else:
+            dt=kwargs["dt"]
         func_not_right_length=False
         if func!=None:
             likelihood=func(time_series)
@@ -115,6 +137,8 @@ class harmonics:
             if len(likelihood)!=len(time_series):
                 func_not_right_length=True
         if func==None or func_not_right_length==True:
+            if dt==None:
+                raise ValueError("To create the likelihood you need to give a dt")
             L=len(time_series)
             window=np.hanning(L)
             #time_series=np.multiply(time_series, window)
@@ -123,7 +147,9 @@ class harmonics:
             top_hat=copy.deepcopy(Y)
             first_harm=(self.harmonics[0]*self.input_frequency)-(self.input_frequency*0.5)
             last_harm=(self.harmonics[-1]*self.input_frequency)+(self.input_frequency*0.5)
-            Y[np.where((f<(first_harm-(self.input_frequency*self.filter_val))) & (f>last_harm+(self.input_frequency*self.filter_val)))]=0
+            print(first_harm, last_harm)
+            abs_f=np.abs(f)
+            Y[np.where((abs_f<(first_harm)) | (abs_f>last_harm))]=0
             likelihood=Y
         time_domain=np.fft.ifft(likelihood)
         return time_domain
@@ -148,62 +174,6 @@ class harmonics:
                 extended_peak_idx=np.where((extended_frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (extended_frequencies>true_harm-(self.input_frequency*self.filter_val)))
                 box_area[extended_peak_idx]=max(fft_plot[peak_idx])
             ax.plot(extended_frequencies, box_area, color="r", linestyle="--")
-
-
-    def harmonics_plus(self, title, method, times, **kwargs):
-        plt.rcParams.update({'font.size': 12})
-        large_plot_xaxis=times
-        fig=plt.figure(num=None, figsize=(15, 6), dpi=80, facecolor='w', edgecolor='k')
-        if method=="abs":
-            a=abs
-        else:
-            a=self.empty
-        time_list=[]
-        titles=[]
-        for key, value in list(kwargs.items()):
-            if key=="voltage":
-                large_plot_xaxis=voltages
-                continue
-            time_list.append(value)
-            titles.append(key)
-
-        title_lower=[x.lower() for x in titles]
-        exp_idx=title_lower.index("experimental")
-        new_order=list(range(0, len(titles)))
-        new_order[0]=exp_idx
-        new_order[exp_idx]=0
-        titles=[titles[x] for x in new_order]
-        time_list=[time_list[x] for x in new_order]
-        harmonics_list=[]
-        print("~"*50)
-        for i in range(0, len(time_list)):
-            harms=self.generate_harmonics(times, time_list[i])
-            harmonics_list.append(harms)
-        harm_axes=[]
-        harm_len=2
-        fig.text(0.03, 0.5, 'Current($\mu$A)', ha='center', va='center', rotation='vertical')
-
-        for i in range(0,self.num_harmonics):
-            harm_axes.append(plt.subplot2grid((self.num_harmonics,harm_len*2), (i,0), colspan=harm_len))
-            for q in range(0, len(titles)):
-                harm_axes[i].plot(times, np.multiply(a(harmonics_list[q][i,:]), 1e6), label=titles[q])
-            harm_axes[i].yaxis.set_label_position("right")
-            harm_axes[i].set_ylabel(str(self.harmonics[i]), rotation=0)
-        harm_axes[i].legend()
-        harm_axes[i].set_xlabel("Time(s)")
-
-        time_ax=plt.subplot2grid((self.num_harmonics,harm_len*2), (0,harm_len), rowspan=self.num_harmonics, colspan=harm_len)
-        for p in range(0, len(titles)):
-            if titles[p].lower()=="experimental":
-                time_ax.plot(large_plot_xaxis, np.multiply(time_list[p], 1e3), label=titles[p], alpha=1.0)
-            else:
-                time_ax.plot(large_plot_xaxis, np.multiply(time_list[p], 1e3), label=titles[p], alpha=0.5)
-        time_ax.set_ylabel("Current(mA)")
-        time_ax.set_xlabel("Time(s)")
-        plt.legend()
-        plt.suptitle(title)
-        plt.subplots_adjust(left=0.08, bottom=0.09, right=0.95, top=0.92, wspace=0.23)
-        plt.show()
     def plot_harmonics(self, times, **kwargs):
         label_list=[]
         time_series_dict={}
@@ -220,11 +190,14 @@ class harmonics:
             kwargs["xlabel"]=""
         if "ylabel" not in kwargs:
             kwargs["ylabel"]=""
-
+        if "DC_component" not in kwargs:
+            kwargs["DC_component"]=False
         if "legend" not in kwargs:
             kwargs["legend"]={"loc":"center"}
         if "axes_list" not in kwargs:
             define_axes=True
+        else:
+            define_axes=False
         if "h_num" not in kwargs:
             kwargs["h_num"]=True
         if "colour" not in kwargs:
@@ -257,6 +230,17 @@ class harmonics:
         for label in label_list:
             harm_dict[label]=self.generate_harmonics(times, time_series_dict[label], hanning=kwargs["hanning"], func=kwargs["fft_func"])
         num_harms=self.num_harmonics
+        if kwargs["DC_component"]==True:
+            pot=kwargs["xaxis"]
+            fft_pot=np.fft.fft(pot)
+            fft_freq=np.fft.fftfreq(len(pot), times[1]-times[0])
+            max_freq=self.input_frequency
+            zero_harm_idx=np.where((fft_freq>-(0.5*max_freq)) & (fft_freq<(0.5*max_freq)))
+            dc_pot=np.zeros(len(fft_pot), dtype="complex")
+            dc_pot[zero_harm_idx]=fft_pot[zero_harm_idx]
+            kwargs["xaxis"]=np.real(np.fft.ifft(dc_pot))
+
+
         for i in range(0, num_harms):
             if define_axes==True:
                 plt.subplot(num_harms, 1,i+1)
