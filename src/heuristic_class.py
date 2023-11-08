@@ -512,6 +512,8 @@ class DCV_peak_area():
         self.check.on_clicked(self.hiding)
         #self.radio1.on_clicked(self.show_bg_func)
         self.radio3.on_clicked(self.show_peak_position)
+        for element in [self.radio2, self.check, self.radio3]:
+            element.on_clicked(self.update)
         for radios in [self.radio2]:
             for circle in radios.circles:
                 circle.set_radius(0.09)
@@ -631,21 +633,6 @@ class Automated_trumpet(DCV_peak_area):
             sorted_idx=np.argsort(scan_list)
             return_list=[file_list[x] for x in sorted_idx]
             return return_list, sorted(scan_list)
-            
-                    
-                        
-
-                        
-                    
-
-        
-            
-                    
-
-                
-                            
-            
-
 
 class Laviron_EIS(single_electron):
     def __init__(self, dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}):

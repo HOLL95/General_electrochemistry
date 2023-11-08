@@ -155,23 +155,29 @@ fac=1e-2
 #0.209
 time_series_params=[0.235, 0.0674086382052161, 177.04633092062943, 88.31972285297374, 0.000342081409583126, 0.02292512550909509*0, -0.0004999993064740369*0, 2.5653514370132974e-05*0, 6.037508022415195e-11, 8.794196510802587, 0, 0, 0.5999998004431891]
 #C
-EIS_params={'E_0': 0.23708843969139082, 'k_0': 4.028523388682444, 'gamma': 7.779384163661676e-10, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
+EIS_params1={'E_0': 0.23708843969139082, 'k_0': 4.028523388682444, 'gamma': 7.779384163661676e-10, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
 #CPE
-EIS_params={'E_0': 0.3047451457126534, 'k_0': 39.40663787158313, 'gamma': 1.0829517784499947e-10, 'Cdl': 8.7932554621096e-06, 'alpha': 0.5394294479538084, 'Ru': 80.76397847517714,"omega":8.794196510802587}
+EIS_params2={'E_0': 0.3047451457126534, 'k_0': 39.40663787158313, 'gamma': 1.0829517784499947e-10, 'Cdl': 8.7932554621096e-06, 'alpha': 0.5394294479538084, 'Ru': 80.76397847517714,"omega":8.794196510802587}
 #Cfarad
-EIS_params={'E_0': 0.2161051668499098, 'k_0': 106.6602436491309, 'gamma': 2.5360979030661595e-11, 'Cdl': 8.751614540745486e-06, 'alpha': 0.47965820103670564, 'Ru': 80.92159716231082,"omega":8.794196510802587}
-ferro.def_optim_list(["E_0","k_0", "gamma", "Cdl", "alpha", "Ru", "omega"])
-vals=[EIS_params[x] for x in ferro.optim_list]
+EIS_params3={'E_0': 0.2161051668499098, 'k_0': 106.6602436491309, 'gamma': 2.5360979030661595e-11, 'Cdl': 8.751614540745486e-06, 'alpha': 0.47965820103670564, 'Ru': 80.92159716231082,"omega":8.794196510802587}
+EIS_composite=[EIS_params1, EIS_params2, EIS_params3]
+fig, axes_list=plt.subplots(h_class.num_harmonics, 1)
+labels=["C", "CPE", "No Cdl_F"]
+data_time_series=ferro.i_nondim(current_results),
+h_class.plot_harmonics(ferro.t_nondim(time_results),data_time_series=ferro.i_nondim(current_results),hanning=True, plot_func=abs, ax=axes_list)
+for i in range(0, len(EIS_composite)):
+    ferro.def_optim_list(["E_0","k_0", "gamma", "Cdl", "alpha", "Ru", "omega"])
+    vals=[EIS_composite[i][x] for x in ferro.optim_list]
 
-psv_best_dict=dict(zip(ferro.optim_list, time_series_params))
-sim=ferro.i_nondim(ferro.test_vals(vals, "timeseries"))
-#optim_params=["E0_mean", "E0_std","k_0","Ru","gamma","omega"]
-#ferro.def_optim_list(optim_params)
+    psv_best_dict=dict(zip(ferro.optim_list, time_series_params))
+    sim=ferro.i_nondim(ferro.test_vals(vals, "timeseries"))
+    #optim_params=["E0_mean", "E0_std","k_0","Ru","gamma","omega"]
+    #ferro.def_optim_list(optim_params)
 
-#sim2=ferro.i_nondim(ferro.test_vals(time_series_params2, "timeseries"))
-#plt.plot(sim), ,sim2_time_series=sim2
-plot_args=dict(data_time_series=ferro.i_nondim(current_results),sim_time_series=sim   ,hanning=True, plot_func=abs, )#xaxis=voltage_results, DC_component=True
-
-h_class.plot_harmonics(ferro.t_nondim(time_results), **plot_args)
-#h_class.plot_harmonics(ferro.t_nondim(time_results), current_time_series=current_results,simulated_time_series=sim, hanning=True, plot_func=abs)
+    #sim2=ferro.i_nondim(ferro.test_vals(time_series_params2, "timeseries"))
+    #plt.plot(sim), ,sim2_time_series=sim2
+    plot_args=dict(  hanning=True, plot_func=abs, ax=axes_list)#xaxis=voltage_results, DC_component=True
+    plot_args[labels[i]+"_time_series"]=sim
+    h_class.plot_harmonics(ferro.t_nondim(time_results), **plot_args)
+    #h_class.plot_harmonics(ferro.t_nondim(time_results), current_time_series=current_results,simulated_time_series=sim, hanning=True, plot_func=abs)
 plt.show()

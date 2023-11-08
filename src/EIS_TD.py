@@ -19,7 +19,8 @@ class EIS_TD(single_electron):
             simulation_options["eis_test"]=False
         if "cdl_dispersion" not in simulation_options:
             simulation_options["frequency_dispersion"]=False
-       
+        
+        
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
     def define_frequencies(self,min_f, max_f, points_per_decade=10):
         frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
@@ -78,7 +79,8 @@ class EIS_TD(single_electron):
     def de_normalise(self, parameters, values):
         de_normed=np.zeros(len(parameters))
         for i in range(0, len(parameters)):
-            de_normed=self.un_normalise(values[i], self.param_bounds[parameters[i]])
+            de_normed[i]=self.un_normalise(values[i], self.param_bounds[parameters[i]])
+        return de_normed
     def simulate(self,parameters, freqs):
         sf=1/self.dim_dict["sampling_freq"]
         if (np.log2(sf)%2)!=0:
@@ -255,6 +257,7 @@ class EIS_TD(single_electron):
         #real[index]=0
         #imag[index]=0
         if self.simulation_options["eis_test"]==True:
+            print(list(self.de_normalise(self.optim_list, parameters)))
             fig, ax=plt.subplots(1,2)
             twinx=ax[0].twinx()
             if self.other_values["secret_data"] is not None:
