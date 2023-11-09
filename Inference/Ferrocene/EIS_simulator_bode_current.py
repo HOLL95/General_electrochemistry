@@ -111,7 +111,7 @@ param_bounds={
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["E_0","k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
+laviron.def_optim_list(["E_0","k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
 
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
@@ -138,7 +138,7 @@ score = pints.GaussianLogLikelihood(cmaes_problem)
 lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
 upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
-for i in range(0, 1):
+for i in range(0, 5):
     x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
     print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)

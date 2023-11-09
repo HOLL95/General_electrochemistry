@@ -132,6 +132,7 @@ plt.show()
 params={'E_0': 0.20225617873352192, 'k_0': 57.306676595213354, 'gamma': 4.6405804443127187e-11, 'Cdl': 8.75161453231382e-06, 'alpha': 0.3774297334729768, 'Ru': 80.92159706659638, 'cpe_alpha_cdl': 0.756284207176267, 'cpe_alpha_faradaic': 0.8447336542387816, 'phase': -0.7048512714370077}
 crap_eo={'E0_mean': 0.35, 'E0_std': 0.04597377187031984, 'k_0': 0.9170295784159767, 'gamma': 5.4039057494043345e-09, 'Cdl': 9.233041679008419e-06, 'alpha': 0.6499999999999999, 'Ru': 80.3618065939186, 'cpe_alpha_cdl': 0.7495703342169231, 'cpe_alpha_faradaic': 0.9965534124836868, 'phase': 0.08174799951007117}
 
+
 laviron.simulation_options["label"]="MCMC"
 laviron.simulation_options["data_representation"]="bode"
 fig, ax=plt.subplots()

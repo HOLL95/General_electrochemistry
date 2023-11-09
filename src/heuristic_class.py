@@ -731,6 +731,7 @@ class Laviron_EIS(single_electron):
                 kwargs[EIS_Cs[i]]="C{0}".format(i+1)
             elif kwargs[EIS_Cs[i]]=="C":
                 kwargs[EIS_Cs[i]]="C{0}".format(i+1)
+                
             elif kwargs[EIS_Cs[i]]=="CPE":
                 kwargs[EIS_Cs[i]]=("Q{0}".format(i+1), "alpha{0}".format(i+1))
                 if i==1 and "cpe_alpha_faradaic" not in params:
@@ -744,6 +745,7 @@ class Laviron_EIS(single_electron):
                
             else:
                 raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element)".format(EIS_Cs[i]))
+            
             self.simulation_options[EIS_Cs[i]]= kwargs[EIS_Cs[i]]
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":kwargs["EIS_Cdl"], "p2":["R1", kwargs["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=False)
@@ -823,7 +825,8 @@ class Laviron_EIS(single_electron):
                     #self.dim_dict[sim_params[j]]=
                     #print(self.values[i][j])
                 simulation_params=self.calculate_circuit_parameters(print_circuit_params)
-                
+                if self.simulation_options["EIS_Cf"]=="CPE":
+                    raise ValueError("Can't have dispersion and a CPE for the faradaic process")
                 current_weight=np.prod(self.weights[i])
                 if i==0:
                    EIS_params=simulation_params

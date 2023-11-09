@@ -129,7 +129,7 @@ for i in range(0, 5):
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, td.n_parameters()+td.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
     td.simulation_options["eis_test"]=False
-    cmaes_fitting.set_parallel(True)
+    cmaes_fitting.set_parallel(False)
     found_parameters, found_value=cmaes_fitting.run()   
     real_params=td.change_norm_group(found_parameters[:-td.n_outputs()], "un_norm")
 
