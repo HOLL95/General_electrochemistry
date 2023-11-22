@@ -26,8 +26,7 @@ real=np.flip(data[truncate:-truncate_2,0])
 imag=np.flip(data[truncate:-truncate_2,1])
 
 frequencies=np.flip(data[truncate:-truncate_2,2])
-EIS().nyquist(np.column_stack((real, imag)),orthonormal=False)
-plt.title("Ferrocene Nyquist plot")
+EIS().bode(np.column_stack((real, imag)), frequencies)
 plt.show()
 
 
@@ -68,7 +67,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30, 300],
+    "dispersion_bins":[300],
     "GH_quadrature":False,
     "test": False,
     "method": "ramped",
@@ -77,8 +76,8 @@ simulation_options={
     "numerical_method": solver_list[1],
     "label": "MCMC",
     "optim_list":[],
-    "EIS_Cf":"CPE",
-    "EIS_Cdl":"C",
+    "EIS_Cf":"C",
+    "EIS_Cdl":"CPE",
     "DC_pot":240e-3,
     "Rct_only":False,
 }
@@ -112,15 +111,15 @@ param_bounds={
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
-#"E0_mean","E0_std","k0_scale","k0_shape"
+laviron.def_optim_list(["E_0","k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
+
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
 #plt.show()
 fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)
 
-"""sim_data=laviron.simulate([cdl_only[x] for x in laviron.optim_list], fitting_frequencies)
+"""
 fig, ax=plt.subplots()
 twinx=ax.twinx()
 EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, label="Data")
@@ -131,29 +130,14 @@ plt.show()
 
 """
 
-laviron.simulation_options["label"]="cmaes"
+laviron.simulation_options["label"]="MCMC"
 laviron.simulation_options["data_representation"]="bode"
-data_to_fit=EIS().convert_to_bode(spectra)
-cmaes_problem=pints.MultiOutputProblem(laviron,fitting_frequencies,data_to_fit)
-score = pints.GaussianLogLikelihood(cmaes_problem)
-lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
-upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
-CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
-for i in range(0, 1):
-    x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
-    print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
-    cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
-    cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
-    laviron.simulation_options["test"]=False
-    cmaes_fitting.set_parallel(False)
-    found_parameters, found_value=cmaes_fitting.run()   
-    real_params=laviron.change_norm_group(found_parameters[:-laviron.n_outputs()], "un_norm")
-
-    print(dict(zip(laviron.optim_list, list(real_params))))
-sim_data=laviron.simulate(found_parameters[:-laviron.n_outputs()], fitting_frequencies)
+vals={'E_0': 0.2014214483444881, 'k0_scale': 1.0950956335756536, 'k0_shape': 1.043401547065882, 'gamma': 1.4645920920242938e-09, 'Cdl': 7.945475589121264e-06, 'alpha': 0.359816590101354, 'Ru': 81.69086207153816, 'cpe_alpha_cdl': 0.768033972041215, 'cpe_alpha_faradaic': 0.9119951540999298, 'phase': -0.20113351781378697} 
+val_list=[vals[x] for x in laviron.optim_list]
+sim_data=laviron.simulate(val_list, fitting_frequencies)
 fig, ax=plt.subplots()
 twinx=ax.twinx()
 EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
 EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag")
-ax.set_title("C_f as CPE fit")
+ax.set_title("k0_disp_fit_ladder")
 plt.show()

@@ -112,8 +112,9 @@ vals={'E_0': 0.18401745010050377, 'k_0': 74.4544133828206, 'dcv_sep': 0.00691502
 sim=trumpets.simulate([vals[x] for x in trumpets.optim_list], np.divide(scan_rates, 1000))
 fig, ax=plt.subplots()
 fitting_scan_rates=np.divide(scan_rates, 1000)
-trumpets.trumpet_plot(scan_rates, data,ax=ax)
-trumpets.trumpet_plot(scan_rates, trumpets.e_nondim(sim),ax=ax)
+trumpets.trumpet_plot(scan_rates, data,ax=ax, label="Data")
+trumpets.trumpet_plot(scan_rates, trumpets.e_nondim(sim),ax=ax, label="Simulation")
+ax.legend()
 plt.show()
 fitting_data=data/trumpets.nd_param.c_E0
 cmaes_problem=pints.MultiOutputProblem(trumpets,fitting_scan_rates,fitting_data)

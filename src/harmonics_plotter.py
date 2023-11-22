@@ -239,6 +239,7 @@ class harmonics:
             dc_pot=np.zeros(len(fft_pot), dtype="complex")
             dc_pot[zero_harm_idx]=fft_pot[zero_harm_idx]
             kwargs["xaxis"]=np.real(np.fft.ifft(dc_pot))
+            self.dc_pot=kwargs["xaxis"]
 
 
         for i in range(0, num_harms):

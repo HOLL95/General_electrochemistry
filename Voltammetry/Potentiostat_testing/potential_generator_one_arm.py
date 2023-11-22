@@ -4,12 +4,12 @@ import math
 
 min_interval=1/5000
 desired_Hz=10
-desired_scan_rate=222.5e-3
+desired_scan_rate=22.5e-3
 E_reverse=0.5
 E_start=-0.2
 distance=(E_reverse-E_start)
-DC_range=distance/0.5
-end_time=(2*distance)/desired_scan_rate
+DC_range=distance
+end_time=distance/desired_scan_rate
 num_points=int(end_time//min_interval)+1
 if num_points>65000:
     splitting=True
@@ -21,7 +21,7 @@ total_sine_waves=end_time*desired_Hz
 Ac_amplitude=0.15
 t=np.linspace(0, 1, int(num_points))
 #total_sine_waves=10
-y=E_reverse-(np.abs(t-0.5)*DC_range)+Ac_amplitude*np.sin(total_sine_waves*2*math.pi*t)
+y=E_start+(t*DC_range)+Ac_amplitude*np.sin(total_sine_waves*2*math.pi*t)
 f=open("-0.2 to 0.5_100mVs-1_5Hz.txt", "w")
 for i in range(0, len(t)):
     f.write("{0} \n".format(y[i]))

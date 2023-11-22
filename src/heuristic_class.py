@@ -92,9 +92,13 @@ class DCVTrumpet(single_electron):
             if ax==None:
                 plt.scatter(kwargs["log"](scan_rates),  trumpets[:, 0], label="Forward sim", color=colors[0])
                 plt.scatter(kwargs["log"](scan_rates),  trumpets[:, 1], label="Reverse sim", color=colors[0], facecolors='none')
+                plt.xlabel("Log scan rate")
+                plt.ylabel("Peak position (V)")
                 plt.legend()
                 plt.show()
             else:
+                ax.set_xlabel("Log scan rate")
+                ax.set_ylabel("Peak position (V)")
                 if kwargs["description"]==False:
                     if kwargs["cc"] is None:
                         if ax.collections:
@@ -817,6 +821,7 @@ class Laviron_EIS(single_electron):
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
             else:
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
+                print(self.values)
             #print(self.values, "LAV")
 
             for i in range(0, len(self.weights)):
@@ -851,7 +856,7 @@ class Laviron_EIS(single_electron):
             Z_vals=self.simulator.test_vals(EIS_params, frequencies)
         else:       
             EIS_params=self.calculate_circuit_parameters(print_circuit_params)
-            print(EIS_params, "Normal")
+            #print(EIS_params, "Normal")
             Z_vals=self.simulator.test_vals(EIS_params, frequencies)
         
         if self.simulation_options["test"]==True:
