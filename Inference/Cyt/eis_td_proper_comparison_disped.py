@@ -23,7 +23,7 @@ from pints.plot import trace
 DC_val=0
 
 param_list={
-       "E_0":0.001,
+       "E_0":0.01,
         'E_start':  DC_val-10e-3, #(starting dc voltage - V)
         'E_reverse':DC_val+10e-3,
         'omega':0,  #    (frequency Hz)
@@ -100,44 +100,82 @@ param_bounds={
 
 td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
 frequencies=td.define_frequencies(-1, 6)
-lav_cdl_val= 7.246044133637491e-07
-fig, axes=plt.subplots(1,2)
+lav_cdl_val= param_list["Cdl"]*param_list["area"]
+fig, axes=plt.subplots(1,3)
 ax=axes[0]
 twinx=ax.twinx()
-twinx2=axes[1].twinx()
-laviron=Laviron_EIS(copy.deepcopy(param_list), copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
-laviron.simulation_options["dispersion_bins"]=300
-td.def_optim_list(["k0_shape", "k0_scale","gamma", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
-laviron.def_optim_list(["gamma","k0_shape","k0_scale",  "Cdl", "alpha", "Ru"])
-lav_circuit={"z1":"R0", "z2":{"p1":"C1", "p2":["R1", "C2"]}}
-lav_ec=EIS(circuit=lav_circuit)
-#save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
-ec_data=lav_ec.test_vals({'R0': 100.89130837867, 'R1': 985.4168866804519, 'C1': 7.246044124672741e-07, 'C2': 6.522158185693151e-06}, np.multiply(frequencies,1))
-EIS().bode(ec_data, frequencies, ax=ax, twinx=twinx, scatter=1, line=False)
 
-for scale in [60, 75.6999999, 90]:
-    params=[0.5, scale, 1e-10, 1e-5, 0.55, 100, 0, 0]
+
+laviron=Laviron_EIS(copy.deepcopy(param_list), copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
+td.def_optim_list(["gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+laviron.def_optim_list(["gamma","k_0" , "Cdl", "alpha", "Ru"])
+
+#save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+ax3=axes[2]
+twinx3=ax3.twinx()
+ax3.set_title("Non dispersed")
+for scale in [10, 500, 1000]:
+    params=[1e-10, scale, 1e-5, 0.55, 100, 0, 0]
     param_dict=dict(zip(td.optim_list, params))
-    param_dict["k_0"]=param_dict["k0_scale"]
+    
+    td_vals=td.simulate([param_dict[x] for x in td.optim_list], frequencies)
     param_dict["Cdl"]=lav_cdl_val
-    print(param_dict)
-    print([param_dict[x] for x in laviron.optim_list])
+ 
     
     #bode_vals=td.simulate(params, frequencies)
-    lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies)
-    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label=scale)
-    #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
-ec_data=lav_ec.test_vals({'R0': 100.89130837867, 'R1': 985.4168866804519, 'C1': 7.246044124672741e-07, 'C2': 6.522158185693151e-06}, np.multiply(frequencies,2*math.pi))
-EIS().bode(ec_data, frequencies, ax=axes[1], twinx=twinx2, scatter=1, line=False)
-for shape in [0.25, 0.5, 0.75]:
-    params=[shape, 80, 1e-10, 1e-5, 0.55, 100, 0, 0]
+    lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
+    
+    EIS().bode(lav_ec_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale), scatter=1, line=False)
+    EIS().bode(td_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale))
+ax3.legend()
+
+laviron.simulation_options["dispersion_bins"]=[300]
+td.def_optim_list(["gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+laviron.def_optim_list(["gamma","k0_shape","k0_scale" , "Cdl", "alpha", "Ru"])
+
+#save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+ax.set_title("k0 dispersion (scale)")
+
+for scale in [0.25, 0.5, 0.9]:
+    params=[1e-10, scale, 75, 1e-5, 0.55, 100, 0, 0]
     param_dict=dict(zip(td.optim_list, params))
     
-    td_sim=td.simulate(params, frequencies)
-    EIS().bode(td_sim, frequencies, ax=axes[1], twinx=twinx2, label=shape)
+    td_vals=td.simulate([param_dict[x] for x in td.optim_list], frequencies)
+    param_dict["Cdl"]=lav_cdl_val
+ 
+    
+    #bode_vals=td.simulate(params, frequencies)
+    lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
+    
+    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label="scale="+str(scale), scatter=1, line=False)
+    EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="scale="+str(scale))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
-axes[1].legend()
+    ax.legend()
 
-ax.legend()
+td.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+laviron.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru"])
+
+#save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+
+ax2=axes[1]
+twinx2=ax2.twinx()
+ax2.set_title("E0 dispersion (std)")
+for std in [0.01, 0.025, 0.05]:
+    params=[0.01, std, 1e-10, 75, 1e-5, 0.55, 100, 0, 0]
+    param_dict=dict(zip(td.optim_list, params))
+    
+    td_vals=td.simulate([param_dict[x] for x in td.optim_list], frequencies)
+    param_dict["Cdl"]=lav_cdl_val
+ 
+    
+    #bode_vals=td.simulate(params, frequencies)
+    lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
+    
+    EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std), scatter=1, line=False)
+    EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std))
+    #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
+    ax2.legend()
+
+
 plt.show()
 

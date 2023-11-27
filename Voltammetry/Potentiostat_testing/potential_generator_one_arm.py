@@ -2,16 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-min_interval=1/5000
-desired_Hz=10
-desired_scan_rate=22.5e-3
+min_interval=0.34*1e-3
+desired_Hz=72
+desired_scan_rate=30e-3
 E_reverse=0.5
 E_start=-0.2
 distance=(E_reverse-E_start)
 DC_range=distance
 end_time=distance/desired_scan_rate
 num_points=int(end_time//min_interval)+1
-if num_points>65000:
+if num_points>60000:
     splitting=True
 else:
     splitting=False

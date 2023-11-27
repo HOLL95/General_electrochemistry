@@ -821,7 +821,7 @@ class Laviron_EIS(single_electron):
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
             else:
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
-                print(self.values)
+                
             #print(self.values, "LAV")
 
             for i in range(0, len(self.weights)):

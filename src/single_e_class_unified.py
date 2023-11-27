@@ -293,8 +293,8 @@ class single_electron:
                 else:
                     raise ValueError("Fewer specified bins than distributions")
 
-                self.GH_setup()
-            self.disp_class=dispersion(self.simulation_options, optim_list)
+                
+
             if self.simulation_options["GH_quadrature"]==True:
                 self.GH_setup()
             self.disp_class=dispersion(self.simulation_options, optim_list)
