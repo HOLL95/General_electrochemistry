@@ -17,7 +17,8 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -68,7 +69,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30, 300],
+    "dispersion_bins":[50],
     "GH_quadrature":False,
     "test": False,
     "method": "ramped",
@@ -145,7 +146,7 @@ for i in range(0, 5):
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
     laviron.simulation_options["test"]=False
-    cmaes_fitting.set_parallel(False)
+    cmaes_fitting.set_parallel(True)
     found_parameters, found_value=cmaes_fitting.run()   
     real_params=laviron.change_norm_group(found_parameters[:-laviron.n_outputs()], "un_norm")
 
