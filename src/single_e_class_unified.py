@@ -266,6 +266,7 @@ class single_electron:
 
                             m=re.search('.+?(?=_'+all_disp_flags[j]+')', self.optim_list[i])
                             param=m.group(0)
+                            
                             if param in disp_param_dict:
                                 disp_param_dict[param].append(all_disp_flags[j])
                             else:

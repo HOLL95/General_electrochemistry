@@ -35,20 +35,20 @@ py::array Laviron_ladder(py::dict& params, std::vector<double>& frequencies, std
     const size_t cols=static_cast<size_t>(buf_info.shape[1]);
     double F=96485.3321;
     double R=8.3145;
-    double T=get(params,std::string("T"),0);
+    double T=get(params,std::string("T"),0.0);
     double FRT=F/(R*T);
     map<string, double> current_values;
     current_values["k0"]= get(params,std::string("k_0"),0.0);
     current_values["E0"]= get(params,std::string("E_0"),0.0);
     current_values["alpha"]= get(params,std::string("alpha"),0.1);
-
+    
 
     double gamma=get(params,std::string("gamma"),0.1);
     double area=get(params,std::string("area"),0.1);
     double dc_pot=get(params,std::string("dc_pot"),0.1);
     dcomp Ru(get(params,std::string("Ru"),0.0), 0.0);
     dcomp Cdl(get(params,std::string("Cdl"),0.0), 0.0);
-    dcomp cpe_alpha_cdl(get(params,std::string("cpe_alpha_cdl"),0), 0.0);
+    dcomp cpe_alpha_cdl(get(params,std::string("cpe_alpha_cdl"),0.0), 0.0);
     std::vector<double> resistors(rows,0);
     std::vector<double> capacitors(rows,0);
     pair<double, double> currentRC;
