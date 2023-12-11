@@ -667,7 +667,7 @@ class single_electron:
                 self.dim_dict["cap_phase"]=self.dim_dict["phase"]
             self.nd_param=params(self.dim_dict, self.nondim_flag_dict)
             #print([self.dim_dict[x] for x in ["E_0","gamma","k_0" , "Cdl", "alpha", "Ru", "phase", "cap_phase"]])
-            time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
+            time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val, self.simulation_options["Marcus_kinetics"],False)
             #print(time.time()-start)
             if self.simulation_options["dispersion_test"]==True:
                 self.disp_test.append(time_series_current)
@@ -821,7 +821,7 @@ class single_electron:
             else:
                 if self.simulation_options["numerical_method"]=="pybamm":
                     try:
-                        time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
+                        time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"], False)
                     except:
 
                         time_series=np.zeros(len(self.time_vec))
@@ -829,7 +829,7 @@ class single_electron:
                     
                     
                     
-                    time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"])
+                    time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val, self.simulation_options["Marcus_kinetics"], False)
         if self.simulation_options["numerical_method"]=="Kalman_simulate":
             self.nd_param.nd_param_dict["Cdl"]=cdl_record
             time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])

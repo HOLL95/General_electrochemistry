@@ -35,7 +35,7 @@ param_list={
     'gamma': 1e-10,
     "original_gamma":1e-10,        # (surface coverage per unit area)
     'k_0': 75, #(reaction rate s-1)
-    'alpha': 0.5,
+    'alpha': 0.45,
     "E0_mean":0,
     "E0_std": 0.025,
     "E0_skew":0.2,
@@ -49,6 +49,7 @@ param_list={
     'num_peaks': 10,
     "k0_shape":0.4,
     "k0_scale":0.01,
+    "cpe_alpha_cdl":1
     
 }
 print(param_list["E_start"], param_list["E_reverse"])
@@ -124,23 +125,25 @@ vals=[scale_vals, std_vals]
 fig, ax=plt.subplots(2,2)
 for i in range(0,1):
     for j in range(1, len(classes)):
-        axes=ax[i,j]
-        twinx=axes.twinx()
-        if i==0:
-            classes[j].simulation_options["GH_quadrature"]=False
-        else:
-            classes[j].simulation_options["GH_quadrature"]=True
-        classes[j].def_optim_list(optim[i])
-        for z in range(0, len(vals[i])):
-            sim_params=[param_list[x] for x in classes[j].optim_list]
-            sim_params[1]=vals[i][z]
-            if j==1:
-                sim_params[2]=lav_cdl_val
-                bode_vals=classes[j].simulate(sim_params, frequencies*2*math.pi)
+        for m in [True, False]:
+            classes[j].simulation_options["C_sim"]=m
+            axes=ax[i,j]
+            twinx=axes.twinx()
+            if i==0:
+                classes[j].simulation_options["GH_quadrature"]=False
             else:
-                 bode_vals=classes[j].simulate(sim_params, frequencies)
-            print(sim_params)
-            EIS().bode(bode_vals, frequencies, ax=axes, twinx=twinx, compact_labels=True, data_type="phase_mag", label=label_vals[i]+str(vals[i][z]))
+                classes[j].simulation_options["GH_quadrature"]=True
+            classes[j].def_optim_list(optim[i])
+            for z in range(0, 1):
+                sim_params=[param_list[x] for x in classes[j].optim_list]
+                sim_params[1]=vals[i][z]
+                if j==1:
+                    sim_params[2]=lav_cdl_val
+                    bode_vals=classes[j].simulate(sim_params, frequencies*2*math.pi)
+                else:
+                    bode_vals=classes[j].simulate(sim_params, frequencies)
+                print(sim_params)
+                EIS().bode(bode_vals, frequencies, ax=axes, twinx=twinx, compact_labels=True, data_type="phase_mag", label=label_vals[i]+str(vals[i][z]))
 ax[0,0].set_title("Time domain")
 ax[0,1].set_title("Equivalent circuit")
 ax[0,1].legend(loc="lower left")

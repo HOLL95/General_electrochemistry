@@ -271,7 +271,7 @@ std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, d
 }
 
 
-py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10, const bool Marcus_flag=false, const bool interaction_flag==false) {
+py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10, const bool Marcus_flag=false, const bool interaction_flag=false) {
     const double v=1;
     const int digits_accuracy = std::numeric_limits<double>::digits;
     const double max_iterations = 100;
@@ -320,7 +320,7 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     double integral_0_reduction=0;
     double integral_0_oxidation=0;
     double Upper_lambda=0;
-    double aoo, aor, arr;
+    double aoo, aor, arr, S, G, E0_ap, k0_ap;
     if (Marcus_flag==true){
       Upper_lambda=get(params,std::string("Upper_lambda"),0.0);
       integral_0_reduction=Marcus_kinetics(0, Upper_lambda, 1);
@@ -330,10 +330,10 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
       aoo=get(params,std::string("aoo"),0.0);
       aor=get(params,std::string("aor"),0.0);
       arr=get(params,std::string("arr"),0.0);
-      const double S=arr-aoo;
-      const double G=aoo+arr-(2*aor);
-      const double k0_ap=k0*exp(-2*gamma*aoo)
-      const double E0_ap=get(params,std::string("E0_ap"),0.0);
+      double S=arr-aoo;
+      double G=aoo+arr-(2*aor);
+      double k0_ap=k0*exp(-2*gamma*aoo);
+      double E0_ap=get(params,std::string("E0_ap"),0.0);
 
 
     }
@@ -401,7 +401,8 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
             }
 
 
-            e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma, Upper_lambda, integral_0_oxidation, integral_0_reduction, Marcus_flag);
+            e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma, Upper_lambda, integral_0_oxidation, integral_0_reduction, Marcus_flag, aoo, arr, aor,k0_ap, E0_ap, S, G, interaction_flag);
+
             boost::uintmax_t max_it = max_iterations;
             //Itot1 = boost::math::tools::newton_raphson_iterate(bc, Itot0,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
             std::pair <double, double> sol=boost::math::tools::brent_find_minima(bc,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);

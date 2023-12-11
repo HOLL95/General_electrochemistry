@@ -13,6 +13,8 @@ from decimal import Decimal
 from matplotlib.widgets import Slider, Button, RadioButtons, TextBox, CheckButtons
 from numpy.lib.stride_tricks import sliding_window_view
 from EIS_class import EIS
+
+from ladder_laviron import Laviron_ladder
 class DCVTrumpet(single_electron):
     def __init__(self, dim_parameter_dictionary, simulation_options, other_values, param_bounds):
         if simulation_options["method"]!="dcv":
@@ -674,6 +676,8 @@ class Laviron_EIS(single_electron):
             simulation_options["Rct_only"]=False
         if "invert_imaginary" not in simulation_options:
             simulation_options["invert_imaginary"]=False
+        if "C_sim" not in simulation_options:
+            simulation_options["C_sim"]=True
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
         if "v" not in dim_parameter_dictionary or "original_omega" not in dim_parameter_dictionary:
@@ -814,46 +818,54 @@ class Laviron_EIS(single_electron):
         #.print(Ra_coeff)
         #EIS_params={'R0': 5, 'C1': 1e-06, 'R1': 59.27316911806477, 'C2': 2.4156737037803954e-05}
         if self.simulation_options["dispersion"]==True:
-            
             self.disp_test=[]
             Z_vals=np.zeros((len(frequencies),self.n_outputs()))
             if self.simulation_options["GH_quadrature"]==True:
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict, self.other_values["GH_dict"])
             else:
                 sim_params, self.values, self.weights=self.disp_class.generic_dispersion(self.dim_dict)
-                
-            #print(self.values, "LAV")
-
-            for i in range(0, len(self.weights)):
-                for j in range(0, len(sim_params)):   
-                    self.dim_dict[sim_params[j]]=self.values[i][j]
-                    #self.dim_dict[sim_params[j]]=
-                    #print(self.values[i][j])
-                simulation_params=self.calculate_circuit_parameters(print_circuit_params)
-                if self.simulation_options["EIS_Cf"]=="CPE":
-                    raise ValueError("Can't have dispersion and a CPE for the faradaic process")
-                current_weight=np.prod(self.weights[i])
-                if i==0:
-                   EIS_params=simulation_params
-                else:
-                    EIS_params["C{0}".format(i+2)]=simulation_params["C2"]
-                    EIS_params["R{0}".format(i+1)]=simulation_params["R1"]
-                #print(self.Laviron_circuit)
-                #print(EIS_params)
-                EIS_params["C{0}".format(i+2)]*=current_weight
-                EIS_params["R{0}".format(i+1)]/=current_weight
-                """if i==0:
-                    simulation_params={key:EIS_params[key]*np.prod(self.weights[i]) for key in EIS_params}
-                else:
+            if self.simulation_options["C_sim"]==True:
+                self.dim_dict["T"]=298
+                self.dim_dict["dc_pot"]=self.simulation_options["DC_pot"]
+                c_weights=[np.prod(x) for x in self.weights]
+                c_values=[list(x) for x in self.values]
+                if self.simulation_options["EIS_Cdl"]=="C1":
+                    self.dim_dict["cpe_alpha_cdl"]=1
+                Z_vals=Laviron_ladder(self.dim_dict, frequencies,c_weights, c_values, self.simulation_options["dispersion_parameters"])
+                Z_vals=np.column_stack((Z_vals[0,:], Z_vals[1,:]))
+               
+            else:
+                for i in range(0, len(self.weights)):
+                    for j in range(0, len(sim_params)):   
+                        self.dim_dict[sim_params[j]]=self.values[i][j]
+                        #self.dim_dict[sim_params[j]]=
+                        #print(self.values[i][j])
+                    simulation_params=self.calculate_circuit_parameters(print_circuit_params)
+                    if self.simulation_options["EIS_Cf"]=="CPE":
+                        raise ValueError("Can't have dispersion and a CPE for the faradaic process")
                     current_weight=np.prod(self.weights[i])
-                    for key in simulation_params.keys():
-                        simulation_params[key]+=EIS_params[key]*current_weight"""
-                #sim_vals=self.simulator.test_vals(EIS_params, frequencies)
-                if self.simulation_options["dispersion_test"]==True:
-                    self.disp_test.append(sim_vals)
-                #current_z_val=np.multiply(sim_vals, np.prod(self.weights[i]))
-                #Z_vals=np.add(Z_vals, current_z_val)
-            Z_vals=self.simulator.test_vals(EIS_params, frequencies)
+                    if i==0:
+                        EIS_params=simulation_params
+                    else:
+                        EIS_params["C{0}".format(i+2)]=simulation_params["C2"]
+                        EIS_params["R{0}".format(i+1)]=simulation_params["R1"]
+                    #print(self.Laviron_circuit)
+                    #print(EIS_params)
+                   
+                    EIS_params["C{0}".format(i+2)]*=current_weight
+                    EIS_params["R{0}".format(i+1)]/=current_weight
+                    #print(EIS_params["R{0}".format(i+1)], EIS_params["C{0}".format(i+2)], current_weight,"python")
+                   
+
+                    #sim_vals=self.simulator.test_vals(EIS_params, frequencies)
+                    if self.simulation_options["dispersion_test"]==True:
+                        self.disp_test.append(sim_vals)
+                    #current_z_val=np.multiply(sim_vals, np.prod(self.weights[i]))
+                    #Z_vals=np.add(Z_vals, current_z_val)
+                Z_vals=self.simulator.test_vals(EIS_params, frequencies)
+               
+            
+
         else:       
             EIS_params=self.calculate_circuit_parameters(print_circuit_params)
             #print(EIS_params, "Normal")

@@ -17,7 +17,7 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -77,7 +77,7 @@ simulation_options={
     "numerical_method": solver_list[1],
     "label": "MCMC",
     "optim_list":[],
-    "EIS_Cf":"CPE",
+    "EIS_Cf":"C",
     "EIS_Cdl":"C",
     "DC_pot":240e-3,
     "Rct_only":False,
@@ -112,7 +112,7 @@ param_bounds={
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
+laviron.def_optim_list(["E0_mean", "E0_std","k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
 #"E0_mean","E0_std","k0_scale","k0_shape"
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
@@ -139,7 +139,7 @@ score = pints.GaussianLogLikelihood(cmaes_problem)
 lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
 upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
-for i in range(0, 1):
+for i in range(0, 5):
     x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
     print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
