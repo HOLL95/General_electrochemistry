@@ -175,6 +175,9 @@ EIS_params_7={'E0_mean': 0.35, 'E0_std': 0.059192130273338424, 'k_0': 1.67851448
 
 
 
+EIS_params_5={'E_0': 0.17367485939633537, 'k0_shape': 2.4360726160882744, 'k0_scale': 0.15942388883368433, 'gamma': 8.019805323074907e-09, 'Cdl': 9.844551737915205e-07, 'alpha': 0.6465984705927521, 'Ru': 91.5686733543809, 'cpe_alpha_cdl': 0.9169107302998178, 'cpe_alpha_faradaic': 0.9863374008502952, 'phase': -1.9689345255496846}
+
+
 EIS_composite=[EIS_params_4]
 fig, axes_list=plt.subplots(h_class.num_harmonics, 1)
 labels=["k0_disp"]

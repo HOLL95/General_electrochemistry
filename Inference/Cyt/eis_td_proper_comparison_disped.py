@@ -101,8 +101,8 @@ param_bounds={
 td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
 frequencies=td.define_frequencies(-1, 6)
 lav_cdl_val= param_list["Cdl"]*param_list["area"]
-fig, axes=plt.subplots(1,3)
-ax=axes[0]
+fig, axes=plt.subplots(2,2)
+ax=axes[0,1]
 twinx=ax.twinx()
 
 
@@ -111,7 +111,7 @@ td.def_optim_list(["gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["gamma","k_0" , "Cdl", "alpha", "Ru"])
 
 #save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
-ax3=axes[2]
+ax3=axes[0,0]
 twinx3=ax3.twinx()
 ax3.set_title("Non dispersed")
 for scale in [10, 500, 1000]:
@@ -129,7 +129,7 @@ for scale in [10, 500, 1000]:
     EIS().bode(td_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale))
 ax3.legend()
 
-laviron.simulation_options["dispersion_bins"]=[300]
+laviron.simulation_options["dispersion_bins"]=[50]
 td.def_optim_list(["gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["gamma","k0_shape","k0_scale" , "Cdl", "alpha", "Ru"])
 
@@ -147,8 +147,8 @@ for scale in [0.25, 0.5, 0.9]:
     #bode_vals=td.simulate(params, frequencies)
     lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
     
-    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label="scale="+str(scale), scatter=1, line=False)
-    EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="scale="+str(scale))
+    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale), scatter=1, line=False)
+    EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax.legend()
 
@@ -157,7 +157,7 @@ laviron.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru"]
 
 #save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
 
-ax2=axes[1]
+ax2=axes[1,0]
 twinx2=ax2.twinx()
 ax2.set_title("E0 dispersion (std)")
 for std in [0.01, 0.025, 0.05]:
@@ -175,6 +175,34 @@ for std in [0.01, 0.025, 0.05]:
     EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax2.legend()
+td.simulation_options["dispersion_bins"]=td.simulation_options["dispersion_bins"]*2#
+laviron.simulation_options["dispersion_bins"]=[30,50]
+
+td.def_optim_list(["E0_mean", "E0_std","gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
+laviron.def_optim_list(["E0_mean", "E0_std","gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru"])
+
+#save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
+
+ax2=axes[1,1]
+twinx2=ax2.twinx()
+ax2.set_title("E0, k0 dispersion")
+for std in [0.025, 0.05]:
+    for scale in  [0.5, 0.9]:
+        params=[0.01, std, 1e-10, scale, 75, 1e-5, 0.55, 100, 0, 0]
+        param_dict=dict(zip(td.optim_list, params))
+        
+        td_vals=td.simulate([param_dict[x] for x in td.optim_list], frequencies)
+        param_dict["Cdl"]=lav_cdl_val
+    
+        
+        #bode_vals=td.simulate(params, frequencies)
+        lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
+        
+        EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std= %.3f, shape= %.1f" % (std, scale), scatter=1, line=False)
+        EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std= %.3f, shape= %.1f" % (std, scale))
+        #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
+        ax2.legend()
+
 
 
 plt.show()

@@ -105,11 +105,11 @@ param_bounds={
 td=EIS_TD(param_list, simulation_options, other_values, param_bounds)
 
 lav_cdl_val= 7.246044133637491e-07
-fig, axes=plt.subplots(1,3)
-ax=axes[0]
+fig, axes=plt.subplots(2,2)
+ax=axes[0,0]
 twinx=ax.twinx()
-twinx2=axes[1].twinx()
-twinx_3=axes[2].twinx()
+twinx2=axes[0,1].twinx()
+twinx_3=axes[1,0].twinx()
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 
 laviron.def_optim_list(["gamma","k_0",  "Cdl", "alpha", "Ru"])
@@ -128,7 +128,6 @@ for scale in [60, 75.6999999, 90]:
     lav_ec_vals=laviron.simulate(params, frequencies)
     EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
-ec_data=lav_ec.test_vals({'R0': 100.89130837867, 'R1': 985.4168866804519, 'C1': 7.246044124672741e-07, 'C2': 6.522158185693151e-06}, np.multiply(frequencies,2*math.pi))
 td.def_optim_list(["k0_shape", "k0_scale","gamma", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 
 EIS().bode(ec_data, frequencies, ax=axes[1], twinx=twinx2, scatter=1, line=False)
@@ -150,8 +149,9 @@ for shape in [0.25, 0.5, 0.75, 1.0, 1.25]:
 for i in range(0, len(laviron.disp_test),3):
     EIS().bode(laviron.disp_test[i], frequencies, ax=axes[2], twinx=twinx_3)
 EIS().bode(lav_ec_vals, frequencies, ax=axes[2], twinx=twinx_3, lw=4)
-axes[1].legend()
-axes[2].legend()
+axes[0,1].legend()
+axes[1,0].legend()
 ax.legend()
+
 plt.show()
 
