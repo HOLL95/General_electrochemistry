@@ -81,7 +81,7 @@ simulation_options={
     "C_sim":True,
     "optim_list":[],
     "EIS_Cf":"C",
-    "EIS_Cdl":"CPE",
+    "EIS_Cdl":"C",
     "DC_pot":240e-3,
     "Rct_only":False,
 }
@@ -117,7 +117,9 @@ import copy
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])#"E0_mean","E0_std","k0_scale","k0_shape"
+#laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])#"E0_mean","E0_std","k0_scale","k0_shape"
+laviron.def_optim_list([ "Cdl", "alpha", "Ru"])#"E0_mean","E0_std","k0_scale","k0_shape"
+
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
 #plt.show()
@@ -125,14 +127,14 @@ fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)
 EIS_params_5={'E_0': 0.19066872485338204, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
 EIS_params_5={'E0_mean': 0.19066872485338204, "E0_std":1e-5, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
-sim_data=laviron.simulate([EIS_params_5[x] for x in laviron.optim_list], fitting_frequencies)
+"""sim_data=laviron.simulate([EIS_params_5[x] for x in laviron.optim_list], fitting_frequencies)
 fig, ax=plt.subplots()
 twinx=ax.twinx()
 EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, label="Data")
 EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, label="Simulation")
 ax.legend()
 ax.set_title("C fit")
-plt.show()
+plt.show()"""
 
 
 
@@ -144,7 +146,7 @@ score = pints.GaussianLogLikelihood(cmaes_problem)
 lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
 upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
-for i in range(0, 10):
+for i in range(0, 1):
     x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
     print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)

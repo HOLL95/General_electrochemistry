@@ -17,7 +17,7 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -76,8 +76,8 @@ simulation_options={
     "numerical_method": solver_list[1],
     "label": "MCMC",
     "optim_list":[],
-    "EIS_Cf":"CPE",
-    "EIS_Cdl":"CPE",
+    "EIS_Cf":"C",
+    "EIS_Cdl":"C",
     "DC_pot":240e-3,
     "Rct_only":False,
 }
@@ -111,7 +111,7 @@ param_bounds={
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["E_0","k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic","phase"])
+laviron.def_optim_list(["E0_mean","E0_std","k_0", "gamma", "Cdl", "alpha", "Ru"])
 
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
@@ -137,14 +137,25 @@ laviron.simulation_options["label"]="MCMC"
 laviron.simulation_options["data_representation"]="bode"
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
-for k in [10,params["k_0"], 75, 150, 200,1000]:
-    params={'E_0': 0.20225617873352192, 'k_0': k, 'gamma': 4.6405804443127187e-11, 'Cdl': 8.75161453231382e-06, 'alpha': 0.3774297334729768, 'Ru': 80.92159706659638, 'cpe_alpha_cdl': 0.756284207176267, 'cpe_alpha_faradaic': 0.8447336542387816, 'phase': -0.7048512714370077}
 
-    vals=[params[x] for x in laviron.optim_list]
-    sim_data=laviron.simulate(vals, fitting_frequencies)
-    
-    
-    EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag")
-    ax.set_title("No Cdl_f fit")
+fig, axes=plt.subplots(2,2)
+gammas= [2e-11, 4e-11, 6e-11, 8e-11]
+ks=[10,50, 75, 175]
+for i in range(0, len(gammas)):
+    ax=axes[i//2, i%2]
+    twinx=ax.twinx()
+    EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, lw=2, label="Data")
+    gamma=gammas[i]
+    print(gamma)
+    ax.set_title("Gamma = %.2f pmol cm$^{-2}$" % (gamma*1e12) )
+    for k in range(0, len(ks)):
+        k0=ks[k]
+        params={'E0_mean': 0.24,"E0_std":0.0637810584632682, 'k_0': k0, 'gamma': gamma, 'Cdl': 0.0001221774141290586*0.07, 'alpha': 0.5, 'Ru': 80.92159706659638}
+
+        vals=[params[x] for x in laviron.optim_list]
+        sim_data=laviron.simulate(vals, fitting_frequencies)
+        
+        
+        EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag", label="$k_0$= %d s$^{-1}$" % k0)
+    ax.legend()
 plt.show()

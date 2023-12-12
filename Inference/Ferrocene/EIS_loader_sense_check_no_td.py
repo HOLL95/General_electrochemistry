@@ -70,7 +70,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30,300],
+    "dispersion_bins":[30],
     "GH_quadrature":False,
     "test": False,
     "method": "sinusoidal",
@@ -120,9 +120,9 @@ laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 
 #td.simulation_options["dispersion_bins"]=[16]
 #laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-#laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl"])
 #laviron.def_optim_list(["E_0",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+#laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 banned_param={"cpe_alpha_cdl", "cpe_alpha_faradaic"}
 get_set=list(set(laviron.optim_list)-banned_param)
 td_optim_list=[x for x in laviron.optim_list if x in get_set]+["phase","cap_phase"]
@@ -167,6 +167,8 @@ EIS_params_5={'E_0': 0.19066872485338204-DC_val, 'k0_shape': 1.042945880414477, 
 EIS_params_5a={'E0_mean': 0.19066872485338204-DC_val, "E0_std":1e-5, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
 #E0_mean with CPE
 EIS_params_6={'E0_mean': 0.3499999999999999-DC_val, 'E0_std': 0.045854752108924646, 'k_0': 0.9166388879743895, 'gamma': 5.405583319246063e-09, 'Cdl': 9.23395426422013e-06, 'alpha': 0.6499999999999999, 'Ru': 80.37330196288727, 'cpe_alpha_cdl': 0.7495664487939422, 'cpe_alpha_faradaic': 0.1477882191366903}
+EIS_params_6a={'E0_mean': 0.24099999999999996, 'E0_std': 0.1, 'k_0': 2.0033034599121295, 'gamma': 1.8525985403724938e-09, 'Cdl': 1.215857285495776e-05, 'alpha': 0.6499999999999997, 'Ru': 77.57400276352958, 'cpe_alpha_cdl': 0.7149324900344087}
+
 #E0_mean with C
 EIS_params_7={'E0_mean': 0.35-DC_val, 'E0_std': 0.059192130273338424, 'k_0': 1.678514486845095, 'gamma': 4.586111119553072e-09, 'Cdl': 1.3948590417154984e-06, 'alpha': 0.65, 'Ru': 96.39939088176911, 'cpe_alpha_cdl': 0.6612954622562719, 'cpe_alpha_faradaic': 0.9995161877220936}
 
@@ -178,7 +180,7 @@ EIS_params_7={'E0_mean': 0.35-DC_val, 'E0_std': 0.059192130273338424, 'k_0': 1.6
 EIS_params_9={'E0_mean': 0.2552237543929984-DC_val, 'E0_std': 0.0010014967867590788, 'k0_shape': 2.4360714665636465, 'k0_scale': 0.22242584355076356, 'gamma': 2.2858275700178405e-09, 'Cdl': 9.844551474481184e-07, 'alpha': 0.35822572276185904, 'Ru': 91.56868145656738, 'cpe_alpha_cdl': 0.5070420269200153, 'cpe_alpha_faradaic': 0.1970959976913189, 'phase': -1.9689465346727104}
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-param_dict=EIS_params_5a
+param_dict=EIS_params_6a
 circ_params=[param_dict[x] for x in laviron.optim_list]
 sim_vals=laviron.simulate(circ_params, fitting_frequencies)
 
