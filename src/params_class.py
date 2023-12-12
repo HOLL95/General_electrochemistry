@@ -140,9 +140,8 @@ class params:
         if flag=='re_dim':
             self.param_dict["sampling_freq"]=value/((2*math.pi)/self.param_dict["nd_omega"])
         elif flag == 'non_dim':
-
             if self.param_dict["omega"]==0:
-                #print("Hi")
+                
                 self.param_dict["sampling_freq"]=value
             else:
                 self.param_dict["sampling_freq"]=value*((2*math.pi)/self.param_dict["nd_omega"])

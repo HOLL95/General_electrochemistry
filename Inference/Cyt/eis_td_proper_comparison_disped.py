@@ -20,10 +20,10 @@ import pints
 import copy
 from pints.plot import trace
 
-DC_val=0
+DC_val=0.0
 
 param_list={
-       "E_0":0.01,
+       "E_0":0,
         'E_start':  DC_val-10e-3, #(starting dc voltage - V)
         'E_reverse':DC_val+10e-3,
         'omega':0,  #    (frequency Hz)
@@ -110,7 +110,7 @@ twinx=ax.twinx()
 laviron=Laviron_EIS(copy.deepcopy(param_list), copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
 td.def_optim_list(["gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["gamma","k_0" , "Cdl", "alpha", "Ru"])
-
+"""
 #save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
 ax3=axes[0,0]
 twinx3=ax3.twinx()
@@ -152,7 +152,7 @@ for scale in [0.25, 0.5, 0.9]:
     EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax.legend()
-
+"""
 td.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru"])
 
@@ -176,6 +176,7 @@ for std in [0.01, 0.025, 0.05]:
     EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax2.legend()
+plt.show()
 td.simulation_options["dispersion_bins"]=td.simulation_options["dispersion_bins"]*2#
 laviron.simulation_options["dispersion_bins"]=[30,50]
 

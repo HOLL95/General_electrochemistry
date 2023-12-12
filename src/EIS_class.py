@@ -583,7 +583,7 @@ class EIS:
                         ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
                 twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
             if kwargs["scatter"] is not False:
-                ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"], color=kwargs["colour"])
+                ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"], color=kwargs["colour"],label=kwargs["label"])
                 twinx.scatter(x_freqs[0::kwargs["scatter"]], magnitude[0::kwargs["scatter"]], marker="v", s=kwargs["markersize"], color=kwargs["colour"])
             
         elif kwargs["type"]=="phase":

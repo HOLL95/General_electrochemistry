@@ -19,9 +19,12 @@ class EIS_TD(single_electron):
             simulation_options["eis_test"]=False
         if "cdl_dispersion" not in simulation_options:
             simulation_options["frequency_dispersion"]=False
-        
+        if simulation_options["method"]!="sinusoidal":
+            raise ValueError("Method in simulation_options needs to be sinusoidal")
+       
         
         super().__init__("", dim_parameter_dictionary, simulation_options, other_values, param_bounds)
+        print(self.time_vec, self.nd_param.nd_param_dict["sampling_freq"], self.dim_dict["sampling_freq"])
     def define_frequencies(self,min_f, max_f, points_per_decade=10):
         frequency_powers=np.linspace(min_f, max_f, (max_f-min_f)*points_per_decade)
         freqs=[10**x for x in frequency_powers]
@@ -165,6 +168,7 @@ class EIS_TD(single_electron):
                 I=self.i_nondim(nd_current)[int_sf:]
                 V=self.e_nondim(self.define_voltages())[int_sf:]#
                 times=self.t_nondim(self.time_vec)[int_sf:]
+               
                 #if j==1:
                 #    plt.title(new_end)
                 #    plt.plot(times, I)
