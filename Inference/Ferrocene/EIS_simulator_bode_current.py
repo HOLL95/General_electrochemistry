@@ -18,7 +18,7 @@ import pints
 from scipy.optimize import minimize
 from pints.plot import trace
 data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -70,7 +70,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30,300],
+    "dispersion_bins":[30, 100],
     "GH_quadrature":False,
     "test": False,
     "method": "sinusoidal",
@@ -92,9 +92,9 @@ other_values={
     "bounds_val":20000,
 }
 param_bounds={
-    'E_0':[0.15, 0.35],
-    "E0_mean":[0.15, 0.35],
-    "E0_std":[0.001, 0.1],
+    'E_0':[0.239, 0.5],
+    "E0_mean":[0.239, 0.241],
+    "E0_std":[1e-5, 0.05],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
     'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
     'Cdl': [0,1e-2], #(capacitance parameters)
@@ -117,7 +117,7 @@ import copy
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])#"E0_mean","E0_std","k0_scale","k0_shape"
+laviron.def_optim_list(["E0_mean", "E0_std", "k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl"])#"E0_mean","E0_std","k0_scale","k0_shape"
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
 #plt.show()
@@ -125,14 +125,14 @@ fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)
 EIS_params_5={'E_0': 0.19066872485338204, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
 EIS_params_5={'E0_mean': 0.19066872485338204, "E0_std":1e-5, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
-sim_data=laviron.simulate([EIS_params_5[x] for x in laviron.optim_list], fitting_frequencies)
-fig, ax=plt.subplots()
-twinx=ax.twinx()
-EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, label="Data")
-EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, label="Simulation")
-ax.legend()
-ax.set_title("C fit")
-plt.show()
+#sim_data=laviron.simulate([EIS_params_5[x] for x in laviron.optim_list], fitting_frequencies)
+#fig, ax=plt.subplots()
+#twinx=ax.twinx()
+#EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, label="Data")
+#EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, label="Simulation")
+#ax.legend()
+#ax.set_title("C fit")
+#plt.show()
 
 
 
