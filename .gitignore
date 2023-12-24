@@ -4,5 +4,6 @@ CMakeCache.txt
 Makefile
 EIS/Symbolic-modified-nodal-analysis
 *.so
+*.pickle
 lib/pybind11
 Theory/Numerics/MCMC/

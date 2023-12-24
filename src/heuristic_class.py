@@ -871,15 +871,25 @@ class Laviron_EIS(single_electron):
             #print(EIS_params, "Normal")
             Z_vals=self.simulator.test_vals(EIS_params, frequencies)
         
-        if self.simulation_options["test"]==True:
-            fig, ax=plt.subplots()
-            self.simulator.nyquist(Z_vals, ax=ax, orthonormal=False, s=1)
-            self.simulator.nyquist(self.secret_data_EIS, ax=ax, orthonormal=False, s=1)
-            plt.show()
+        
         if self.simulation_options["data_representation"]=="nyquist": 
+            if self.simulation_options["test"]==True:
+                print(list(params))
+                fig, ax=plt.subplots()
+                self.simulator.nyquist(Z_vals, ax=ax, orthonormal=False, s=1)
+                self.simulator.nyquist(self.secret_data_EIS, ax=ax, orthonormal=False, s=1)
+                plt.show()
             return Z_vals
         elif self.simulation_options["data_representation"]=="bode":
             return_arg=self.simulator.convert_to_bode(Z_vals)
+            if self.simulation_options["test"]==True:
+                print(list(params))
+                fig, ax=plt.subplots()
+                twinx=ax.twinx()
+                ax.set_title("Test plot")
+                self.simulator.bode(Z_vals,frequencies, ax=ax, orthonormal=False,twinx=twinx)
+                self.simulator.bode(self.secret_data_EIS, frequencies,ax=ax, orthonormal=False,  twinx=twinx)
+                plt.show()
             if "phase" in self.optim_list:
                 return_arg[:,0]+=self.dim_dict["phase"]
             if self.simulation_options["bode_split"]!=None:

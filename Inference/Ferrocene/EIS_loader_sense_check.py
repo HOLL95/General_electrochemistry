@@ -57,7 +57,7 @@ param_list={
         "E0_std": 0.025,
         "k0_shape":0.4,
         "k0_scale":75,
-        "num_peaks":50,
+        "num_peaks":10,
         "cap_phase":0
 }
 print(param_list["E_start"], param_list["E_reverse"])
@@ -70,7 +70,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30],
+    "dispersion_bins":[300],
     "GH_quadrature":False,
     "test": False,
     "method": "sinusoidal",
@@ -118,10 +118,10 @@ td=EIS_TD(copy.deepcopy(param_list), copy.deepcopy(simulation_options), copy.dee
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 
-td.simulation_options["dispersion_bins"]=[16]
-laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+td.simulation_options["dispersion_bins"]=[100]
+#laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-#laviron.def_optim_list(["E_0",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+laviron.def_optim_list(["E_0",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 banned_param={"cpe_alpha_cdl", "cpe_alpha_faradaic"}
 get_set=list(set(laviron.optim_list)-banned_param)
@@ -161,6 +161,7 @@ EIS_params3={'E_0': 0.2161051668499098-DC_val, 'k_0': 106.6602436491309, 'gamma'
 #No CPE
 EIS_params_4={'E_0': 0.2014214483444881-DC_val, 'k0_scale': 1.0950956335756536, 'k0_shape': 1.043401547065882, 'gamma': 1.4645920920242938e-09, 'Cdl': 7.945475589121264e-06, 'alpha': 0.359816590101354, 'Ru': 81.69086207153816, 'cpe_alpha_cdl': 0.768033972041215, 'cpe_alpha_faradaic': 0.9119951540999298, 'phase': -0.20113351781378697,"omega":8.794196510802587} 
 EIS_params_4={'E_0': 0.19463469159444804-DC_val, 'k0_shape': 2.392919243565184, 'k0_scale': 0.2064967806796385, 'gamma': 3.924680690469505e-09, 'Cdl': 9.90894008867702e-07, 'alpha': 0.5883138432002848, 'Ru': 90.57829277724034, 'cpe_alpha_cdl': 0.5659794458625567, 'cpe_alpha_faradaic': 0.14317733968270077}
+EIS_params_4={'E_0': 0.2226369985285386, 'k0_shape': 2.392919250556589, 'k0_scale': 0.24611646420768749, 'gamma': 2.189348988012857e-09, 'Cdl': 9.908940071648933e-07, 'alpha': 0.5587056057336539, 'Ru': 90.57829286855551, 'cpe_alpha_cdl': 0.8941354153164397, 'cpe_alpha_faradaic': 0.8163866289424468}
 
 
 #CPE but no extra phase
@@ -177,18 +178,25 @@ EIS_params_7={'E0_mean': 0.35-DC_val, 'E0_std': 0.059192130273338424, 'k_0': 1.6
 #EIS_params_5={'E_0': 0.17367485939633537, 'k0_shape': 2.4360726160882744, 'k0_scale': 0.15942388883368433, 'gamma': 8.019805323074907e-09, 'Cdl': 9.844551737915205e-07, 'alpha': 0.6465984705927521, 'Ru': 91.5686733543809, 'cpe_alpha_cdl': 0.9169107302998178, 'cpe_alpha_faradaic': 0.9863374008502952, 'phase': -1.9689345255496846}
 #Both no C
 EIS_params_9={'E0_mean': 0.2552237543929984-DC_val, 'E0_std': 0.0010014967867590788, 'k0_shape': 2.4360714665636465, 'k0_scale': 0.22242584355076356, 'gamma': 2.2858275700178405e-09, 'Cdl': 9.844551474481184e-07, 'alpha': 0.35822572276185904, 'Ru': 91.56868145656738, 'cpe_alpha_cdl': 0.5070420269200153, 'cpe_alpha_faradaic': 0.1970959976913189, 'phase': -1.9689465346727104}
+#k0_distribution with hard lower limits 
+{'E_0': 0.2241032166519744, 'k0_shape': 0.36042285494223125, 'k0_scale': 30.0, 'gamma': 3.81680321550312e-10, 'Cdl': 1.239479377634673e-06, 'alpha': 0.6499999999999999, 'Ru': 94.97839502706194, 'cpe_alpha_cdl': 0.7813622563224152, 'cpe_alpha_faradaic': 0.3162880458183584}
+
+
+
+
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-param_dict=EIS_params1
+param_dict=EIS_params_4
 circ_params=[param_dict[x] for x in laviron.optim_list]
+print(circ_params)
 sim_vals=laviron.simulate(circ_params, fitting_frequencies)
 param_dict["Cdl"]/=param_list["area"]
 #param_dict["E0_mean"]-=240e-3
 param_dict["E_0"]-=240e-3
 td_param_list=[param_dict[x] if x in laviron.optim_list else free_params[x] for x in td.optim_list]
-td_vals=td.simulate(td_param_list, frequencies)
+#td_vals=td.simulate(td_param_list, frequencies)
 EIS().bode(np.column_stack((real, imag)),frequencies,ax=ax, twinx=twinx, label="Data")
 EIS().bode(sim_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", label="Laviron")
-EIS().bode(td_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", line=False, scatter=1, label="TD")
+#EIS().bode(td_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", line=False, scatter=1, label="TD")
 ax.legend()
 plt.show()

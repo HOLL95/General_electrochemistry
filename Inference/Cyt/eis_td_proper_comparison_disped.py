@@ -152,7 +152,7 @@ for scale in [0.25, 0.5, 0.9]:
     EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale))
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax.legend()
-"""
+z
 td.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru"])
 
