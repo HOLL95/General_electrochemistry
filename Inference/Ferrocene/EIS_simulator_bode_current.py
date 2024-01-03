@@ -107,9 +107,9 @@ param_bounds={
     'alpha': [0.35, 0.65],
     "dcv_sep":[0, 0.5],
     "cpe_alpha_faradaic":[0,1],
-    "cpe_alpha_cdl":[0.6,1],
+    "cpe_alpha_cdl":[0.65,1],
     "k0_shape":[0,10],
-    "k0_scale":[30, 1e3],
+    "k0_scale":[0,200],
     "phase":[-180, 180],
 }
 import copy
@@ -120,8 +120,8 @@ laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E0_mean", "E0_std", "k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl"])#"E0_mean","E0_std","k0_scale","k0_shape"
 spectra=np.column_stack((real, imag))
-#EIS().bode(spectra, frequencies)
-#plt.show()
+EIS().bode(spectra, frequencies)
+plt.show()
 fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)
 EIS_params_5={'E_0': 0.19066872485338204, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
