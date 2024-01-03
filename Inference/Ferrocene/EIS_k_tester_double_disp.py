@@ -68,7 +68,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30],
+    "dispersion_bins":[30,300],
     "GH_quadrature":False,
     "test": False,
     "method": "ramped",
@@ -112,12 +112,11 @@ param_bounds={
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["E0_mean","E0_std","k_0", "gamma", "Cdl", "alpha", "Ru","cpe_alpha_cdl"])
+laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
-#plt.show()
-fitting_frequencies=2*np.pi*frequencies
+#plt.show()1.95684990431219e-09
 #EIS().nyquist(spectra, orthonormal=False)
 
 """sim_data=laviron.simulate([cdl_only[x] for x in laviron.optim_list], fitting_frequencies)
@@ -140,8 +139,8 @@ fig, ax=plt.subplots()
 twinx=ax.twinx()
 
 fig, axes=plt.subplots(2,2)
-gammas= [1e-11, 5e-11, 5e-10, 5.405583319246063e-09]
-ks=[0.9166388879743895,50, 75, 175]
+gammas= [1e-11, 5e-11, 5e-10, 8.738837903502286e-10]
+ks=[1.7509356211175566,50, 75, 175]
 for i in range(0, len(gammas)):
     ax=axes[i//2, i%2]
     twinx=ax.twinx()
@@ -152,7 +151,8 @@ for i in range(0, len(gammas)):
     for k in range(0, len(ks)):
         k0=ks[k]
         #params={'E0_mean': 0.24,"E0_std":0.0637810584632682, 'k_0': k0, 'gamma': gamma, 'Cdl': 0.0001221774141290586*0.07, 'alpha': 0.5, 'Ru': 80.92159706659638}
-        params={'E0_mean': 0.3499999999999999, 'E0_std': 0.045854752108924646, 'k_0': k0, 'gamma': gamma, 'Cdl': 9.23395426422013e-06, 'alpha': 0.6499999999999999, 'Ru': 80.37330196288727, 'cpe_alpha_cdl': 0.7495664487939422, 'cpe_alpha_faradaic': 0.1477882191366903}
+        params={'E0_mean': 0.24015377746572225, 'E0_std': 0.0021373301993834804, 'k0_shape': 1.0429509932174068, 'k0_scale':k0 , 'gamma': gamma, 'Cdl': 7.947284126522816e-06, 'alpha': 0.499215202883645, 'Ru': 81.68491214990672, 'cpe_alpha_cdl': 0.7680050975512425}
+
         vals=[params[x] for x in laviron.optim_list]
         sim_data=laviron.simulate(vals, fitting_frequencies)
         

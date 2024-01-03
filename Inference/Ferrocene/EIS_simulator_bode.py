@@ -40,7 +40,7 @@ param_list={
         'CdlE1': 0,
         'CdlE2': 0,
         "CdlE3":0,
-        'gamma': 1e-11,
+        'gamma': 7e-11,
         "original_gamma":1e-11,        # (surface coverage per unit area)
         'k_0': 100, #(reaction rate s-1)
         'alpha': 0.55,

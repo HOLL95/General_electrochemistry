@@ -70,7 +70,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[30, 100],
+    "dispersion_bins":[300],
     "GH_quadrature":False,
     "test": False,
     "method": "sinusoidal",
@@ -107,17 +107,18 @@ param_bounds={
     'alpha': [0.35, 0.65],
     "dcv_sep":[0, 0.5],
     "cpe_alpha_faradaic":[0,1],
-    "cpe_alpha_cdl":[0,1],
+    "cpe_alpha_cdl":[0.6,1],
     "k0_shape":[0,10],
-    "k0_scale":[0,1e4],
+    "k0_scale":[30, 1e3],
     "phase":[-180, 180],
 }
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-#laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["E0_mean", "E0_std", "k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl"])#"E0_mean","E0_std","k0_scale","k0_shape"
+#laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+#laviron.def_optim_list(["E0_mean", "E0_std", "k0_shape","k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl"])#"E0_mean","E0_std","k0_scale","k0_shape"
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
 #plt.show()
@@ -136,15 +137,17 @@ EIS_params_5={'E0_mean': 0.19066872485338204, "E0_std":1e-5, 'k0_shape': 1.04294
 
 
 
+
+#laviron.def_optim_list(["E_0","k0_shape", "k
 laviron.simulation_options["label"]="cmaes"
-laviron.simulation_options["data_representation"]="bode"
+laviron.simulation_options["data_representation"]="nyquist"
 data_to_fit=EIS().convert_to_bode(spectra)
-cmaes_problem=pints.MultiOutputProblem(laviron,fitting_frequencies,data_to_fit)
+cmaes_problem=pints.MultiOutputProblem(laviron,fitting_frequencies,spectra)
 score = pints.GaussianLogLikelihood(cmaes_problem)
 lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
 upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
-for i in range(0, 10):
+for i in range(0, 1):
     x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
     print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
@@ -155,10 +158,16 @@ for i in range(0, 10):
     real_params=laviron.change_norm_group(found_parameters[:-laviron.n_outputs()], "un_norm")
 
     print(dict(zip(laviron.optim_list, list(real_params))))
-sim_data=laviron.simulate(found_parameters[:-laviron.n_outputs()], fitting_frequencies)
-fig, ax=plt.subplots()
-twinx=ax.twinx()
-EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
-EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag")
-ax.set_title("C_f as CPE fit")
-plt.show()
+    sim_data=laviron.simulate(found_parameters[:-laviron.n_outputs()], fitting_frequencies)
+    fig, ax=plt.subplots()
+    twinx=ax.twinx()
+    
+    EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
+    EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, )#data_type="phase_mag"
+    
+    ax.set_title("C_f as CPE fit")
+    plt.show()
+    fig, ax=plt.subplots()
+    EIS().nyquist(spectra,orthonormal=False, ax=ax)
+    EIS().nyquist(sim_data, orthonormal=False,ax=ax)
+    plt.show()

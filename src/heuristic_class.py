@@ -661,7 +661,7 @@ class Laviron_EIS(single_electron):
             elif simulation_options[EIS_Cs[i]]=="CPE":
                 simulation_options[EIS_Cs[i]]=("Q{0}".format(i+1), "alpha{0}".format(i+1))
             else:
-                raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element)".format(EIS_Cs[i]))
+                raise ValueError("{0} needs to be either C (capacitor) or CPE (constant phase element), not {1}".format(EIS_Cs[i], simulation_options[EIS_Cs[i]]))
         if "data_representation" not in simulation_options:
             simulation_options["data_representation"]="nyquist"  
             simulation_options["bode_split"]=None
