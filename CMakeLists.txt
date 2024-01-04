@@ -9,7 +9,7 @@ set(source_dir "src")
 #Pints is current incomaptible with python 3.11. If you are using python 3.11, you will need to run everything in =<3.10. Compiling the simulation code with an earlier python version can be achieved by uncommenting the line below, and setting the appropriate version number
 
 #set(PYBIND11_FINDPYTHON ON)
-set(PYBIND11_PYTHON_VERSION "3.11")
+set(PYBIND11_PYTHON_VERSION "3.12")
 find_package(pybind11 CONFIG)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
