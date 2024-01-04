@@ -17,8 +17,9 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
+import pandas as pd
 data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -143,25 +144,58 @@ laviron.simulation_options["label"]="cmaes"
 laviron.simulation_options["data_representation"]="bode"
 data_to_fit=EIS().convert_to_bode(spectra)
 cmaes_problem=pints.MultiOutputProblem(laviron,fitting_frequencies,data_to_fit)
-score = pints.GaussianLogLikelihood(cmaes_problem)
+score = pints.SumOfSquaresError(cmaes_problem)
 lower_bound=np.append(np.zeros(len(laviron.optim_list)), [0]*laviron.n_outputs())
 upper_bound=np.append(np.ones(len(laviron.optim_list)), [50]*laviron.n_outputs())
+lower_bound=np.zeros(len(laviron.optim_list))
+upper_bound=np.ones(len(laviron.optim_list))
 CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
+titles=laviron.optim_list+["score", "best"]
 for i in range(0, 10):
-    x0=list(np.random.rand(len(laviron.optim_list)))+[5]*laviron.n_outputs()
-    print(len(x0), len(laviron.optim_list), cmaes_problem.n_parameters())
-    cmaes_fitting=pints.CMAES(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries)
+    x0=list(np.random.rand(len(laviron.optim_list)))
+    cmaes_fitting=pints.CMAES(x0, sigma0=[0.075 for x in range(0, laviron.n_parameters())], boundaries=CMAES_boundaries)
     e = pints.ParallelEvaluator(score)
     threshold=1e-4
     iterations=200
     running=True
     laviron.simulation_options["test"]=False
-    current_best=-1e7
+    current_best=1e7
     unchanged_iterations=0
+    file_name="traces/Profile_trace_%d_k0_disp.csv" % (i+1)
+    df = pd.DataFrame(columns=titles)
+    file_name_best="traces/Profile_trace_%d_k0_disp_best.csv" % (i+1)
+    df_best = pd.DataFrame(columns=titles[:-1])
+    counter=0
+    best_counter=0
     while running==True:
-
+    #for i in range(0,1):   
         xs=cmaes_fitting.ask()
+        #f_xs=[score(x) for x in xs]
         f_xs=e.evaluate(xs)
-        cmaes.tell(f_xs)
-        f_best=cmaes.f_best()
-        if >threshold:
+        cmaes_fitting.tell(f_xs)
+        #print(xs)
+        #print(f_xs)
+        best=cmaes_fitting.f_best()
+        for i in range(0, len(f_xs)):
+            df.loc[counter]=np.append(laviron.change_norm_group(xs[i], "un_norm"), [f_xs[i], best])
+            counter+=1
+            
+        f_best=cmaes_fitting.f_best()
+        if (current_best-f_best)>threshold:
+            unchanged_iterations=0
+        else:
+            unchanged_iterations+=1
+        print(f_best, current_best, unchanged_iterations)
+        if f_best<current_best:
+            
+            current_best=f_best
+            df_best.loc[best_counter]=np.append(laviron.change_norm_group(cmaes_fitting.x_best(), "un_norm"), [best])
+            best_counter+=1
+        if unchanged_iterations==iterations:
+            running=False
+    
+    df.set_index(titles[0], inplace=True)
+    df.to_csv(file_name)
+    df_best.set_index(titles[0], inplace=True)
+    df_best.to_csv(file_name_best)
+    #print(list(laviron.change_norm_group(best, "un_norm")))
