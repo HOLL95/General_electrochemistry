@@ -15,6 +15,7 @@ from EIS_TD import EIS_TD
 from heuristic_class import Laviron_EIS
 from harmonics_plotter import harmonics
 import numpy as np
+import _pickle as cPickle
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
@@ -138,34 +139,9 @@ fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)cdl_val*0.25,
 laviron.simulation_options["data_representation"]="bode"
 data_to_fit=EIS().convert_to_bode(spectra)
-#C
-EIS_params1={'E_0': 0.23708843969139082-DC_val, 'k_0': 4.028523388682444, 'gamma': 7.779384163661676e-10, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
-#CPE
-EIS_params2={'E_0': 0.3047451457126534-DC_val, 'k_0': 39.40663787158313, 'gamma': 1.0829517784499947e-10, 'Cdl': 8.7932554621096e-06, 'alpha': 0.5394294479538084, 'Ru': 80.76397847517714,"omega":8.794196510802587}
-#Cfarad
-EIS_params3={'E_0': 0.2161051668499098-DC_val, 'k_0': 106.6602436491309, 'gamma': 2.5360979030661595e-11, 'Cdl': 8.751614540745486e-06, 'alpha': 0.47965820103670564, 'Ru': 80.92159716231082,"omega":8.794196510802587}
-#No CPE
-#EIS_params_4={'E_0': 0.2014214483444881-DC_val, 'k0_scale': 1.0950956335756536, 'k0_shape': 1.043401547065882, 'gamma': 1.4645920920242938e-09, 'Cdl': 7.945475589121264e-06, 'alpha': 0.359816590101354, 'Ru': 81.69086207153816, 'cpe_alpha_cdl': 0.768033972041215, 'cpe_alpha_faradaic': 0.9119951540999298, 'phase': -0.20113351781378697,"omega":8.794196510802587} 
-#EIS_params_4={'E_0': 0.19463469159444804-DC_val, 'k0_shape': 2.392919243565184, 'k0_scale': 0.2064967806796385, 'gamma': 3.924680690469505e-09, 'Cdl': 9.90894008867702e-07, 'alpha': 0.5883138432002848, 'Ru': 90.57829277724034, 'cpe_alpha_cdl': 0.5659794458625567, 'cpe_alpha_faradaic': 0.14317733968270077}
 
-
-#CPE but no extra phase
-EIS_params_5={'E_0': 0.15993573511018355-DC_val, 'k0_shape': 1.0143738017899193, 'k0_scale': 0.4719318521743649, 'gamma': 5.364902729622656e-09, 'Cdl': 7.636444325985663e-06, 'alpha': 0.364166232234114, 'Ru': 81.92130789951946, 'cpe_alpha_cdl': 0.7725503185958909, 'cpe_alpha_faradaic': 0.008866416527890587}
 EIS_params_5={'E_0': 0.19066872485338204-DC_val, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
-EIS_params_5a={'E0_mean': 0.19066872485338204-DC_val, "E0_std":1e-5, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
-#E0_mean with CPE
-EIS_params_6={'E0_mean': 0.3499999999999999-DC_val, 'E0_std': 0.045854752108924646, 'k_0': 0.9166388879743895, 'gamma': 5.405583319246063e-09, 'Cdl': 9.23395426422013e-06, 'alpha': 0.6499999999999999, 'Ru': 80.37330196288727, 'cpe_alpha_cdl': 0.7495664487939422, 'cpe_alpha_faradaic': 0.1477882191366903}
-EIS_params_6a={'E0_mean': 0.24099999999999996, 'E0_std': 0.1, 'k_0': 2.0033034599121295, 'gamma': 1.8525985403724938e-09, 'Cdl': 1.215857285495776e-05, 'alpha': 0.6499999999999997, 'Ru': 77.57400276352958, 'cpe_alpha_cdl': 0.7149324900344087}
 
-#E0_mean with C
-EIS_params_7={'E0_mean': 0.35-DC_val, 'E0_std': 0.059192130273338424, 'k_0': 1.678514486845095, 'gamma': 4.586111119553072e-09, 'Cdl': 1.3948590417154984e-06, 'alpha': 0.65, 'Ru': 96.39939088176911, 'cpe_alpha_cdl': 0.6612954622562719, 'cpe_alpha_faradaic': 0.9995161877220936}
-
-
-
-
-#EIS_params_5={'E_0': 0.17367485939633537, 'k0_shape': 2.4360726160882744, 'k0_scale': 0.15942388883368433, 'gamma': 8.019805323074907e-09, 'Cdl': 9.844551737915205e-07, 'alpha': 0.6465984705927521, 'Ru': 91.5686733543809, 'cpe_alpha_cdl': 0.9169107302998178, 'cpe_alpha_faradaic': 0.9863374008502952, 'phase': -1.9689345255496846}
-#Both no C
-EIS_params_9={'E0_mean': 0.2552237543929984-DC_val, 'E0_std': 0.0010014967867590788, 'k0_shape': 2.4360714665636465, 'k0_scale': 0.22242584355076356, 'gamma': 2.2858275700178405e-09, 'Cdl': 9.844551474481184e-07, 'alpha': 0.35822572276185904, 'Ru': 91.56868145656738, 'cpe_alpha_cdl': 0.5070420269200153, 'cpe_alpha_faradaic': 0.1970959976913189, 'phase': -1.9689465346727104}
 fig, ax=plt.subplots()
 twinx=ax.twinx()
 param_dict=EIS_params_5
@@ -177,3 +153,70 @@ EIS().bode(sim_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", label
 
 ax.legend()
 plt.show()
+data_to_fit=EIS().convert_to_bode(spectra)
+
+
+
+
+
+names=["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "Ru", "cpe_alpha_cdl", "sigma_1","sigma_2"]
+ranges=[[0.15, 0.35],[0.1, 1.5], [1, 75], [5e-11, 3e-9],[1e-6, 1e-5], [50, 100], [0.6, 0.9]]
+
+
+
+trough_params=["gamma", "k0_scale"]
+
+variable_params=names[:-2]
+range_dict=dict(zip(variable_params, ranges))
+
+num_vars=5
+monster_dict={}
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+from copy import deepcopy
+import time
+start=time.time()
+for i in range(0,len(trough_params)):#
+    key=trough_params[i]
+    depend_axis=names.index(key)
+
+    
+    min_val=range_dict[key][0]
+    max_val=range_dict[key][1]
+    plot_line=np.logspace(np.log10(min_val), np.log10(max_val), num_vars)
+    nearest_idx=find_nearest(plot_line, EIS_params_5[key])
+    plot_line[nearest_idx]=EIS_params_5[key]
+    not_that_variable=[x for x in variable_params if x is not key]
+    for j in range(0, len(not_that_variable)):#
+        save_key=trough_params[i]+"-"+not_that_variable[j]
+        independ_axis=names.index(not_that_variable[j])
+        monster_dict[save_key]={x:{"params":deepcopy(EIS_params_5), "score":1e6} for x in range(0, num_vars**2)}
+        second_key=not_that_variable[j]
+        predictions=np.logspace(np.log10(range_dict[second_key][0]), np.log10(range_dict[second_key][1]), num_vars)
+        nearest_idx2=find_nearest(predictions, EIS_params_5[second_key])        
+        predictions[nearest_idx2]=EIS_params_5[second_key]
+        #plt.scatter(predictions, plot_line)
+        #plt.show()
+        for lcv_1 in range(0, num_vars):
+            
+            
+            current_variable=predictions[lcv_1]
+           
+            #plot_var_list=np.linspace((predictions[lcv_1]*0.5), (predictions[lcv_1]*1.5))
+            for lcv_2 in range(0, num_vars):
+                idx=(num_vars*lcv_1)+lcv_2
+                monster_dict[save_key][idx]["params"][key]=plot_line[lcv_1]
+                monster_dict[save_key][idx]["params"][not_that_variable[j]]=predictions[lcv_2]
+                sim_params=[monster_dict[save_key][idx]["params"][x] for x in laviron.optim_list]
+                sim_data=laviron.simulate(sim_params, fitting_frequencies)
+                score1=laviron.RMSE(sim_data[:,0], data_to_fit[:,0])
+                score2=laviron.RMSE(sim_data[:,1], data_to_fit[:,1])
+                monster_dict[save_key][idx]["score"]=score1+score2
+
+        #for key1 in monster_dict[save_key].keys():
+        #    print(monster_dict[save_key][key1]["params"])
+with open(r"simple_profile.pickle", "wb") as output_file:
+    cPickle.dump(monster_dict, output_file)
+print(time.time()-start)

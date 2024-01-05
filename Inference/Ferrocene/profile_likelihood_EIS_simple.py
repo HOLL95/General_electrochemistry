@@ -17,8 +17,8 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -81,7 +81,7 @@ simulation_options={
     "C_sim":True,
     "optim_list":[],
     "EIS_Cf":"C",
-    "EIS_Cdl":"C",
+    "EIS_Cdl":"CPE",
     "DC_pot":240e-3,
     "Rct_only":False,
 }
@@ -116,45 +116,33 @@ import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["k0_shape", "k0_scale", "gamma", "Cdl",  "Ru", "cpe_alpha_cdl"])
+laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl",  "Ru", "cpe_alpha_cdl"])
 #laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])#"E0_mean","E0_std","k0_scale","k0_shape"
 #laviron.def_optim_list([ "Cdl", "alpha", "Ru"])#"E0_mean","E0_std","k0_scale","k0_shape"
-
+laviron.simulation_options["label"]="MCMC"
+laviron.simulation_options["data_representation"]="bode"
 spectra=np.column_stack((real, imag))
-EIS().bode(spectra, frequencies)
-plt.show()
+
 fitting_frequencies=2*np.pi*frequencies
 #EIS().nyquist(spectra, orthonormal=False)
 EIS_params_5={'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
-
-"""sim_data=laviron.simulate([EIS_params_5[x] for x in laviron.optim_list], fitting_frequencies)
-fig, ax=plt.subplots()
+EIS_params_5={'E_0': 0.19066872485338204, 'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866}
+fig,ax=plt.subplots()
 twinx=ax.twinx()
-EIS().bode(spectra, frequencies, ax=ax, twinx=twinx, label="Data")
-EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, label="Simulation")
+param_dict=EIS_params_5
+circ_params=[param_dict[x] for x in laviron.optim_list]
+sim_vals=laviron.simulate(circ_params, fitting_frequencies)
+
+EIS().bode(np.column_stack((real, imag)),frequencies,ax=ax, twinx=twinx, label="Data")
+EIS().bode(sim_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", label="Laviron")
+
 ax.legend()
-ax.set_title("C fit")
-plt.show()"""
+plt.show()
 
 
 
-laviron.simulation_options["label"]="MCMC"
-laviron.simulation_options["data_representation"]="bode"
+
 data_to_fit=EIS().convert_to_bode(spectra)
-dir=os.getcwd()
-dir_list=dir.split("/")
-loc=[i for i in range(0, len(dir_list)) if dir_list[i]=="General_electrochemistry"]
-source_list=dir_list[:loc[0]+1] + ["src"]
-source_loc=("/").join(source_list)
-sys.path.append(source_loc)
-from MCMC_plotting import MCMC_plotting
-from pints import plot
-desired_files=["EIS_k_disp_tests_2"]
-mplot=MCMC_plotting(burn=90000)
-
-import statsmodels.api as sm
-from itertools import combinations
-import _pickle as cPickle
 
 
 
@@ -173,7 +161,7 @@ trough_params=["gamma", "k0_scale"]
 variable_params=names[:-2]
 range_dict=dict(zip(variable_params, ranges))
 trough_params_target=[5e-11, 75]
-num_vars=100
+num_vars=20
 monster_dict={}
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -220,6 +208,14 @@ for i in range(0,len(trough_params)):#
                 score1=laviron.RMSE(sim_data[:,0], data_to_fit[:,0])
                 score2=laviron.RMSE(sim_data[:,1], data_to_fit[:,1])
                 monster_dict[save_key][idx]["score"]=score1+score2
+                print(lcv_1, nearest_idx, lcv_2, nearest_idx2)
+                if lcv_1==nearest_idx and lcv_2 ==nearest_idx2:
+                    fig,ax=plt.subplots()
+                    twinx=ax.twinx()
+                    print(sim_params)
+                    EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
+                    EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag")
+                    plt.show()
         #for key1 in monster_dict[save_key].keys():
         #    print(monster_dict[save_key][key1]["params"])
 with open(r"simple_profile.pickle", "wb") as output_file:
