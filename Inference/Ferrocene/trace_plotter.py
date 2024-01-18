@@ -68,9 +68,9 @@ for j in range(6, len(comb)):
             best_y=best_data[:,idx2]
             best_z=np.log10(best_data[:,-1])
             threshold=np.where(best_z<1.7*min(best_z))
-            ax.scatter(best_x[threshold][0::step], best_y[threshold][0::step], marker="x")
-    #ax.tripcolor(np.log10(x), np.log10(y), z, shading='gouraud')
-    ax.scatter(x,y, c=z, cmap=warmcool, s=0.5)
+            #ax.scatter(best_x[threshold][0::step], best_y[threshold][0::step], marker="x")
+    ax.tripcolor(np.log10(x), np.log10(y), z, shading='gouraud')
+    #ax.scatter(x,y, c=z, cmap=warmcool, s=0.5)
     if log_dict[param1]==True:
         ax.set_xscale('log')
     if log_dict[param2]==True:

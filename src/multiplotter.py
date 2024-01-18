@@ -34,7 +34,7 @@ class multiplot:
             kwargs["fourier_plot"]=False
         if "fourier_position" not in kwargs and kwargs["fourier_plot"]!=False:
             kwargs["fourier_position"]=[1]
-
+        
         if "distribution_position" in kwargs and kwargs["orientation"]=="portrait":
             raise NotImplementedError("Haven't put portrait mode in yet for the distribution")
         if "distribution_position" not in kwargs:
@@ -56,6 +56,12 @@ class multiplot:
                     raise ValueError(str(pos)+" is greater than largest column number "+str(num_cols))
         y_dim=(kwargs["num_harmonics"]*num_rows*kwargs["plot_height"])+(kwargs["row_spacing"]*(num_rows-1))
         x_dim=(kwargs["plot_width"]*num_cols)+(kwargs["col_spacing"]*(num_cols-1))
+        self.pw=kwargs["plot_width"]
+        self.ph=kwargs["plot_height"]
+        self.cs=kwargs["col_spacing"]
+        self.rs=kwargs["row_spacing"]
+        self.num_harms=kwargs["num_harmonics"]
+        self.orientation=kwargs["orientation"]
         gridspecification=mpl.gridspec.GridSpec(y_dim, x_dim)
         if kwargs["orientation"] =="landscape":
             total_axes=[]
@@ -156,3 +162,18 @@ class multiplot:
                 total_axes.append(row_axes)
             self.gridspec=gridspecification
             self.axes_dict=(dict(zip(axes, total_axes)))
+
+    def merge_harmonics(self, rowpos, colpos, **kwargs):
+        if "rowspan" not in kwargs:
+            kwargs["rowspan"]=self.pw
+        row_idx=self.ph*self.num_harms*(rowpos-1)+self.rs*(rowpos-1)
+        col_idx=self.pw*(colpos-1)+self.cs*(colpos-1)
+        mega_loc=(row_idx,col_idx)
+        print(mega_loc)
+        subplotspec=self.gridspec.new_subplotspec(mega_loc,(self.num_harms) , (kwargs["rowspan"]))
+        #if self.orientation=="landscape":
+        #    big_ax=self.axes_dict["row%d" % rowpos][colpos*self.num_harms]
+        #else:
+        #    big_ax=self.axes_dict["col%d" % colpos][rowpos*self.num_harms]
+        big_ax=plt.subplot(subplotspec)
+        return big_ax

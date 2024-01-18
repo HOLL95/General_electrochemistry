@@ -20,7 +20,7 @@ import pints
 from scipy.optimize import minimize
 from pints.plot import trace
 data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -169,7 +169,7 @@ trough_params=["gamma", "k0_scale"]
 variable_params=names[:-2]
 range_dict=dict(zip(variable_params, ranges))
 
-num_vars=5
+num_vars=150
 monster_dict={}
 def find_nearest(array, value):
     array = np.asarray(array)
