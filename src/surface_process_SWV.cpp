@@ -39,7 +39,7 @@ double fourier_dEdt(double pi, double scan_rate, int order, double deltaE, doubl
   return coeff*dEdt;
 }
 
-py::object SWV_current(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10) {
+py::object SWV_current(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10,const bool Marcus_flag=false, const bool interaction_flag=false) {
     double E;
     double numerator, denominator;
     double Itot_sum;
@@ -71,6 +71,10 @@ py::object SWV_current(py::dict params, std::vector<double> t, std::string metho
       denominator=1+((k0*exp(-alpha*E)/SF)*(1+exp(E)));
       Itot[j-1]=numerator/denominator;
       Itot_sum+=Itot[j-1];
+    }
+    for (int j=0; j<end;, j++){
+      Itot[j]=Itot[j]*gamma;
+
     }
     return py::cast(Itot);
   }

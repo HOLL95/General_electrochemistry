@@ -353,7 +353,10 @@ class single_electron:
     def un_normalise(self, norm, boundaries):
         return (norm*(boundaries[1]-boundaries[0]))+boundaries[0]
     def i_nondim(self, current):
-        return np.multiply(current, self.nd_param.c_I0)
+        if self.simulation_options["method"]=="square_wave":
+            return np.multiply(current, self.sw_class.c_I0)
+        else:
+            return np.multiply(current, self.nd_param.c_I0)
     def e_nondim(self, potential):
         return np.multiply(potential, self.nd_param.c_E0)
     def t_nondim(self, time):

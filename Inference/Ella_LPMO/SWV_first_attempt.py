@@ -1,17 +1,20 @@
-import numpy as np
+import matplotlib.pyplot as plt
+import math
 import os
 import sys
-cwd=os.getcwd()
-cwd_list=cwd.split("/")
-cwd_idx=([i for i,x in enumerate(cwd_list) if x=="src"][0])+1
-src_loc=("/").join(cwd_list[:cwd_idx])
-sys.path.append(src_loc)
+dir=os.getcwd()
+dir_list=dir.split("/")
+loc=[i for i in range(0, len(dir_list)) if dir_list[i]=="General_electrochemistry"]
+source_list=dir_list[:loc[0]+1] + ["src"]
+source_loc=("/").join(source_list)
+sys.path.append(source_loc)
+print(sys.path)
 
 import matplotlib.pyplot as plt
 import math
 import time
 from single_e_class_unified import single_electron
-from scipy.optimize import curve_fit
+
 import pints
 from pints import plot
 F=96485.3329
@@ -76,30 +79,10 @@ for k0_val in [0.5]:
     SWV_chain_dict[key]={}
     for i in range(0, len(noise_val)):
         SW=single_electron(None, param_list, simulation_options, other_values, param_bounds)
-        plt.plot()
+        
         end=int((DeltaE/dE)*sampling_factor)
         test=SW.test_vals([0.0, k0_val, 0.5], "timeseries")
-        noisy_test=SW.add_noise(test, noise_val[i]*max(test))
-        print(len(test))
-        MCMC_problem=pints.SingleOutputProblem(SW, list(range(0, len(noisy_test))), noisy_test)
-        log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
-        log_prior=pints.UniformLogPrior([SW.param_bounds[x][0] for x in SW.optim_list]+[0], [SW.param_bounds[x][1] for x in SW.optim_list]+[2*SW.RMSE(noisy_test, test)])
-        print(log_prior.n_parameters(), log_liklihood.n_parameters())
-        log_posterior=pints.LogPosterior(log_liklihood, log_prior)
-        mcmc_parameters=[param_list["E_0"], k0_val, param_list["alpha"]]+[SW.RMSE(noisy_test, test)]
-        xs=[mcmc_parameters,
-            mcmc_parameters,
-            mcmc_parameters
-            ]
-        mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioBardenetACMC)
-        mcmc.set_parallel(True)
-        mcmc.set_max_iterations(5000)
-        chains=mcmc.run()
-        means=np.zeros(len(SW.optim_list))
-        for z in range(0, len(SW.optim_list)):
-
-            total_chain=[chains[x, 500:, z] for x in range(0, 3)]
-            total_chain=np.concatenate(total_chain)
-            means[z]=np.mean(total_chain)
-        SWV_chain_dict[key][str(noise_val[i])]=chains
-np.save("SWV_sampled_MCMC_errors_irreversible_3", SWV_chain_dict)
+        plt.plot(test)
+        plt.show()
+        
+        
