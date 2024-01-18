@@ -18,8 +18,8 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henry/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/henry;;/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10

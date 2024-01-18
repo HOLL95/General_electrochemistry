@@ -15,7 +15,7 @@ def log_tick_formatter(val, pos=None):
     return f"$10^{{%.2f}}$" % val  # remove int() if you don't use MaxNLocator
     # return f"{10**val:.2e}"      # e-Notation
 
-EIS_params_5={'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
+EIS_params_5={'E_0': 0.19066872485338204,'k0_shape': 1.042945880414477, 'k0_scale': 0.9795762782576537, 'gamma': 1.95684990431219e-09, 'Cdl': 7.947339398582637e-06, 'alpha': 0.40751831983141673, 'Ru': 81.68485916975126, 'cpe_alpha_cdl': 0.7680042639799866, 'cpe_alpha_faradaic': 0.5461987862331081}
 
 for key in monster_dict.keys():
     params=key.split("-")
@@ -28,9 +28,9 @@ for key in monster_dict.keys():
             param_dict=monster_dict[key][idx]["params"]
             x[i]=param_dict[params[0]]
             y[j]=param_dict[params[1]]
-            z[i,j]=monster_dict[key][idx]["score"]
+            z[j,i]=monster_dict[key][idx]["score"]
             
-            print(monster_dict[key][idx]["params"],monster_dict[key][idx]["score"])
+            #print(monster_dict[key][idx]["params"],monster_dict[key][idx]["score"])
     xaxis=np.log10(x)
     yaxis=np.log10(y)
     xi, yi=np.meshgrid(xaxis,yaxis)
