@@ -214,6 +214,15 @@ for i in range(0,len(trough_params)):#
                 score1=laviron.RMSE(sim_data[:,0], data_to_fit[:,0])
                 score2=laviron.RMSE(sim_data[:,1], data_to_fit[:,1])
                 monster_dict[save_key][idx]["score"]=score1+score2
+                print(score1+score2,  lcv_1, nearest_idx, lcv_2, nearest_idx2, idx)
+                if lcv_1==nearest_idx and lcv_2==nearest_idx2:
+                    fig,ax=plt.subplots()
+                    twinx=ax.twinx()
+                    print(monster_dict[save_key][idx]["params"], save_key, idx)
+                    EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
+                    EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx, data_type="phase_mag")
+                    plt.show()
+
 
         #for key1 in monster_dict[save_key].keys():
         #    print(monster_dict[save_key][key1]["params"])

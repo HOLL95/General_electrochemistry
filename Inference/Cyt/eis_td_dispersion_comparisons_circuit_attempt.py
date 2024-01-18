@@ -18,7 +18,7 @@ from heuristic_class import Laviron_EIS
 import numpy as np
 import pints
 from pints.plot import trace
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Henry/7_6_23/Text_files/DCV_EIS_text"
+data_loc="/home/henryll/Documents/Experimental_data/Henry/7_6_23/Text_files/DCV_EIS_text"
 data_file="EIS_modified.txt"
 
 data=np.loadtxt(data_loc+"/"+data_file, skiprows=10)    
@@ -124,13 +124,13 @@ for scale in [60, 75.6999999, 90]:
     params=[1e-10, scale,lav_cdl_val, 0.55, 100]
    
     
-    #bode_vals=td.simulate(params, frequencies)
+    bode_vals=td.simulate(params, frequencies)
     lav_ec_vals=laviron.simulate(params, frequencies)
     EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label=scale)
-    #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
+    EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
 td.def_optim_list(["k0_shape", "k0_scale","gamma", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
-
-EIS().bode(ec_data, frequencies, ax=axes[1], twinx=twinx2, scatter=1, line=False)
+plt.show()
+EIS().bode(ec_data_1, frequencies, ax=axes[1,0], twinx=twinx2, scatter=1, line=False)
 for shape in [0.25, 0.5, 0.75, 1.0, 1.25]:
     params=[shape, 75.69999, 1e-10, 1e-5, 0.55, 100, 0, 0]
     param_dict=dict(zip(td.optim_list, params))
