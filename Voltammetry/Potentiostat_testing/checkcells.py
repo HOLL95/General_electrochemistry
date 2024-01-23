@@ -36,12 +36,14 @@ plt.show()
 
                 # check the 3rd harmonic, it should have
                            # 1/3 amplitude, 3*10 deg
-s=np.sin(2*np.pi*get_max*time)      # reference sine, note the n*t
-c=np.cos(2*np.pi*get_max*time)  
 
-for sinusoid in [current, ac_component]:
+idx=np.where(time>(3/get_max))
+s=np.sin(2*np.pi*get_max*time[idx])      # reference sine, note the n*t
+c=np.cos(2*np.pi*get_max*time[idx])  
+for sinusoid in [current[idx], ac_component[idx]]:
     xs,xc=sinusoid*s,sinusoid*c
     a,b=2*np.mean(xs),2*np.mean(xc)
+    print(a,b)
     mag=np.hypot(b,a)
     rad=np.arctan2(b,a)
     deg=rad*180/np.pi
