@@ -18,9 +18,9 @@ figure=multiplot(3, 4, **{"harmonic_position":[1,2], "num_harmonics":num_harms, 
 bigax=figure.merge_harmonics(2, 1)
 
 axes=figure.axes_dict
-loc=loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/"
-file1="NGB-ECHEM(01)-025 FTacV ELTON 0.01 mM Fc 104.31 mVs-1 80 mV amp 72 Hz @ GC_data_export_cv_current"
-file2="NGB-ECHEM(01)-025 FTacV ELTON 0.01 mM Fc 104.31 mVs-1 80 mV amp 72 Hz @ GC_data_export_cv_voltage"
+loc=loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
+file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
+file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
 harmonics_range=list(range(0, num_harms))
 h_class=harmonics(harmonics_range, 72.04862601258495, 0.25)
 current_data=np.loadtxt(loc+file1)
@@ -41,12 +41,20 @@ real_axis=axes["row2"][h_class.num_harmonics*2:h_class.num_harmonics*3]
 plot_dict={"Real_time_series":current, "plot_func":np.real, "axes_list":real_axis, "legend":None}#"hanning(Real)_time_series":hanning*current,
 h_class.plot_harmonics(time, **plot_dict  )
 imag_axis=axes["row2"][h_class.num_harmonics*3:]
+arg_list={"Real":np.real, "Abs":np.abs,"Imag":np.imag, }#
 plot_dict={"Imag_time_series":current, "plot_func":np.imag, "axes_list":imag_axis, "colour":colours[1], "legend":None}#"hanning(Imag)_time_series":hanning*current,
+one_sided_frequencies={}
 h_class.plot_harmonics(time, **plot_dict  )
-for arg,linestyle in zip([np.real, np.imag], ["-","--"]):
+fourier_dict={"Two sided frequencies (Hz)":np.fft.fftshift(frequency), "Two sided absolute values log10":np.fft.fftshift(abs(Y))}
+for argkey,linestyle in zip(["Real", "Imag"], ["-","--"]):
     fourier_bits, freqs=h_class.generate_harmonics(time, current, hanning=False, return_fourier=True)
+   
+    arg=arg_list[argkey]
     for i in range(0, h_class.num_harmonics):
         axes["row2"][h_class.num_harmonics+i].plot(freqs, arg(fourier_bits[i]), linestyle=linestyle)
+        
+        key=argkey+" Fourier_peak %d" % harmonics_range[i]
+        fourier_dict[key]=arg(fourier_bits[i])
 abs_axis=axes["row3"][:h_class.num_harmonics]
 plot_dict={"Abs_time_series":current,"Hanning_time_series":hanning*current, "plot_func":np.abs, "axes_list":abs_axis, "legend":None}#"hanning(Imag)_time_series":hanning*current,
 h_class.plot_harmonics(time, **plot_dict  )
@@ -56,6 +64,24 @@ h_class.plot_harmonics(time, **plot_dict  )
 axes["row1"][0].plot(time, h_class.dc_pot)
 image=np.asarray(Image.open(loc+"3elec.png"))
 axes["row1"][1].imshow(image)
+save_harms=h_class.generate_harmonics(time, current, hanning=False)
+hanning_save_harms=h_class.generate_harmonics(time, current, hanning=True)
+save_harm_dict={}
+
+for arg in ["Real","Abs"]:
+    for i in range(0, len(harmonics_range)):
+        key=arg+" Harmonic %d" % harmonics_range[i]
+        save_harm_dict[key]=arg_list[arg](save_harms[i,:])
+for i in range(0, len(harmonics_range)):
+        key="Hanning Abs Harmonic %d" % harmonics_range[i]
+        save_harm_dict[key]=np.abs(hanning_save_harms[i,:])
+
+        #print(arg, i, 2*np.max(arg_list[arg](save_harms[i,:])))
+full_dict={"Time":time, "Ac_potential (V)":potential, "DC_potential (V)":h_class.dc_pot}|save_harm_dict
+h_class.savecsv("Time-domain-plots_fig1.csv", full_dict)
+h_class.savecsv("Fourier-domain-plots_fig1.csv", fourier_dict)
+
+
 plt.subplots_adjust(top=0.95,
                     bottom=0.11,
                     left=0.07,

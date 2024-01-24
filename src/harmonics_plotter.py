@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+from pandas import DataFrame
 class harmonics:
     def __init__(self, harmonics, input_frequency, filter_val):
         self.harmonics=harmonics
@@ -58,19 +59,24 @@ class harmonics:
             time_series=np.multiply(data, window)
         else:
             time_series=data
+        if "one_sided" not in kwargs:
+            kwargs["one_sided"]=True
+        
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
         Y=np.fft.fft(time_series)
         last_harm=(self.harmonics[-1]*self.input_frequency)
         
-        frequencies=f#[np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))]
+        frequencies=f
         harmonics=np.zeros((self.num_harmonics, len(time_series)), dtype="complex")
         if kwargs["return_fourier"]==True:
-            ft_peak_return= harmonics=np.zeros((self.num_harmonics, len(frequencies)), dtype="complex")
+            one_side_idx=np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))
+            one_side_frequencies=f[one_side_idx]
+            ft_peak_return= np.zeros((self.num_harmonics, len(f)), dtype="complex")
         for i in range(0, self.num_harmonics):
             true_harm=self.harmonics[i]*self.input_frequency
             #plt.axvline(true_harm, color="black")
             freq_idx=np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))
-            filter_bit=(top_hat[freq_idx])
+            #filter_bit=(top_hat[freq_idx])
             if kwargs["return_amps"]==True:
 
                 abs_bit=abs(filter_bit)
@@ -84,23 +90,28 @@ class harmonics:
                     top_hat=copy.deepcopy(Y)#(copy.deepcopy(Y[0:len(frequencies)]))
                     top_hat[np.where((frequencies>(j*true_harm+(self.input_frequency*self.filter_val))) | (frequencies<true_harm*j-(self.input_frequency*self.filter_val)))]=0
                     f_domain_harmonic+=top_hat
+            
             if kwargs["return_fourier"]==False:
-                harmonics[i,:]= harmonics[i,:]=((np.fft.ifft(top_hat)))
+                #multiplied_time=times*true_harm*j
+                #f_domain_harmonic*=np.fft.fft(np.sin(multiplied_time))
+                #f_domain_harmonic*=np.fft.fft(np.cos(multiplied_time))
+                #f_domain_harmonic[np.where((frequencies>true_harm+(self.input_frequency*self.filter_val)) & (frequencies<-true_harm-(self.input_frequency*self.filter_val)))]=0
+                if kwargs["one_sided"]==True:
+                    harmonics[i,:]= 2*((np.fft.ifft(top_hat)))
+                    
+                else:
+                    harmonics[i,:]= ((np.fft.ifft(f_domain_harmonic)))
             else:
-                frequencies=f[np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))]
-                ft_peak_return[i,:]=harmonics[i,0:len(frequencies)]
+                
+                ft_peak_return[i,:]=f_domain_harmonic
         self.f=f
         self.Y=Y
-        if kwargs["return_amps"]==True:
-            return harmonics, amps
-        else:
-            return harmonics
         if kwargs["return_amps"]==True:
             return harmonics, amps
         if kwargs["return_fourier"]==False:
             return harmonics
         else:
-            return ft_peak_return, frequencies
+            return ft_peak_return, f
     def empty(self, arg):
         return arg
     def single_oscillation_plot(self, times, data, **kwargs):
@@ -213,6 +224,9 @@ class harmonics:
             if self.harmonics[0]==0:
                 print(box_area[0])
                 ax.plot([0,0], [0, box_area[0]],color="r", linestyle="--")
+    def savecsv(self,filename, dictdata):
+        df=DataFrame(dictdata)
+        df.to_csv(filename)
     def plot_harmonics(self, times, **kwargs):
         label_list=[]
         time_series_dict={}
@@ -245,6 +259,7 @@ class harmonics:
             kwargs["lw"]=1
         if "alpha" not in kwargs:
             kwargs["alpha"]=1
+
         else:
             if len(kwargs["axes_list"])!=self.num_harmonics:
                 raise ValueError("Wrong number of axes for harmonics")
@@ -294,8 +309,11 @@ class harmonics:
             plot_counter=0
             for plot_name in label_list:
                 if i==0:
-                    print(plot_name)
-                    ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), label=plot_name, alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
+                    if i==self.harmonics[i]:
+                        pf=np.real
+                    else:
+                        pf=kwargs["plot_func"]
+                    ax.plot(kwargs["xaxis"], pf(harm_dict[plot_name][i,:]), label=plot_name, alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 else:
                     ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 plot_counter+=1
