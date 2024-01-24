@@ -18,7 +18,8 @@ figure=multiplot(3, 4, **{"harmonic_position":[1,2], "num_harmonics":num_harms, 
 bigax=figure.merge_harmonics(2, 1)
 
 axes=figure.axes_dict
-loc=loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
+loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
+loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_1/"
 file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
 file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
 harmonics_range=list(range(0, num_harms))
@@ -38,11 +39,11 @@ axes["row1"][3].set_xlim([-500, 500])
 colours=plt.rcParams['axes.prop_cycle'].by_key()['color']
 h_class.harmonic_selecter(bigax, current, time, extend=1, log=True, arg=abs)
 real_axis=axes["row2"][h_class.num_harmonics*2:h_class.num_harmonics*3]
-plot_dict={"Real_time_series":current, "plot_func":np.real, "axes_list":real_axis, "legend":None}#"hanning(Real)_time_series":hanning*current,
+plot_dict={"Real_time_series":current, "plot_func":np.real, "axes_list":real_axis, "legend":None,"one_sided":False}#"hanning(Real)_time_series":hanning*current,
 h_class.plot_harmonics(time, **plot_dict  )
 imag_axis=axes["row2"][h_class.num_harmonics*3:]
 arg_list={"Real":np.real, "Abs":np.abs,"Imag":np.imag, }#
-plot_dict={"Imag_time_series":current, "plot_func":np.imag, "axes_list":imag_axis, "colour":colours[1], "legend":None}#"hanning(Imag)_time_series":hanning*current,
+plot_dict={"Imag_time_series":current, "plot_func":np.imag, "axes_list":imag_axis, "colour":colours[1], "legend":None, "one_sided":False}#"hanning(Imag)_time_series":hanning*current,
 one_sided_frequencies={}
 h_class.plot_harmonics(time, **plot_dict  )
 fourier_dict={"Two sided frequencies (Hz)":np.fft.fftshift(frequency), "Two sided absolute values log10":np.fft.fftshift(abs(Y))}

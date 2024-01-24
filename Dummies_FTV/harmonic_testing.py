@@ -16,8 +16,9 @@ num_harms=6
 
 
 loc=loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
-file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
-file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
+loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/"
+file1="NGB-ECHEM(01)-025_FTacV_ELTON_0.01_mM_Fc_104.31_mVs-1_80_mV_amp_72_Hz_@_GC_data_export_cv_current"
+file2="NGB-ECHEM(01)-025_FTacV_ELTON_0.01_mM_Fc_104.31_mVs-1_80_mV_amp_72_Hz_@_GC_data_export_cv_voltage"
 harmonics_range=list(range(0, num_harms))
 num_harmonics=len(harmonics_range)
 h_class=harmonics(harmonics_range, 72.04862601258495, 0.25)
@@ -31,5 +32,5 @@ two_sided=h_class.generate_harmonics(time, current, one_sided=False)
 for i in range(0,num_harmonics):
     
     ax[i].plot(time, np.real(two_sided[i,:]))
-    ax[i].plot(time, 2*np.abs(one_sided[i,:]))
+    ax[i].plot(time, np.abs(one_sided[i,:]))
 plt.show()
