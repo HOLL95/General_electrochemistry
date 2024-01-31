@@ -354,7 +354,7 @@ class single_electron:
         return (norm*(boundaries[1]-boundaries[0]))+boundaries[0]
     def i_nondim(self, current):
         if self.simulation_options["method"]=="square_wave":
-            return np.multiply(current, self.sw_class.c_I0)
+            return np.multiply(current, self.nd_param.sw_class.c_I0)
         else:
             return np.multiply(current, self.nd_param.c_I0)
     def e_nondim(self, potential):
@@ -368,6 +368,9 @@ class single_electron:
     def n_outputs(self):
         if self.simulation_options["multi_output"]==True:
             return 2
+        elif self.simulation_options["method"]=="square_wave":
+            if self.simulation_options["square_wave_return"]=="composite":
+                return 2
         else:
             return 1
     def n_parameters(self):
@@ -393,7 +396,7 @@ class single_electron:
            
             for i in self.time_vec:
                 i=int(i)
-                voltages[i-1]=SWV_surface.potential(i, self.dim_dict["sampling_factor"], self.dim_dict["scan_increment"],self.dim_dict["SW_amplitude"], self.dim_dict["E_start"])
+                voltages[i-1]=SWV_surface.potential(i, self.dim_dict["sampling_factor"], self.dim_dict["scan_increment"],self.dim_dict["SW_amplitude"], self.dim_dict["E_start"], self.dim_dict["v"])
             voltages=voltages/self.nd_param.sw_class.c_E0
         elif self.simulation_options["method"]=="square_wave_fourier":
             for i in range(0, len(self.time_vec)):
@@ -612,12 +615,12 @@ class single_electron:
         sampling_factor=self.dim_dict["sampling_factor"]
         self.end=int(abs(self.dim_dict['deltaE']//self.dim_dict['scan_increment']))
 
-        p=np.array(range(1, self.end-1))
+        p=np.array(range(0, self.end))
 
         self.b_idx=(sampling_factor*p)+(sampling_factor/2)
-        self.f_idx=(p+1)*sampling_factor
+        self.f_idx=p*sampling_factor
         Es=self.dim_dict["E_start"]#-self.dim_dict["E_0"]
-        self.E_p=(Es-(p*self.dim_dict['scan_increment']))
+        self.E_p=(Es+self.dim_dict["v"]*(p*self.dim_dict['scan_increment']))
     def SW_peak_extractor(self, current, **kwargs):
         if "mean" not in kwargs:
             kwargs["mean"]=0
@@ -852,9 +855,16 @@ class single_electron:
             time_series=np.append(time_series, [time_series for x in range(0, multiply_num)])[:-1]
       
         if self.simulation_options["method"]=="square_wave":
+            forwards, backwards, net, _=self.SW_peak_extractor(time_series)
             if self.simulation_options["square_wave_return"]=="net":
-                _, _, net, _=self.SW_peak_extractor(time_series)
+                
                 time_series=net
+            elif self.simulation_options["square_wave_return"]=="forwards":
+                time_series=forwards
+            elif self.simulation_options["square_wave_return"]=="backwards":
+                time_series=backwards
+            elif self.simulation_options["square_wave_return"]=="composite":
+                time_series=np.column_stack((forwards, backwards))
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):

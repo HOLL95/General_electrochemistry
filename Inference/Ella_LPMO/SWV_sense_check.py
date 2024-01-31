@@ -36,15 +36,15 @@ n=2
 T=298
 alpha=0.5
 sampling_factor=200
-scan_direction=1
-estep=2e-3
+scan_direction=-1
+estep=4e-3
 param_list={
 "E_0":0.0,
-'E_start':  data[:,0][0], #(starting dc voltage - V)
+'E_start':  0.4, #(starting dc voltage - V)
 'scan_increment': estep,   #(ac voltage amplitude - V) freq_range[j],#
 'area': 0.07, #(electrode surface area cm^2)
 'gamma': 1e-10,
-"omega":1,
+"omega":10,
 "Ru":0,
 "original_gamma":1e-10,
 "T":273+25,
@@ -52,8 +52,8 @@ param_list={
 'k_0': 75, #(reaction rate s-1)
 'alpha': 0.5,
 "sampling_factor":sampling_factor,
-"SW_amplitude":2e-3,
-"deltaE":abs(data[:,0][-1]-data[:,0][0]),
+"SW_amplitude":50e-3,
+"deltaE":0.8,
 "v":scan_direction,
 }
 K=param_list["k_0"]/param_list["omega"]
@@ -62,7 +62,7 @@ simulation_options={
 "method":"square_wave",
 "experimental_fitting":False,
 "likelihood":"timeseries",
-"square_wave_return":"forwards",
+"square_wave_return":"composite",
 "optim_list":["E_0", "k_0", "alpha","gamma"],
 "no_transient":False
 }
@@ -89,16 +89,13 @@ SW=single_electron(None, param_list, simulation_options, other_values, param_bou
 end=int((DeltaE/dE)*sampling_factor)
 volts=SW.e_nondim(SW.define_voltages())
 f, b, subtract, E_p=SW.SW_peak_extractor(volts)
-
-plt.plot(volts, label="Full potential")
-plt.scatter(SW.f_idx[1:],f[1:], label="Forward samples")
-plt.scatter(SW.b_idx,E_p, label="Backward samples")
-plt.scatter(SW.b_idx,data[:-1,0], label="Potential data", s=15)
-plt.xlabel("Dimensionless time")
-plt.ylabel("Potential (V)")
-plt.legend()
-plt.show()
-current=SW.simulate([0.0, 0.475, 0.5, 5e-12], [])
-plt.plot(E_p, current)
+#plt.plot(volts)
+#plt.scatter(SW.f_idx,E_p)
+#plt.scatter(SW.f_idx,data[:-1,0], linestyle="--")
+#plt.show()
+current=SW.simulate([0.0, 4.75, 0.5, 1e-10], [])
+plt.plot(E_p, current[:,0])
+plt.plot(E_p, current[:,1], color="red")
+plt.plot(E_p, current[:,0]-current[:,1], color="black")
 plt.show()
         
