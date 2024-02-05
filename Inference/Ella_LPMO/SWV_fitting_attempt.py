@@ -11,7 +11,8 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 data_loc="/home/henryll/Documents/Experimental_data/Ella/SWV/SWV_exp/"
-file="CjAA10_ox.txt"
+files=["CjAA10_red.txt","CjAA10_ox.txt"]
+file="CjAA10_red.txt"
 data=np.loadtxt(data_loc+file)
 
 import matplotlib.pyplot as plt
@@ -32,28 +33,28 @@ dE=4e-3
 DeltaE=0.3
 Esw=80e-3
 
-n=2
+n=1
 T=298
 alpha=0.5
 sampling_factor=200
-scan_direction=1
+scan_direction=-1
 estep=2e-3
 param_list={
 "E_0":0.0,
-'E_start':  data[:,0][0], #(starting dc voltage - V)
+'E_start': 0.25, #(starting dc voltage - V)
 'scan_increment': estep,   #(ac voltage amplitude - V) freq_range[j],#
 'area': 0.07, #(electrode surface area cm^2)
-'gamma': 1e-10,
-"omega":1,
+'gamma': 1e-11,
+"omega":10,
 "Ru":0,
-"original_gamma":1e-10,
+"original_gamma":1e-11,
 "T":273+25,
 "n":n,
 'k_0': 75, #(reaction rate s-1)
 'alpha': 0.5,
 "sampling_factor":sampling_factor,
 "SW_amplitude":2e-3,
-"deltaE":abs(data[:,0][-1]-data[:,0][0]),
+"deltaE":0.45,
 "v":scan_direction,
 }
 K=param_list["k_0"]/param_list["omega"]
@@ -62,7 +63,7 @@ simulation_options={
 "method":"square_wave",
 "experimental_fitting":False,
 "likelihood":"timeseries",
-"square_wave_return":"forwards",
+"square_wave_return":"backwards",
 "optim_list":["E_0", "k_0", "alpha","gamma"],
 "no_transient":False
 }
@@ -89,16 +90,13 @@ SW=single_electron(None, param_list, simulation_options, other_values, param_bou
 end=int((DeltaE/dE)*sampling_factor)
 volts=SW.e_nondim(SW.define_voltages())
 f, b, subtract, E_p=SW.SW_peak_extractor(volts)
+experimental_current=data[:-1,1]/SW.nd_param.sw_class.c_I0
+sim_current=SW.simulate([0.0, 4.75, 0.5, 1e-11], [])
+plt.plot(volts)
+plt.scatter(SW.f_idx,E_p)
+plt.scatter(SW.f_idx,data[:-1,0], linestyle="--")
+plt.show()
 
-plt.plot(volts, label="Full potential")
-plt.scatter(SW.f_idx[1:],f[1:], label="Forward samples")
-plt.scatter(SW.b_idx,E_p, label="Backward samples")
-plt.scatter(SW.b_idx,data[:-1,0], label="Potential data", s=15)
-plt.xlabel("Dimensionless time")
-plt.ylabel("Potential (V)")
-plt.legend()
+plt.plot(E_p, sim_current)
+plt.plot(E_p, experimental_current)
 plt.show()
-current=SW.simulate([0.0, 0.475, 0.5, 5e-12], [])
-plt.plot(E_p, current)
-plt.show()
-        

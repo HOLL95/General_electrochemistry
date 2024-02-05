@@ -19,7 +19,7 @@ bigax=figure.merge_harmonics(2, 1)
 
 axes=figure.axes_dict
 loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
-loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_1/"
+#loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_1/"
 file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
 file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
 harmonics_range=list(range(0, num_harms))

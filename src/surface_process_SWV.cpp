@@ -10,7 +10,7 @@ V get(py::dict m, const std::string &key, const V &defval) {
 }
 
 
-double potential(int j, double SF, double dE, double Esw, double E_start){
+double potential(int j, double SF, double dE, double Esw, double E_start, int scan_direction){
   double first_term=ceil((j/(SF/2))*0.5)*dE;
   int second_term;
   if (ceil(j/(SF/2))/2==ceil((j/(SF/2))*0.5)){
@@ -18,7 +18,7 @@ double potential(int j, double SF, double dE, double Esw, double E_start){
   }else{
     second_term=-1;
   }
-  return E_start+Esw-(((first_term+second_term*Esw)+Esw)-dE);
+  return E_start+scan_direction*(((first_term+second_term*Esw)+Esw)-dE);
 }
 double fourier_Et(double pi, double scan_rate, double order, double deltaE, double E_start, double t){
   double E=E_start;
@@ -59,20 +59,21 @@ py::object SWV_current(py::dict params, std::vector<double> t, std::string metho
     const double delta_E = get(params,std::string("deltaE"),0.1);
     const int SF= get(params,std::string("sampling_factor"),0.1);
     const double Esw= get(params,std::string("SW_amplitude"),0.1);
+    const double v =get(params,std::string("v"),0.1);
     const double E_start=Es-E0;
     int end =(delta_E/d_E)*SF;
     std::vector<double> Itot(end, 0);
-    E=FRT*(potential(0, SF, d_E, Esw, E_start));
+    E=FRT*(Es);
     Itot[0]=k0*exp(-alpha*E)/(1+(1+exp(E))*((k0*exp(-alpha*E))/SF));
     Itot_sum=Itot[0];
     for (int j = 1; j <= end; j++) {
-      E=FRT*(potential(j, SF, d_E, Esw, E_start));
+      E=FRT*(potential(j, SF, d_E, Esw, E_start, v));
       numerator=k0*exp(-alpha*E)*(1-((1+exp(E))/SF)*Itot_sum);
       denominator=1+((k0*exp(-alpha*E)/SF)*(1+exp(E)));
       Itot[j-1]=numerator/denominator;
       Itot_sum+=Itot[j-1];
     }
-    for (int j=0; j<end;, j++){
+    for (int j=0; j<end; j++){
       Itot[j]=Itot[j]*gamma;
 
     }
