@@ -13,16 +13,16 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-files=[ "FTacV_non-ideal_capacitor_(harmonics)_200_mV_cv_","FTacV_ideal_capacitor_(no harmonics)_200_mV_cv_"]
-desire="Fourier"
-labels=["Non-ideal","Ideal"]
+files=["Gamry_ideal_200mV_120Hz.txt"]
+desire="Timeseries"
+labels=["Ideal"]
 
 for j in range(0, len(files)):
     file=files[j]    
-    current=np.loadtxt(loc+file+"current")[:,1]
-    voltage=np.loadtxt(loc+file+"voltage")
-    time=voltage[:,0]
-    voltage=voltage[:,1]
+    current=np.loadtxt(loc+file, skiprows=1)
+    time=current[:,0]
+    voltage=current[:,1]
+    current=current[:,2]
     freqs=np.fft.fftfreq(len(current), time[1]-time[0])
     Y=np.fft.fft(current)
     get_max=abs(freqs[np.where(Y==max(Y))][0])
@@ -60,7 +60,7 @@ for j in range(0, len(files)):
         twinx.set_ylabel("Current (A)")
         #twinx.set_ylim([-0.002, 0.002])
         twinx.legend()
-        ax.set_xlim([-0.01, 0.05])
+        ax.set_xlim([-0.01, 0.1])
 
         
 

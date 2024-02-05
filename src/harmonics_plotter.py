@@ -92,10 +92,6 @@ class harmonics:
                     f_domain_harmonic+=top_hat
             
             if kwargs["return_fourier"]==False:
-                #multiplied_time=times*true_harm*j
-                #f_domain_harmonic*=np.fft.fft(np.sin(multiplied_time))
-                #f_domain_harmonic*=np.fft.fft(np.cos(multiplied_time))
-                #f_domain_harmonic[np.where((frequencies>true_harm+(self.input_frequency*self.filter_val)) & (frequencies<-true_harm-(self.input_frequency*self.filter_val)))]=0
                 if kwargs["one_sided"]==True:
                     harmonics[i,:]= 2*((np.fft.ifft(top_hat)))
                     
@@ -259,7 +255,8 @@ class harmonics:
             kwargs["lw"]=1
         if "alpha" not in kwargs:
             kwargs["alpha"]=1
-
+        if "one_sided" not in kwargs:
+            kwargs["one_sided"]=True
         else:
             if len(kwargs["axes_list"])!=self.num_harmonics:
                 raise ValueError("Wrong number of axes for harmonics")
@@ -282,7 +279,7 @@ class harmonics:
         if label_counter==0:
             return
         for label in label_list:
-            harm_dict[label]=self.generate_harmonics(times, time_series_dict[label], hanning=kwargs["hanning"], func=kwargs["fft_func"])
+            harm_dict[label]=self.generate_harmonics(times, time_series_dict[label], hanning=kwargs["hanning"], func=kwargs["fft_func"], one_sided=kwargs["one_sided"])
         num_harms=self.num_harmonics
         if kwargs["DC_component"]==True:
             pot=kwargs["xaxis"]
@@ -310,7 +307,10 @@ class harmonics:
             for plot_name in label_list:
                 if i==0:
                     if i==self.harmonics[i]:
-                        pf=np.real
+                        if kwargs["plot_func"]==np.abs or kwargs["plot_func"]==abs:
+                            pf=np.real
+                        else:
+                            pf=kwargs["plot_func"]
                     else:
                         pf=kwargs["plot_func"]
                     ax.plot(kwargs["xaxis"], pf(harm_dict[plot_name][i,:]), label=plot_name, alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])

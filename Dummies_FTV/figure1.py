@@ -57,7 +57,7 @@ for argkey,linestyle in zip(["Real", "Imag"], ["-","--"]):
         key=argkey+" Fourier_peak %d" % harmonics_range[i]
         fourier_dict[key]=arg(fourier_bits[i])
 abs_axis=axes["row3"][:h_class.num_harmonics]
-plot_dict={"Abs_time_series":current,"Hanning_time_series":hanning*current, "plot_func":np.abs, "axes_list":abs_axis, "legend":None}#"hanning(Imag)_time_series":hanning*current,
+plot_dict={"Abs_time_series":current,"Hanning_time_series":hanning*current, "plot_func":np.abs, "axes_list":abs_axis, "legend":None, "one_sided":True}#"hanning(Imag)_time_series":hanning*current,
 h_class.plot_harmonics(time, **plot_dict  )
 Dc_axis=axes["row3"][h_class.num_harmonics:h_class.num_harmonics*2]
 plot_dict={"DC_axis_time_series":current*hanning,"plot_func":np.abs, "axes_list":Dc_axis, "DC_component":True, "xaxis":potential, "legend":None}#"hanning(Imag)_time_series":hanning*current,
