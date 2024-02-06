@@ -13,9 +13,9 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
+#loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 files=["Gamry_ideal_200mV_120Hz.txt"]
-desire="Timeseries"
+desire="Phase"
 labels=["Ideal"]
 
 for j in range(0, len(files)):
@@ -91,13 +91,13 @@ for j in range(0, len(files)):
         num_periods=int(np.floor(time[-1]*get_max))
         periods=list(range(1, num_periods))
         phases=np.zeros((2, num_periods-1))
-        for i in range(50, 90):
+        for i in range(0, num_periods-1):
             print(i)
             idx=np.where((time>(i/get_max))& (time<((i+1)/get_max)))
             s=np.sin(2*np.pi*get_max*time[idx])      # reference sine, note the n*t
             c=np.cos(2*np.pi*get_max*time[idx])  
             sines=[current[idx], ac_component[idx]]
-            plt.plot(time[idx], current[idx])
+            #plt.plot(time[idx], current[idx])
             
             for m in range(0, len(sines)):
                 sinusoid=sines[m]
@@ -106,15 +106,15 @@ for j in range(0, len(files)):
                 a,b=2*np.mean(xs),2*np.mean(xc)
                 mag=np.hypot(b,a)
                 rad=np.arctan2(b,a)
-                deg=rad*180/np.pi
+                deg=rad
                 phases[m][i]=deg
-        plt.show()
+        #plt.show()
         if j==0:
             fig, ax=plt.subplots(1,2)
         ax[0].set_title("Current phase")
         ax[0].set_xlabel("Period")
         print(j, "+"*30)
-        ax[0].scatter(periods, phases[0,:], label=labels[j])
+        ax[0].plot(periods, phases[1,:], label=labels[j])
         #if j==1:
         #    twinx=ax[0].twinx()
         #    twinx.scatter(periods, phases[1,:]+90,  color="red", s=0.5)
@@ -123,7 +123,15 @@ for j in range(0, len(files)):
        
         ax[1].set_title("Potential phase")
         ax[1].set_xlabel("Period")
-        ax[1].scatter(periods, phases[0,:]-phases[1,:])#
+        unwrapped_phases=np.unwrap(phases[1,:])
+        plot_phases=np.zeros(len(time))
+        for i in range(0, num_periods-1):
+            idx=np.where((time>(i/get_max))& (time<((i+1)/get_max)))
+            plot_phases[idx]=unwrapped_phases[i]
+        ax[1].plot(periods, unwrapped_phases)#
         ax[0].legend()
         ax[1].legend()
+        plt.show()
+        #inv=np.arcsin(ac_component/0.1)
+        #plt.plot(inv)
 plt.show()
