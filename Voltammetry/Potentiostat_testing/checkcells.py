@@ -13,8 +13,9 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-files=[ "FTacV_non-ideal_capacitor_(harmonics)_200_mV_cv_","FTacV_ideal_capacitor_(no harmonics)_200_mV_cv_"]
-desire="Fourier"
+loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
+files=[ "FTACV_MONASH_CHECK-CELL_v2_ideal_capacitor_200_mV_export_cv_"]#,"FTacV_ideal_capacitor_(no harmonics)_200_mV_cv_"]
+desire="Timeseries"
 labels=["Non-ideal","Ideal"]
 
 for j in range(0, len(files)):
@@ -44,8 +45,8 @@ for j in range(0, len(files)):
         ax.set_ylabel("Amplitude (A)")
         ax.legend()
     elif desire=="Timeseries":   
-        
-        fig, ax=plt.subplots()
+
+        """ fig, ax=plt.subplots()
         if j==0:
 
 
@@ -60,8 +61,13 @@ for j in range(0, len(files)):
         twinx.set_ylabel("Current (A)")
         #twinx.set_ylim([-0.002, 0.002])
         twinx.legend()
-        ax.set_xlim([-0.01, 0.05])
-
+        ax.set_xlim([-0.01, 0.05])"""
+        second_reduction=np.where((time>1) & (time<5))
+        time=time[second_reduction]
+        current=current[second_reduction]
+        voltage=ac_component[second_reduction]
+        plt.plot(voltage, current)
+        plt.show()
         
 
                     # check the 3rd harmonic, it should have
@@ -74,8 +80,7 @@ for j in range(0, len(files)):
         h_class.plot_harmonics(time, **plot_dict)
 
     elif desire=="Phase":
-        if j==0:
-            fig, ax=plt.subplots(1,2)
+        
         num_periods=int(np.floor(time[-1]*get_max))
         periods=list(range(1, num_periods))
         phases=np.zeros((2, num_periods-1))
@@ -85,6 +90,7 @@ for j in range(0, len(files)):
             s=np.sin(2*np.pi*get_max*time[idx])      # reference sine, note the n*t
             c=np.cos(2*np.pi*get_max*time[idx])  
             sines=[current[idx], ac_component[idx]]
+            #plt.plot(time[idx], sines[1])
             for m in range(0, len(sines)):
                 sinusoid=sines[m]
                 
@@ -94,7 +100,9 @@ for j in range(0, len(files)):
                 rad=np.arctan2(b,a)
                 deg=rad*180/np.pi
                 phases[m][i]=deg
-        
+        #plt.show()
+        if j==0:
+            fig, ax=plt.subplots(1,2)
         ax[0].set_title("Current phase")
         ax[0].set_xlabel("Period")
         print(j, "+"*30)
