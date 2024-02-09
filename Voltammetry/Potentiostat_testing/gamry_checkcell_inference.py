@@ -15,7 +15,7 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-#loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
+loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 files=["Gamry_ideal_200mV_120Hz.txt"]
 desire="Timeseries"
 labels=["Ideal"]
@@ -26,7 +26,7 @@ class pure_sine:
     def sine_calc(self, amp, freq, phase, m, c):
         
         freq*=2*np.pi
-        phase=m*(time+c)
+        phase=phase#m*(self.time+c)
         #fig, ax=plt.subplots()
         #ax.plot(phase)
         #plt.show()
@@ -77,7 +77,7 @@ for j in range(0, len(files)):
     #plt.show()
 
     ac_component=np.real(np.fft.ifft(potential_Y))
-    second_reduction =np.where((time>0.5) & (time<1.5))
+    second_reduction =np.where((time>0.5) & (time<6))
     time=time[second_reduction]
     ac_component=ac_component[second_reduction]
     current=current[second_reduction]
@@ -96,7 +96,7 @@ for j in range(0, len(files)):
     result=dict(es.result._asdict())
 
     top_vals=result["xbest"]
-        
+    #top_vals=[-3.52551985856492, 127.52956765650454, 3.125341835416577, -47.30391320263106, -28.005164843932178]
     #minimum=fmin(ps.fsine, init_guess)
     #print(minimum)
     top_vals[0]=0.1

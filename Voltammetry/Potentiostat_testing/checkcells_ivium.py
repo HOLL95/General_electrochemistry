@@ -12,7 +12,7 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
-loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
+loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 files=["FTACV_IVIUM_CHECK-CELL_v2_ideal_capacitor_200_mV_fwd_export.txt"]
 desire="Timeseries"

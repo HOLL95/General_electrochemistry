@@ -13,6 +13,7 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
+loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 files=["30_Hz_200mV_amp_non_ideal_cv_", "60_Hz_200mV_amp_non_ideal_cv_", "120_Hz_200mV_amp_non_ideal_cv_"]
 desire="Fourier"
 labels=["30 Hz", "60 Hz", "120 Hz"]
