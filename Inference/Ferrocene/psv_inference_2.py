@@ -19,7 +19,7 @@ from EIS_optimiser import EIS_genetics
 from harmonics_plotter import harmonics
 import numpy as np
 
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
 file_name="2023-10-10_PSV_GC-Green_Fc_cv_"
 blank_file="Blank_PGE_50_mVs-1_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
@@ -87,7 +87,7 @@ simulation_options={
 
 other_values={
     "filter_val": 0.5,
-    "harmonic_range":list(range(4,12,1)),
+    "harmonic_range":list(range(4,8,1)),
     "experiment_time": current_data_file[0::dec_amount,0],
     "experiment_current": current_data_file[0::dec_amount, 1],
     "experiment_voltage":volt_data,

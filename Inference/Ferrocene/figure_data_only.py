@@ -18,36 +18,42 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/"
+blank_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/"
+blank_file_name="Blank/2023-10-09_EIS_GC-Green_Blank_240mV_1"
 #data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
-file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
-data=np.loadtxt(data_loc+"/"+file_name)
-
-truncate=10
-truncate_2=1
-
-real=np.flip(data[truncate:,0])
-imag=np.flip(data[truncate:,1])
-
-frequencies=np.flip(data[truncate:,2])
-trunc_real=np.flip(data[:truncate+1,0])
-trunc_imag=np.flip(data[:truncate+1,1])
-
-trunc_frequencies=np.flip(data[:truncate+1,2])
-spectra=np.column_stack((real, imag))
-trunc_spectra=np.column_stack((trunc_real, trunc_imag))
-
-
+file_name="Fc/2023-10-10_EIS_GC-Green_Fc_240_1"
 fig,ax =plt.subplots(1, 2)
 twinx=ax[1].twinx()
-EIS().nyquist(spectra, orthonormal=False, scatter=1, ax=ax[0])
-EIS().bode(spectra, frequencies, ax=ax[1], twinx=twinx, compact_labels=True)
-EIS().nyquist(trunc_spectra, orthonormal=False, scatter=1, ax=ax[0], colour="red")
-EIS().bode(trunc_spectra, trunc_frequencies, ax=ax[1], twinx=twinx, compact_labels=True, colour="red")
-fig=plt.gcf()
-fig.set_size_inches(7, 4.5)
+files=[blank_file_name, file_name]
+for i in range(0, len(files)):
+    file_name=files[i]
+    data=np.loadtxt(data_loc+"/"+file_name)
 
-plt.tight_layout()
+    truncate=10
+    truncate_2=1
+
+    real=np.flip(data[truncate:,0])
+    imag=np.flip(data[truncate:,1])
+
+    frequencies=np.flip(data[truncate:,2])
+    trunc_real=np.flip(data[:truncate+1,0])
+    trunc_imag=np.flip(data[:truncate+1,1])
+
+    trunc_frequencies=np.flip(data[:truncate+1,2])
+    spectra=np.column_stack((real, imag))
+    trunc_spectra=np.column_stack((trunc_real, trunc_imag))
+
+
+    
+    EIS().nyquist(spectra, orthonormal=False, scatter=1, ax=ax[0])
+    EIS().bode(spectra, frequencies, ax=ax[1], twinx=twinx, compact_labels=True)
+    EIS().nyquist(trunc_spectra, orthonormal=False, scatter=1, ax=ax[0], colour="red")
+    EIS().bode(trunc_spectra, trunc_frequencies, ax=ax[1], twinx=twinx, compact_labels=True, colour="red")
+    fig=plt.gcf()
+    fig.set_size_inches(7, 4.5)
+
+    plt.tight_layout()
 letters=["A", "B"]
 for i in range(0, len(letters)):
     axes=ax[i]

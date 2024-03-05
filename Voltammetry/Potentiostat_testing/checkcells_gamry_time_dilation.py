@@ -74,5 +74,5 @@ for j in range(0, len(files)):
             if i%5==4:
                 twinx.set_ylabel("Potential (mV)")
 
-        ax[0, 0].legend()
+        
 plt.show()

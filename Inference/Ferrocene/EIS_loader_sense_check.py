@@ -71,7 +71,7 @@ simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":False,
     "dispersion":False,
-    "dispersion_bins":[300],
+    "dispersion_bins":[300, 300],
     "GH_quadrature":False,
     "test": False,
     "method": "sinusoidal",
@@ -82,7 +82,7 @@ simulation_options={
     "optim_list":[],
     "C_sim":True,
     "EIS_Cf":"C",
-    "EIS_Cdl":"C",
+    "EIS_Cdl":"CPE",
     "DC_pot":240e-3,
     "Rct_only":False,
 }
@@ -122,14 +122,13 @@ laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
 td.simulation_options["dispersion_bins"]=[100]
 #laviron.def_optim_list(["E_0", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-laviron.def_optim_list(["E_0",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
-#laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+#laviron.def_optim_list(["E_0",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+laviron.def_optim_list(["E0_mean","E0_std",  "k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 banned_param={"cpe_alpha_cdl", "cpe_alpha_faradaic"}
 get_set=list(set(laviron.optim_list)-banned_param)
 td_optim_list=[x for x in laviron.optim_list if x in get_set]+["phase","cap_phase"]
 free_params=dict(zip(["phase","cap_phase"], [0,0]))
-print(free_params)
-td.def_optim_list(td_optim_list)
+
 #"E0_mean","E0_std","k0_scale","k0_shape"
 spectra=np.column_stack((real, imag))
 #EIS().bode(spectra, frequencies)
@@ -154,10 +153,20 @@ data_to_fit=EIS().convert_to_bode(spectra)
 #C
 
 EIS_params1={'E_0': 0.23708843969139082-DC_val, 'k_0': 4.028523388682444, 'gamma': 7.779384163661676e-10, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
-EIS_params1={'E_0': 0.23708843969139082-DC_val, 'k_0': 75, 'gamma': 2e-11, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
+#EIS_params1={'E_0': 0.23708843969139082-DC_val, 'k_0': 75, 'gamma': 2e-11, 'Cdl': 1.4936235822043384e-06, 'alpha': 0.4643410476326257, 'Ru': 97.73001050950825, 'cpe_alpha_cdl': 0.8931193741640449, 'cpe_alpha_faradaic': 0.8522148375036664, "omega":8.794196510802587}
 #CPE
+
 EIS_params2={'E_0': 0.3047451457126534-DC_val, 'k_0': 39.40663787158313, 'gamma': 1.0829517784499947e-10, 'Cdl': 8.7932554621096e-06, 'alpha': 0.5394294479538084, 'Ru': 80.76397847517714,"omega":8.794196510802587}
+#CPEonlycdl
+EIS_params2={'E_0': 0.48473683666709744, 'k_0': 748.8829198367846, 'gamma': 1.8360361398144898e-08, 'Cdl': 6.160194675577306e-05, 'alpha': 0.44425990992099207, 'Ru': 62.57692789363438, 'cpe_alpha_cdl': 0.4804715757637764, 'cpe_alpha_faradaic': 0.37647280608421163}
+#CPEboth
+EIS_params2a={'E_0': 0.45787769024326985, 'k_0': 1.9399798351038797, 'gamma': 3.609270985983326e-08, 'Cdl': 8.793255414148275e-06, 'alpha': 0.5243005057452185, 'Ru': 80.76397850768745, 'cpe_alpha_cdl': 0.7557057511156808, 'cpe_alpha_faradaic': 0.8471965362771445}
+
+
 #Cfarad
+EIS_params3={'E_0': 0.4991982785842859, 'k_0': 1545.3528723742425, 'gamma': 4.0289036924436e-11, 'Cdl': 8.793255423745104e-06, 'alpha': 0.6117535872755911, 'Ru': 80.76397862233247, 'cpe_alpha_cdl': 0.7557057511591937, 'cpe_alpha_faradaic': 0.8471965348601926, 'Cfarad': 4.98359157906545e-05}
+EIS_params3={"E_0":0.24, 'k_0': 42.3589742547644, 'gamma': 5.839640664055033e-11, 'Cdl': 8.793255424507551e-06, 'alpha': 0.3954483294530293, 'Ru': 80.76397847166463, 'cpe_alpha_cdl': 0.7557057509996593, 'cpe_alpha_faradaic': 0.8471965357461846, 'Cfarad': 4.983591555543026e-05}
+
 EIS_params3={'E_0': 0.2161051668499098-DC_val, 'k_0': 106.6602436491309, 'gamma': 2.5360979030661595e-11, 'Cdl': 8.751614540745486e-06, 'alpha': 0.47965820103670564, 'Ru': 80.92159716231082,"omega":8.794196510802587}
 #No CPE
 EIS_params_4={'E_0': 0.2014214483444881-DC_val, 'k0_scale': 1.0950956335756536, 'k0_shape': 1.043401547065882, 'gamma': 1.4645920920242938e-09, 'Cdl': 7.945475589121264e-06, 'alpha': 0.359816590101354, 'Ru': 81.69086207153816, 'cpe_alpha_cdl': 0.768033972041215, 'cpe_alpha_faradaic': 0.9119951540999298, 'phase': -0.20113351781378697,"omega":8.794196510802587} 
@@ -180,20 +189,18 @@ EIS_params_7={'E0_mean': 0.35-DC_val, 'E0_std': 0.059192130273338424, 'k_0': 1.6
 #Both no C
 EIS_params_9={'E0_mean': 0.2552237543929984-DC_val, 'E0_std': 0.0010014967867590788, 'k0_shape': 2.4360714665636465, 'k0_scale': 0.22242584355076356, 'gamma': 2.2858275700178405e-09, 'Cdl': 9.844551474481184e-07, 'alpha': 0.35822572276185904, 'Ru': 91.56868145656738, 'cpe_alpha_cdl': 0.5070420269200153, 'cpe_alpha_faradaic': 0.1970959976913189, 'phase': -1.9689465346727104}
 #Both CPE
-EIS_params_10={'E0_mean': 0.24015377746572225, 'E0_std': 0.0021373301993834804, 'k0_shape': 1.0429509932174068, 'k0_scale': 1.7509356211175566, 'gamma': 8.738837903502286e-10, 'Cdl': 7.947284126522816e-06, 'alpha': 0.499215202883645, 'Ru': 81.68491214990672, 'cpe_alpha_cdl': 0.7680050975512425}
+EIS_params_10={'E0_mean': 0.24015377746572225, 'E0_std': 0.0021373301993834804, 'k0_shape': 1.0429509932174068, 'k0_scale': 1.7509356211175566, 'gamma': 8.738837903502286e-10, 'Cdl': 7.947284126522816e-06, 'alpha': 0.499215202883645, 'Ru': 81.68491214990672, 'cpe_alpha_cdl': 0.7680050975512425, "cpe_alpha_faradaic":1}
 #k0_distribution with hard lower limits 
 {'E_0': 0.2241032166519744, 'k0_shape': 0.36042285494223125, 'k0_scale': 30.0, 'gamma': 3.81680321550312e-10, 'Cdl': 1.239479377634673e-06, 'alpha': 0.6499999999999999, 'Ru': 94.97839502706194, 'cpe_alpha_cdl': 0.7813622563224152, 'cpe_alpha_faradaic': 0.3162880458183584}
 
 fig, ax=plt.subplots()
 twinx=ax.twinx()
-param_dict=EIS_params_4
+param_dict=EIS_params_10
 circ_params=[param_dict[x] for x in laviron.optim_list]
 print(circ_params)
 sim_vals=laviron.simulate(circ_params, fitting_frequencies)
 param_dict["Cdl"]/=param_list["area"]
 #param_dict["E0_mean"]-=240e-3
-param_dict["E_0"]-=240e-3
-td_param_list=[param_dict[x] if x in laviron.optim_list else free_params[x] for x in td.optim_list]
 #td_vals=td.simulate(td_param_list, frequencies)
 EIS().bode(np.column_stack((real, imag)),frequencies,ax=ax, twinx=twinx, label="Data")
 EIS().bode(sim_vals,frequencies,ax=ax, twinx=twinx, data_type="phase_mag", label="Laviron")

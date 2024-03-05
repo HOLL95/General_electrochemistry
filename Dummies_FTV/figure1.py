@@ -23,7 +23,7 @@ loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
 file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
 file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
 harmonics_range=list(range(0, num_harms))
-h_class=harmonics(harmonics_range, 72.04862601258495, 0.25)
+h_class=harmonics(harmonics_range, 72.04862601258495, 0.1)
 current_data=np.loadtxt(loc+file1)
 current=current_data[:,1]
 time=current_data[:,0]
@@ -46,7 +46,7 @@ arg_list={"Real":np.real, "Abs":np.abs,"Imag":np.imag, }#
 plot_dict={"Imag_time_series":current, "plot_func":np.imag, "axes_list":imag_axis, "colour":colours[1], "legend":None, "one_sided":False}#"hanning(Imag)_time_series":hanning*current,
 one_sided_frequencies={}
 h_class.plot_harmonics(time, **plot_dict  )
-fourier_dict={"Two sided frequencies (Hz)":np.fft.fftshift(frequency), "Two sided absolute values log10":np.fft.fftshift(abs(Y))}
+fourier_dict={"Two sided frequencies (Hz)":frequency, "Two sided absolute values log10":abs(Y)}
 for argkey,linestyle in zip(["Real", "Imag"], ["-","--"]):
     fourier_bits, freqs=h_class.generate_harmonics(time, current, hanning=False, return_fourier=True)
    
@@ -78,7 +78,7 @@ for i in range(0, len(harmonics_range)):
         save_harm_dict[key]=np.abs(hanning_save_harms[i,:])
 
         #print(arg, i, 2*np.max(arg_list[arg](save_harms[i,:])))
-full_dict={"Time":time, "Ac_potential (V)":potential, "DC_potential (V)":h_class.dc_pot}|save_harm_dict
+full_dict={"Time":time, "Ac_potential (V)":potential, "DC_potential (V)":h_class.dc_pot,"Current (A)":current}|save_harm_dict
 h_class.savecsv("Time-domain-plots_fig1.csv", full_dict)
 h_class.savecsv("Fourier-domain-plots_fig1.csv", fourier_dict)
 
@@ -89,4 +89,8 @@ plt.subplots_adjust(top=0.95,
                     right=0.955,
                     hspace=0.2,
                     wspace=0.2)
+plt.show()
+fig, ax=plt.subplots(h_class.num_harmonics,1)
+h_class.plot_harmonics(time, NoHanning_time_series=current, Hanning_time_series=current*hanning, axes_list=ax, xlabel="Time (s)", ylabel="Current (A)", plot_func=abs)
+
 plt.show()

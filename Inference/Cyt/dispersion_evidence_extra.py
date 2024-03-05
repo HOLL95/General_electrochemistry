@@ -117,7 +117,7 @@ frequencies=td.define_frequencies(-2, 6, points_per_decade=10)
 common_params_1=["k0_scale", "k0_shape","Cdl"]
 common_params_2=["E0_mean", "E0_std", "Cdl", "k_0"]
 label_vals=["$k_{0}$ shape=","$E^0\\sigma=$"]
-classes=[td, laviron]
+classes=[ laviron]
 optim=[common_params_1, common_params_2]
 vals=[scale_vals, std_vals]
 fig, ax=plt.subplots(2,2)

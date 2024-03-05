@@ -16,6 +16,8 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 from single_e_class_unified import single_electron
+from EIS_TD import EIS_TD
+from EIS_class import EIS
 Hz=10
 num_osc=1
 time_end=num_osc/Hz
@@ -24,24 +26,7 @@ times=np.arange(0, time_end, sf)
 phase=3*math.pi/2
 
 maxiter=1000
-"""def marcus_kinetics(E, E0, lambda_1, integral_0, flag):
-    y=E-E0
-    if flag=="forward":
-        coefficient=25*1000*96485*1.26e-12*np.exp(-0.5*42.51*y)
-    elif flag=="backward":
-        coefficient=25*1000*96485*1.26e-12*np.exp(0.5*42.51*y)
-    integral_1=scipy.integrate.quadrature(I_theta, a=-10000, b=10000, args=(lambda_1, y), maxiter=maxiter)
-    return coefficient*(integral_1/integral_0)
 
-def I_theta(x, lambda_1, y):
-    return np.exp(-((x-42.51*y)**2)/(170.04*lambda_1))/(2*np.cosh(x/2))
-
-lambda_1=0.65
-integral_0=scipy.integrate.romberg(I_theta, a=-10000, b=10000, args=(lambda_1, 0), divmax=100)
-spread=np.linspace(-10000, 10000, int(1e5))
-cosh=np.cosh(spread)
-cosh[np.isinf(cosh)]=0
-print(cosh)"""
 T=(273+25)
 F=96485.3328959
 R=8.314459848
@@ -120,13 +105,13 @@ param_list={
     "E0_mean":0.2,
     "E0_std": 0.05,
     "E0_skew":0.2,
-    "cap_phase":3*math.pi/2,
+    "cap_phase":0,
     "alpha_mean":0.5,
     "alpha_std":1e-3,
-    'sampling_freq' : (1.0/400),
-    'phase' :3*math.pi/2,
+    'sampling_freq' : (1.0/2**8),
+    'phase' :0,
     "time_end": -1,
-    'num_peaks': 3,
+    'num_peaks': 50,
     "aoo":0,
     "aor":0,
     "arr":0,
@@ -195,6 +180,15 @@ plt.plot(voltage, current, label="Interacting")
 plt.plot(voltage, current2, label="Normal")
 plt.legend()
 plt.show()
+td_params=copy.deepcopy(param_list)
+td_params["E_start"]=-10e-3
+td_params["d_E"]=10e-3
+td=EIS_TD(td_params, copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
+frequencies=td.define_frequencies(0, 6)
+td.def_optim_list(["aoo", "aor", "arr", "Cdl"])
+td_vals=td.simulate([0,1,0, td_params["Cdl"]*td_params["area"]], frequencies)
+#EIS().nyquist(td_vals)
+#plt.show()  
 
 """for z in range(0, len(keys)):
     parameter=keys[z]
