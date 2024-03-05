@@ -24,6 +24,11 @@ for j in range(0, len(files)):
     time=current[:,0]
     voltage=current[:,2]
     current=current[:,1]
+    plt.step(time, voltage)
+    plt.scatter(time, voltage)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Potential (V)")
+    plt.show()
     freqs=np.fft.fftfreq(len(current), time[1]-time[0])
     Y=np.fft.fft(current)
     get_max=abs(freqs[np.where(Y==max(Y))][0])

@@ -62,6 +62,8 @@ for j in range(0, len(files)):
     time=time[first_reduction]
     current=current[first_reduction]
     voltage=voltage[first_reduction]
+    plt.step(time, voltage)
+    plt.show()
     freqs=np.fft.fftfreq(len(current), time[1]-time[0])
     Y=np.fft.fft(current)
     get_max=abs(freqs[np.where(Y==max(Y))][0])

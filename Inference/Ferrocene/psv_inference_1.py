@@ -19,7 +19,7 @@ from EIS_optimiser import EIS_genetics
 from harmonics_plotter import harmonics
 import numpy as np
 
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
 file_name="2023-10-10_PSV_GC-Green_Fc_cv_"
 blank_file="Blank_PGE_50_mVs-1_DEC_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
@@ -147,7 +147,7 @@ time_series_params=[0.2591910307724134, 0.0674086382052161, 177.04633092062943, 
 time_series_params2=[0.25722005928627006, 0.06349029977195912, 40.62521741991397, 6.398882388982527, 0.00033901089088824246, -0.09634378924422059, -0.00046147096602321033, 2.0914895093075516e-05, 6.018367690406668e-11, 9.015058786874553, 5.255990662519596, 4.922649305684364, 0.5999999930196368]
 test1=ferro.test_vals(time_series_params, "timeseries")
 test2=ferro.test_vals(time_series_params2, "timeseries")
-h_class.plot_harmonics(time_results, exp_time_series=test1,  exp2_time_series=test2, xaxis=ferro.define_voltages(no_transient=True), hanning=True)
+h_class.plot_harmonics(time_results, exp_time_series=test1,  exp2_time_series=test2, xaxis=ferro.define_voltages(no_transient=True), hanning=False)
 plt.show()
 plt.plot(voltage_results, test1)
 plt.plot(voltage_results, test2)

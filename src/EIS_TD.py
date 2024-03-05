@@ -174,7 +174,8 @@ class EIS_TD(single_electron):
                 #    plt.plot(times, I)
                 #    plt.show()
                 ffts=[]
-                   
+                plt.plot(V, I)
+                plt.show()
                 for dataset in [V, I]:
                     
                     fft=(1/num_points)*np.fft.fftshift(np.fft.fft(dataset))

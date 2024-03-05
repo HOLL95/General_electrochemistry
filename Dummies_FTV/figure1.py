@@ -90,3 +90,7 @@ plt.subplots_adjust(top=0.95,
                     hspace=0.2,
                     wspace=0.2)
 plt.show()
+fig, ax=plt.subplots(h_class.num_harmonics,1)
+h_class.plot_harmonics(time, NoHanning_time_series=current, Hanning_time_series=current*hanning, axes_list=ax, xlabel="Time (s)", ylabel="Current (A)", plot_func=abs)
+
+plt.show()

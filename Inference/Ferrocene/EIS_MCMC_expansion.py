@@ -62,7 +62,7 @@ for i in range(0, len(trough_params)):
         plot_var=multiple*var
         print(key, min(plot_line), max(plot_line))
         print(not_that_variable[j], min(predictions), max(predictions))
-        if depend_axis>independ_axis:
+        """if depend_axis>independ_axis:
             
 
             axis=ax[depend_axis, independ_axis]
@@ -73,7 +73,7 @@ for i in range(0, len(trough_params)):
             axis=ax[independ_axis, depend_axis]
             axis.plot(plot_line, predictions, linestyle="-")
             axis.plot(plot_line,predictions*0.5,  linestyle="--", color="black")
-            axis.plot( plot_line,predictions*1.5, linestyle="--", color="black")
+            axis.plot( plot_line,predictions*1.5, linestyle="--", color="black")"""
 plt.show()     
     
 

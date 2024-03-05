@@ -11,7 +11,7 @@ sys.path.append(source_loc)
 from MCMC_plotting import MCMC_plotting
 from pints import plot
 desired_files=["EIS_k_disp_tests_2"]
-mplot=MCMC_plotting(burn=90000)
+mplot=MCMC_plotting(burn=10000)
 
 names=["k0_shape", "k0_scale", "gamma", "Cdl", "Ru", "cpe_alpha_cdl", "sigma_1","sigma_2"]
 
@@ -21,10 +21,13 @@ chains=np.load(desired_files[0])
        
 ax=mplot.plot_params(names, chains, alpha=0.75)
 ax[0,0].legend()
+
+
 plt.show()
-mplot.plot_2d(names, chains, pooling=False)
+mplot.plot_2d(names, chains, pooling=False, rotation=30)
 import statsmodels.api as sm
-
+fig=plt.gcf()
+fig.set_size_inches(9, 9)
 
 plt.show()
-
+fig.savefig("EIS_MCMC.png", dpi=500)

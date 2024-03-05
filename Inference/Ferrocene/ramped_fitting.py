@@ -18,7 +18,7 @@ import pints
 from scipy.optimize import minimize
 from scipy.signal import decimate
 
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
 
 file_name="2023-10-10_FTV_GC-Green_Fc_cv_"
 current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")

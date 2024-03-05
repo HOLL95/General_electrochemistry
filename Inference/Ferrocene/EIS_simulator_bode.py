@@ -17,7 +17,7 @@ import numpy as np
 import pints
 from scipy.optimize import minimize
 from pints.plot import trace
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Immobilised_Fc/GC-1/Fc/Exported"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-1/Fc/Exported"
 file_name="2023-09-13_EIS_GC-1_Fc_Nyquist_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -74,7 +74,7 @@ simulation_options={
     "label": "MCMC",
     "optim_list":[],
     "EIS_Cf":"C",
-    "EIS_Cdl":"C",
+    "EIS_Cdl":"CPE",
     "DC_pot":240e-3,
 }
 

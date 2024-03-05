@@ -59,14 +59,18 @@ for j in range(0, len(files)):
             s=np.sin(2*np.pi*get_max*time[idx])      # reference sine, note the n*t
             c=np.cos(2*np.pi*get_max*time[idx])  
             sines=[current[idx], ac_component[idx]]
-            ax[i//5, i%5].plot(time[idx], sines[0], label="Current")
-            ax[i//5, i%5].plot(0, 0, color="red", label="Potential")
+            ax[i//5, i%5].plot(time[idx], sines[1], label="Potential")
+            
+            ax[i//5, i%5].plot(time[idx][0], sines[1][0], color="red", label="Reference")
+            ax[0, -1].legend(loc="upper right")
             twinx=ax[i//5, i%5].twinx()
-            twinx.plot(time[idx], sines[1], label="Potential", color="Red")
-            ax.set_title("Sinewave %d"% val)
-            ax.set_xlabel("Time (s)")
-            ax.set_ylabel("Current (A)")
-            twinx.set_ylabel("Potential (V)")
+            twinx.plot(time[idx], s, label="Reference", color="red")
+            #twinx.plot(time[idx], sines[1], label="Potential", color="Red")
+            ax[i//5, i%5].set_title("Sinewave %d"% val)
+            ax[i//5, i%5].set_xlabel("Time (s)")
+            ax[i//5, i%5].set_ylabel("Potential (V)")
+            twinx.set_yticks([])
+            #twinx.set_ylabel("Potential (V)")
 
-        ax[0, 0].legend()
+        
 plt.show()

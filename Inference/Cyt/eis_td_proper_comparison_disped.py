@@ -110,11 +110,12 @@ twinx=ax.twinx()
 laviron=Laviron_EIS(copy.deepcopy(param_list), copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
 td.def_optim_list(["gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["gamma","k_0" , "Cdl", "alpha", "Ru"])
-"""
+
 #save_data=EIS().convert_to_bode(np.column_stack((real, z.imag[index])))
 ax3=axes[0,0]
 twinx3=ax3.twinx()
 ax3.set_title("Non dispersed")
+colors=plt.rcParams['axes.prop_cycle'].by_key()['color']
 for scale in [10, 500, 1000]:
     params=[1e-10, scale, 1e-5, 0.55, 100, 0, 0]
     param_dict=dict(zip(td.optim_list, params))
@@ -126,11 +127,14 @@ for scale in [10, 500, 1000]:
     #bode_vals=td.simulate(params, frequencies)
     lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
     
-    EIS().bode(lav_ec_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale), scatter=1, line=False)
-    EIS().bode(td_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale))
+    EIS().bode(lav_ec_vals, frequencies, ax=ax3, twinx=twinx3, label="k="+str(scale), scatter=1, line=False, compact_labels=True)
+    EIS().bode(td_vals, frequencies, ax=ax3, twinx=twinx3, compact_labels=True)
+twinx3.plot(np.log10(frequencies[-1]), 2, label="Time domain", color=colors[0])
+twinx3.scatter(np.log10(frequencies[-1]), 2,  s=10, label="Equivalent circuit", color=colors[0])
+twinx3.legend(frameon=True, loc="upper center", bbox_to_anchor=[1.25, 1.3], ncols=2)
 ax3.legend()
 
-laviron.simulation_options["dispersion_bins"]=[50]
+"""laviron.simulation_options["dispersion_bins"]=[300]
 td.def_optim_list(["gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["gamma","k0_shape","k0_scale" , "Cdl", "alpha", "Ru"])
 
@@ -148,11 +152,11 @@ for scale in [0.25, 0.5, 0.9]:
     #bode_vals=td.simulate(params, frequencies)
     lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
     
-    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale), scatter=1, line=False)
-    EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale))
+    EIS().bode(lav_ec_vals, frequencies, ax=ax, twinx=twinx, label="shape="+str(scale), scatter=1, line=False, compact_labels=True)
+    EIS().bode(td_vals, frequencies, ax=ax, twinx=twinx, compact_labels=True)
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax.legend()
-z
+
 td.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["E0_mean", "E0_std","gamma","k_0", "Cdl", "alpha", "Ru"])
 
@@ -172,13 +176,13 @@ for std in [0.01, 0.025, 0.05]:
     #bode_vals=td.simulate(params, frequencies)
     lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
     
-    EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std), scatter=1, line=False)
-    EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std))
+    EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std="+str(std), scatter=1, line=False, compact_labels=True)
+    EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, compact_labels=True)
     #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
     ax2.legend()
-plt.show()
+
 td.simulation_options["dispersion_bins"]=td.simulation_options["dispersion_bins"]*2#
-laviron.simulation_options["dispersion_bins"]=[30,50]
+laviron.simulation_options["dispersion_bins"]=[16,100]
 
 td.def_optim_list(["E0_mean", "E0_std","gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru", "phase", "cap_phase"])
 laviron.def_optim_list(["E0_mean", "E0_std","gamma","k0_shape","k0_scale", "Cdl", "alpha", "Ru"])
@@ -200,12 +204,20 @@ for std in [0.025, 0.05]:
         #bode_vals=td.simulate(params, frequencies)
         lav_ec_vals=laviron.simulate([param_dict[x] for x in laviron.optim_list], frequencies*2*math.pi)
         
-        EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std= %.3f, shape= %.1f" % (std, scale), scatter=1, line=False)
-        EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, label="std= %.3f, shape= %.1f" % (std, scale))
+        EIS().bode(lav_ec_vals, frequencies, ax=ax2, twinx=twinx2, label="std= %.3f, shape= %.1f" % (std, scale), scatter=1, line=False, compact_labels=True)
+        EIS().bode(td_vals, frequencies, ax=ax2, twinx=twinx2, compact_labels=True)
         #EIS().bode(bode_vals, frequencies, ax=ax, twinx=twinx, label=scale)
         ax2.legend()
 
-
+fig=plt.gcf()
+#fig.set_size_inches(7, 7)
+plt.subplots_adjust(top=0.895,
+bottom=0.07,
+left=0.085,
+right=0.915,
+hspace=0.21,
+wspace=0.45)"""
 
 plt.show()
 
+#fig.savefig("Dispersed_scans.png", dpi=500)

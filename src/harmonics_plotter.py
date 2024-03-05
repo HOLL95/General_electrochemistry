@@ -220,6 +220,16 @@ class harmonics:
             if self.harmonics[0]==0:
                 print(box_area[0])
                 ax.plot([0,0], [0, box_area[0]],color="r", linestyle="--")
+    def get_freq(self, times, current):
+        fft=abs(np.fft.fft(current))
+        fft_freq=np.fft.fftfreq(len(current), times[1]-times[0])
+        #fig,ax=plt.subplots()
+        
+        maximum=fft_freq[np.where(fft==max(fft))]
+        #ax.plot(fft_freq, fft)
+        #plt.show()
+        print(maximum)
+        self.input_frequency=abs(maximum[0])
     def savecsv(self,filename, dictdata):
         df=DataFrame(dictdata)
         df.to_csv(filename)
@@ -236,9 +246,9 @@ class harmonics:
         if "fft_func" not in kwargs:
             kwargs["fft_func"]=None
         if "xlabel" not in kwargs:
-            kwargs["xlabel"]=""
+            kwargs["xlabel"]=None
         if "ylabel" not in kwargs:
-            kwargs["ylabel"]=""
+            kwargs["ylabel"]=None
         if "DC_component" not in kwargs:
             kwargs["DC_component"]=False
         if "legend" not in kwargs:
@@ -317,10 +327,12 @@ class harmonics:
                 else:
                     ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 plot_counter+=1
-            if i==((num_harms)//2):
-                ax.set_ylabel(kwargs["ylabel"])
-            if i==num_harms-1:
-                ax.set_xlabel(kwargs["xlabel"])
+            if kwargs["ylabel"] is not None:
+                if i==((num_harms)//2):
+                    ax.set_ylabel(kwargs["ylabel"])
+            if kwargs["xlabel"] is not None:
+                if i==num_harms-1:
+                    ax.set_xlabel(kwargs["xlabel"])
             if i==0:
                 if kwargs["legend"] is not None:
                     ax.legend(**kwargs["legend"])
