@@ -13,7 +13,7 @@ sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
 loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
+#loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
 files=["Gamry_ideal_200mV_120Hz.txt"]
 desire="Phase"
 labels=["Ideal"]
@@ -31,6 +31,7 @@ for j in range(0, len(files)):
     freqs=np.fft.fftfreq(len(current), time[1]-time[0])
     Y=np.fft.fft(current)
     get_max=abs(freqs[np.where(Y==max(Y))][0])
+    print(get_max)
     potential_Y=np.fft.fft(voltage)
     #plt.plot(freqs, potential_Y)
     #plt.plot(time, np.fft.ifft(potential_Y))

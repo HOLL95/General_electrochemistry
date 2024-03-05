@@ -12,9 +12,9 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 from harmonics_plotter import harmonics
-loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/checkcell/"
-loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
-files=["Gamry_ideal_200mV_120Hz.txt"]
+loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_2/"
+#loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_2/"
+files=["JB_120Hz_2uF_10_Ohm.txt"]
 desire="Phase"
 labels=["Ideal"]
 
@@ -40,7 +40,7 @@ for j in range(0, len(files)):
     m=np.zeros(len(voltage), dtype="complex")
     m[np.where((freqs<1.5*get_max) & (freqs>0.5*get_max))]=potential_Y[np.where((freqs<1.5*get_max) & (freqs>0.5*get_max))]
     potential_Y[np.where((freqs<0.25*get_max) & (freqs>-0.25*get_max))]=0
-    #plt.plot(freqs, potential_Y)
+
     ac_component=voltage#np.real(np.fft.ifft(potential_Y))
 
     if desire=="Phase":
@@ -59,14 +59,20 @@ for j in range(0, len(files)):
             s=np.sin(2*np.pi*get_max*time[idx])      # reference sine, note the n*t
             c=np.cos(2*np.pi*get_max*time[idx])  
             sines=[current[idx], ac_component[idx]]
-            ax[i//5, i%5].plot(time[idx], sines[0], label="Current")
-            ax[i//5, i%5].plot(0, 0, color="red", label="Potential")
             twinx=ax[i//5, i%5].twinx()
-            twinx.plot(time[idx], sines[1], label="Potential", color="Red")
-            ax.set_title("Sinewave %d"% val)
-            ax.set_xlabel("Time (s)")
-            ax.set_ylabel("Current (A)")
-            twinx.set_ylabel("Potential (V)")
+            ax[i//5, i%5].plot(time[idx], s*1e3, label="Reference")
+            
+            twinx.plot(time[idx], sines[1]*1e3, label="Potential", color="Red")
+            
+            ax[i//5, i%5].plot(time[idx][0], sines[0][0], color="red", label="Potential")
+            
+            ax[i//5, i%5].set_title("Sinewave %d"% val)
+            if i//5==1:
+                ax[i//5, i%5].set_xlabel("Time (s)")
+            if i%5==0:
+                ax[i//5, i%5].set_ylabel("Reference")
+            if i%5==4:
+                twinx.set_ylabel("Potential (mV)")
 
         ax[0, 0].legend()
 plt.show()
