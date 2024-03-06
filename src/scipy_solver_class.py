@@ -73,12 +73,21 @@ class scipy_funcs:
                 aoo=scan_dict["aoo"]
                 aor=scan_dict["aor"]
                 arr=scan_dict["arr"]
+                g=2*(aoo-aor)
+                h=2*(aor-arr)
+                l=np.exp(-2*aor)
+                m=l
+                nu_1_alpha=(np.exp((1-alpha)*ErE0))
+                nu_alpha=np.exp((-alpha)*ErE0)
+                d_thetadt=scan_dict["k_0"]*((m*(1-theta)*nu_1_alpha*np.exp(h*(1-theta)))-(l*theta*nu_alpha*np.exp(g*theta)))
+                dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+                """
                 S=arr-aoo
                 G=aoo+arr-(2*aor)
                 gamma_max=1
                 gamma_tot=1
                 theta_e=gamma_tot/gamma_max
-                E0_ap=scan_dict["E_0"]#E0+(R*T/F)*theta_e*S
+                E0_ap=scan_dict["E_0"]-(current*scan_dict["Ru"])#E0+(R*T/F)*theta_e*S
                 E0=E0_ap
                 fo=theta#(gamma_tot*theta)/gamma_tot
                 fr=1-theta#gamma_r/gamma_tot
@@ -90,8 +99,8 @@ class scipy_funcs:
                 
                 
                 #bv_backwards=k0*np.exp((1-scan_dict["alpha"])*(potential-E0_ap-(current*scan_dict["Ru"])))
-                d_thetadt=k0*bv_forwards*coeff_1*((np.exp(theta_e*G*(1-fr))*fr*np.exp(potential-E0-(current*scan_dict["Ru"])))-((1-fr)*np.exp(theta_e*G*fr)))
-                dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+                d_thetadt=k0*bv_forwards*coeff_1*((np.exp(theta_e*G*(1-fr))*fr*np.exp(potential-E0-(current*scan_dict["Ru"])))-((1-fr)*np.exp(theta_e*G*fr)))"""
+                #dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
         else:
             if self.current_class.simulation_options["method"]=="square_wave":
                 dEdt=(Et-potential)/self.nd_param.nd_param_dict["CmRs"]

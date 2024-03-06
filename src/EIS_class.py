@@ -572,15 +572,16 @@ class EIS:
         x_freqs=np.log10(frequency)
         if kwargs["type"]=="both":
             twinx=kwargs["twinx"]
-            if kwargs["line"]==True:
-                ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
-                if kwargs["no_labels"]!=True:
+            if kwargs["no_labels"]!=True:
                     if kwargs["compact_labels"]==False:
                         ax.set_ylabel("-Phase")
                         twinx.set_ylabel("Magnitude")
                     else:
                         ax.text(x=-0.05, y=1.05, s="$-\\psi$", fontsize=12, transform=ax.transAxes)
                         ax.text(x=0.96, y=1.05, s="$\\log_{10}(|Z|) $", fontsize=12, transform=ax.transAxes)
+            if kwargs["line"]==True:
+                ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
+                
                 twinx.plot(x_freqs, magnitude, linestyle="--", lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
             if kwargs["scatter"] is not False:
                 ax.scatter(x_freqs[0::kwargs["scatter"]], -phase[0::kwargs["scatter"]], s=kwargs["markersize"], color=kwargs["colour"],label=kwargs["label"], alpha=kwargs["alpha"])
@@ -590,7 +591,7 @@ class EIS:
             if kwargs["compact_labels"]==False:
                 ax.set_ylabel("Phase")
             else:
-                 ax.text(x=-0.05, y=1.05, s="$\\psi$", fontsize=12, transform=ax.transAxes)
+                 ax.text(x=-0.05, y=1.05, s="-$\\psi$", fontsize=12, transform=ax.transAxes)
             ax.plot(x_freqs, -phase, label=kwargs["label"], lw=kwargs["lw"], alpha=kwargs["alpha"], color=kwargs["colour"])
 
         elif kwargs["type"]=="magnitude":

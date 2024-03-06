@@ -63,7 +63,7 @@ simulation_options={
     "method": "sinusoidal",
     "phase_only":False,
     "likelihood":likelihood_options[0],
-    "numerical_method": solver_list[1],
+    "numerical_method": "scipy",#,solver_list[1],
     "C_sim":True,
     "label": "MCMC",
     "optim_list":[],

@@ -18,6 +18,7 @@ print(sys.path)
 from single_e_class_unified import single_electron
 from EIS_TD import EIS_TD
 from EIS_class import EIS
+from heuristic_class import Laviron_EIS
 Hz=10
 num_osc=1
 time_end=num_osc/Hz
@@ -27,80 +28,23 @@ phase=3*math.pi/2
 
 maxiter=1000
 
-T=(273+25)
-F=96485.3328959
-R=8.314459848
-FRT=F/(R*T)
-potential=0.3*np.sin(2*math.pi*Hz*times+phase)*FRT
-lambda_1=0.65
-def marcus_kinetics(E, E0, lambda_1, integral_0, flag, k0, inverse_v):
-    T=(273+25)
-    F=96485.3328959
-    R=8.314459848
-    FRT=F/(R*T)
-    y=FRT*(E-E0)
-    
-    integral_1=scipy.integrate.romberg(I_theta, a=-50, b=50, args=(lambda_1, y,inverse_v, flag), divmax=20)
-    return k0*(integral_1/integral_0)
-inverse_v=FRT*lambda_1
-def I_theta(x, lambda_1, y, inverse_v, flag):
-      
-    if flag=="forwards":
-        numerator=np.exp(-(inverse_v/4)*(1+((y+x)/inverse_v))**2)  
-        denominator=1+np.exp(-x)
-    elif flag=="backwards":
-        numerator=np.exp(-(inverse_v/4)*(1-((y+x)/inverse_v))**2)  
-        denominator=1+np.exp(x)
-    return numerator/denominator
-integral_0_kf=scipy.integrate.romberg(I_theta, a=-50, b=50, args=(lambda_1, 0, inverse_v, "forwards"), divmax=20)
-integral_0_kb=scipy.integrate.romberg(I_theta, a=-50, b=50, args=(lambda_1, 0, inverse_v, "backwards"), divmax=20)
-print(integral_0_kb)
-E0=0
-current=np.zeros(len(potential))
 
-dt=sf
-k0=1000
-BV_current=np.zeros(len(potential))
-def BV_kinetics(E, E0, k0,flag):
-
-    y=(E-E0)
-    if flag=="forwards":
-        return k0*np.exp(-0.5*y)
-    else:
-        return k0*np.exp((0.5)*y)
-def interaction_kinetics(E, E0, k0,flag):
-
-    y=(E-E0)
-    if flag=="forwards":
-        return k0*np.exp(-0.5*y)
-    else:
-        return k0*np.exp((0.5)*y)
-gamma=1e-11
-a_vals=[1]
-aoo=0
-arr=0
-aor=0
-
-incidental_vals=[ -0.5]
-orig_interaction_dict={"arr":0, "aoo":0, "aor":0}
-fig, ax=plt.subplots(1,3)
-keys=list(orig_interaction_dict.keys())
 param_list={
-    "E_0":E0,
-    'E_start':  -0.15, #(starting dc voltage - V)
-    'E_reverse':0.15,
+    "E_0":0.01,
+    'E_start':  -0.3, #(starting dc voltage - V)
+    'E_reverse':0.3,
     'omega':9.365311521736066, #8.88480830076,  #    (frequency Hz)
     "original_omega":9.365311521736066,
     'd_E': 299*1e-3,   #(ac voltage amplitude - V) freq_range[j],#
     'area': 0.07, #(electrode surface area cm^2)
     'Ru': 100.0,  #     (uncompensated resistance ohms)
-    'Cdl': 1e-4, #(capacitance parameters)
+    'Cdl': 1e-5, #(capacitance parameters)
     'CdlE1': 0,#0.000653657774506,
     'CdlE2': 0,#0.000245772700637,
     "CdlE3":0,
     'gamma': 1e-10,
     "original_gamma":1e-10,        # (surface coverage per unit area)
-    'k_0': 1000, #(reaction rate s-1)
+    'k_0': 100, #(reaction rate s-1)
     'alpha': 0.5,
     "E0_mean":0.2,
     "E0_std": 0.05,
@@ -115,12 +59,16 @@ param_list={
     "aoo":0,
     "aor":0,
     "arr":0,
+    "gamma_max":1,
 }
 print(param_list["E_start"], param_list["E_reverse"])
 print(param_list)
 solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
 likelihood_options=["timeseries", "fourier"]
 time_start=2/(param_list["original_omega"])
+
+
+
 simulation_options={
     "no_transient":False,
     "numerical_debugging": False,
@@ -134,6 +82,9 @@ simulation_options={
     "likelihood":likelihood_options[0],
     "numerical_method": "scipy",
     "scipy_type":"self_interaction",
+    "EIS_Cdl":"C",
+    "EIS_Cf":"C",
+    "DC_pot":0,
     "label": "MCMC",
     "optim_list":[]
 }
@@ -170,25 +121,50 @@ param_bounds={
 }
 import copy
 
-ferro=single_electron(None, param_list, simulation_options, other_values, param_bounds)
+"""ferro=single_electron(None, param_list, simulation_options, other_values, param_bounds)
 ferro.def_optim_list(["aoo", "aor", "arr"])
-current=ferro.test_vals([0,1,0], "timeseries")
+current=ferro.test_vals([0,-0.5,0], "timeseries")
 ferro.simulation_options["scipy_type"]="single_electron"
 current2=ferro.test_vals([0,0,0], "timeseries")
 voltage=ferro.define_voltages()
 plt.plot(voltage, current, label="Interacting")
 plt.plot(voltage, current2, label="Normal")
 plt.legend()
-plt.show()
+plt.show()"""
 td_params=copy.deepcopy(param_list)
 td_params["E_start"]=-10e-3
 td_params["d_E"]=10e-3
 td=EIS_TD(td_params, copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
 frequencies=td.define_frequencies(0, 6)
+laviron=Laviron_EIS(td_params, copy.deepcopy(simulation_options), copy.deepcopy(other_values), copy.deepcopy(param_bounds))
+laviron.def_optim_list(["aoo", "arr", "aor", "Cdl"])
+
 td.def_optim_list(["aoo", "aor", "arr", "Cdl"])
-td_vals=td.simulate([0,1,0, td_params["Cdl"]*td_params["area"]], frequencies)
-#EIS().nyquist(td_vals)
-#plt.show()  
+fig,ax=plt.subplots()
+twinx=ax.twinx()
+sim_freq=frequencies*2*math.pi
+lav_cdl=td_params["Cdl"]*td_params["area"]
+cs=plt.rcParams['axes.prop_cycle'].by_key()['color']
+for aor in [-1, 0, 1]:
+    td_vals=td.simulate([aor,0.1,-0.1, td_params["Cdl"]], frequencies)
+
+  
+    lav_sim=[aor, 0.1,-0.1, lav_cdl]
+
+    Laviron_vals=laviron.simulate(lav_sim, sim_freq)
+    #EIS().bode(Laviron_vals, frequencies, ax=ax, twinx=twinx)
+    #laviron.def_optim_list(["Cdl"])
+    #Laviron_vals=laviron.simulate([lav_cdl], sim_freq)
+
+    EIS().bode(td_vals, frequencies, data_type="phase_mag", ax=ax, twinx=twinx,  compact_labels=True, label="$a_{oo}$=%d"%aor, )
+    EIS().bode(Laviron_vals, frequencies, ax=ax, twinx=twinx, compact_labels=True, line=False,scatter=1, no_labels=False)
+twinx.scatter(frequencies[0], np.log10(Laviron_vals[0][1]), label="Equivalent circuit", color=cs[0])
+twinx.plot(frequencies[0], np.log10(Laviron_vals[0][1]), label="Time domain", color=cs[0])
+twinx.legend(ncols=2, loc="center", bbox_to_anchor=[0.5, 1.05], frameon=False)
+fig.set_size_inches(6, 4.5)
+ax.legend()    
+fig.savefig("Laviron_check_interaction.png", dpi=500)
+plt.show()  
 
 """for z in range(0, len(keys)):
     parameter=keys[z]

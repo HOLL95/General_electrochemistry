@@ -18,7 +18,7 @@ import pints
 from scipy.optimize import minimize
 from pints.plot import trace
 data_loc="/home/henryll/Documents/Experimental_data/Alice/Immobilised_Fc/GC-Green_(2023-10-10)/Fc"
-#data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data"
 file_name="2023-10-10_EIS_GC-Green_Fc_240_1"
 data=np.loadtxt(data_loc+"/"+file_name)
 truncate=10
@@ -59,6 +59,10 @@ param_list={
         "k0_shape":0.4,
         "k0_scale":75,
         "num_peaks":30,
+        "aoo":0,
+        "arr":0,
+        "aor":0,
+        "gamma_max":1,
 }
 print(param_list["E_start"], param_list["E_reverse"])
 print(param_list)
@@ -80,10 +84,11 @@ simulation_options={
     "label": "MCMC",
     "C_sim":True,
     "optim_list":[],
-    "EIS_Cf":"CPE",
+    "EIS_Cf":"C",
     "EIS_Cdl":"CPE",
     "DC_pot":240e-3,
     "Rct_only":False,
+    
 }
 
 other_values={
@@ -93,7 +98,7 @@ other_values={
 }
 param_bounds={
     'E_0':[0.20, 0.5],
-    "E0_mean":[0.239, 0.241],
+    "E0_mean":[0.2, 0.3],
     "E0_std":[1e-5, 0.05],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
     'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
@@ -111,12 +116,15 @@ param_bounds={
     "k0_shape":[0,10],
     "k0_scale":[0,200],
     "phase":[-180, 180],
-    "Cfarad":[0,1]
+    "Cfarad":[0,1],
+    "aoo":[-10, 10],
+    "arr":[-10, 10],
+    "aor":[-10, 10],
 }
 import copy
 
 laviron=Laviron_EIS(param_list, simulation_options, other_values, param_bounds)
-laviron.def_optim_list(["k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
+laviron.def_optim_list(["E_0","k0_scale","k0_shape", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl","aoo", "aor", "arr"])
 #laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E0_mean", "E0_std", "k_0", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
 #laviron.def_optim_list(["E_0","k0_shape", "k0_scale", "gamma", "Cdl", "alpha", "Ru", "cpe_alpha_cdl", "cpe_alpha_faradaic"])
@@ -155,22 +163,22 @@ for i in range(0, 20):
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, laviron.n_parameters()+laviron.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
     laviron.simulation_options["test"]=False
-    cmaes_fitting.set_parallel(True)
+    cmaes_fitting.set_parallel(False)
     found_parameters, found_value=cmaes_fitting.run()   
     real_params=laviron.change_norm_group(found_parameters[:-laviron.n_outputs()], "un_norm")
 
     print(dict(zip(laviron.optim_list, list(real_params))))
+    print("E0_MEAN", "k0_SCALE")
+    #sim_data=laviron.simulate(found_parameters[:-laviron.n_outputs()], fitting_frequencies)
+    #fig, ax=plt.subplots()
+    #twinx=ax.twinx()
     
-    sim_data=laviron.simulate(found_parameters[:-laviron.n_outputs()], fitting_frequencies)
-    fig, ax=plt.subplots()
-    twinx=ax.twinx()
+    #EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
+    #EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx,data_type="phase_mag" )#
     
-    EIS().bode(spectra, frequencies, ax=ax, twinx=twinx)
-    EIS().bode(sim_data, frequencies, ax=ax, twinx=twinx,data_type="phase_mag" )#
-    
-    ax.set_title("C_f as CPE fit")
-    plt.show()
-    fig, ax=plt.subplots()
-    EIS().nyquist(spectra,orthonormal=False, ax=ax)
-    EIS().nyquist(sim_data, orthonormal=False,ax=ax)
-    plt.show()
+    #ax.set_title("C_f as CPE fit")
+    #plt.show()
+    #fig, ax=plt.subplots()
+    #EIS().nyquist(spectra,orthonormal=False, ax=ax)
+    #EIS().nyquist(sim_data, orthonormal=False,ax=ax)
+    #plt.show()

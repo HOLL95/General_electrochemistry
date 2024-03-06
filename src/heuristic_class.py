@@ -5,6 +5,7 @@ import warnings
 import time
 import os
 import re
+import copy
 from params_class import params
 from scipy.optimize import curve_fit
 from scipy.integrate import simpson
@@ -678,6 +679,8 @@ class Laviron_EIS(single_electron):
             simulation_options["invert_imaginary"]=False
         if "C_sim" not in simulation_options:
             simulation_options["C_sim"]=True
+        if "self_interation" not in simulation_options:
+            simulation_options["self_interaction"]=False
         self.Laviron_circuit={"z1":"R0", "z2":{"p1":simulation_options["EIS_Cdl"], "p2":["R1", simulation_options["EIS_Cf"]]}}
         self.simulator=EIS(circuit=self.Laviron_circuit, invert_imaginary=simulation_options["invert_imaginary"])
         if "v" not in dim_parameter_dictionary or "original_omega" not in dim_parameter_dictionary:
@@ -694,6 +697,16 @@ class Laviron_EIS(single_electron):
         else:
             return 1
     def def_optim_list(self, parameters):
+        interaction_list=set(["aoo", "arr", "aor"])
+        interaction=set(copy.deepcopy(parameters)).intersection(interaction_list)
+        if len(interaction)==0:
+            self.simulation_options["self_interaction"]=False
+        elif len(interaction)==len(interaction_list):
+            self.simulation_options["self_interaction"]=True
+        else:
+            missing=interaction_list-interaction
+            raise ValueError("Missing %s"%missing)
+       
         super().def_optim_list(parameters)
         if self.simulation_options["dispersion"]==True:
             total_elements=np.prod(self.simulation_options["dispersion_bins"])
@@ -778,7 +791,29 @@ class Laviron_EIS(single_electron):
         Ra=Ra_coeff*((alpha*ox*nu_alpha)+((1-alpha)*red*nu_1_alpha))**-1
         sigma=k0*Ra*(nu_alpha+nu_1_alpha)
         Cf=1/sigma
-        #print(Cf)
+        #print(Cf, "original")
+        if self.simulation_options["self_interaction"]==True:
+            #red/=self.dim_dict["gamma_max"]
+            #ox/=self.dim_dict["gamma_max"]
+
+            Ra_coeff/=((self.dim_dict["gamma_max"]))
+            self.dim_dict["aor"]/=self.dim_dict["gamma"]
+            self.dim_dict["aoo"]/=self.dim_dict["gamma"]
+            self.dim_dict["arr"]/=self.dim_dict["gamma"]
+            #nu=(ox/red)*np.exp(2*ox*(self.dim_dict["aor"]-self.dim_dict["aoo"])+2*red*(self.dim_dict["arr"]-self.dim_dict["aor"]))
+            #nu_alpha=nu**-alpha
+            #nu_1_alpha=nu**(1-alpha)
+            m=np.exp(-2*self.dim_dict["aor"]*self.dim_dict["gamma"])
+            l=m
+            g=2*(self.dim_dict["aoo"]-self.dim_dict["aor"])
+            h=2*(self.dim_dict["aor"]-self.dim_dict["arr"])
+            chi=((1-alpha)*m*red*nu_1_alpha*np.exp(h*red))+(alpha*l*ox*nu_alpha*np.exp(g*ox))
+            Ra=Ra_coeff/chi
+            zeta=(m*(1+(h*red))*nu_1_alpha*np.exp(h*red))+(l*(1+(g*ox))*nu_alpha*np.exp(g*ox))
+            sigma=k0*zeta*Ra
+            Cf=1/sigma
+            
+            #print(Cf,"altered", np.exp(h*red), h*red, np.exp(g*ox), g*ox, m)
 
         EIS_params={}
         EIS_params["R0"]=self.dim_dict["Ru"]
@@ -800,16 +835,18 @@ class Laviron_EIS(single_electron):
                 #print("*"*40)
                 EIS_params["Q2"]=self.dim_dict["Cfarad"]
             EIS_params["alpha2"]=self.dim_dict["cpe_alpha_faradaic"]
+        #print(EIS_params, self.simulation_options["self_interaction"])
         if print_circuit_params==True:
             print(EIS_params)
         return EIS_params
     def simulate(self, parameters, frequencies, print_circuit_params=False):
+        if len(parameters)!=len(self.optim_list):
+            raise ValueError("Parameter values needs to be same length as optimsation parameters")
         if self.simulation_options["label"]=="cmaes":
             params=self.change_norm_group(parameters, "un_norm")
         else:
             params=parameters
         for i in range(0, len(self.optim_list)):
-
             self.dim_dict[self.optim_list[i]]=params[i]
 
         
