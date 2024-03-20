@@ -10,6 +10,15 @@ class harmonics:
         self.filter_val=filter_val
     def reorder(list, order):
         return [list[i] for i in order]
+    def get_input_freq(self, time, current):
+        fft=np.fft.fft(current)
+        abs_fft=np.abs(fft)
+        fft_freq=np.fft.fftfreq(len(current),time[1]-time[0])
+        max_freq=abs(max(fft_freq[np.where(abs_fft==max(abs_fft))]))
+        plt.plot(fft_freq, abs_fft)
+        plt.show()
+        print("Input frequency best guess is {0}".format(max_freq))
+        return max_freq
     def plot_ffts(self, time, current, **kwargs):
         if "ax" not in kwargs:
             _, ax=plt.subplots(1,1)
@@ -220,16 +229,6 @@ class harmonics:
             if self.harmonics[0]==0:
                 print(box_area[0])
                 ax.plot([0,0], [0, box_area[0]],color="r", linestyle="--")
-    def get_freq(self, times, current):
-        fft=abs(np.fft.fft(current))
-        fft_freq=np.fft.fftfreq(len(current), times[1]-times[0])
-        #fig,ax=plt.subplots()
-        
-        maximum=fft_freq[np.where(fft==max(fft))]
-        #ax.plot(fft_freq, fft)
-        #plt.show()
-        print(maximum)
-        self.input_frequency=abs(maximum[0])
     def savecsv(self,filename, dictdata):
         df=DataFrame(dictdata)
         df.to_csv(filename)
@@ -246,9 +245,9 @@ class harmonics:
         if "fft_func" not in kwargs:
             kwargs["fft_func"]=None
         if "xlabel" not in kwargs:
-            kwargs["xlabel"]=None
+            kwargs["xlabel"]=""
         if "ylabel" not in kwargs:
-            kwargs["ylabel"]=None
+            kwargs["ylabel"]=""
         if "DC_component" not in kwargs:
             kwargs["DC_component"]=False
         if "legend" not in kwargs:
@@ -257,6 +256,8 @@ class harmonics:
             define_axes=True
         else:
             define_axes=False
+            if len(kwargs["axes_list"])!=self.num_harmonics:
+                raise ValueError("Wrong number of axes for harmonics")
         if "h_num" not in kwargs:
             kwargs["h_num"]=True
         if "colour" not in kwargs:
@@ -267,11 +268,7 @@ class harmonics:
             kwargs["alpha"]=1
         if "one_sided" not in kwargs:
             kwargs["one_sided"]=True
-        else:
-            if len(kwargs["axes_list"])!=self.num_harmonics:
-                raise ValueError("Wrong number of axes for harmonics")
-            else:
-                define_axes=False
+       
         label_counter=0
 
 
@@ -327,12 +324,10 @@ class harmonics:
                 else:
                     ax.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), alpha=kwargs["alpha"], color=kwargs["colour"], lw=kwargs["lw"])
                 plot_counter+=1
-            if kwargs["ylabel"] is not None:
-                if i==((num_harms)//2):
-                    ax.set_ylabel(kwargs["ylabel"])
-            if kwargs["xlabel"] is not None:
-                if i==num_harms-1:
-                    ax.set_xlabel(kwargs["xlabel"])
+            if i==((num_harms)//2):
+                ax.set_ylabel(kwargs["ylabel"])
+            if i==num_harms-1:
+                ax.set_xlabel(kwargs["xlabel"])
             if i==0:
                 if kwargs["legend"] is not None:
                     ax.legend(**kwargs["legend"])

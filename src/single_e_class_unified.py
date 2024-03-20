@@ -333,6 +333,9 @@ class single_electron:
                             sinusoid_count+=1
 
                 self.param_positions=list(set(range(0, len(optim_list)))-set(sinusoid_positions))
+        elif self.simulation_options["method"]=="square_wave":
+            if "SWV_constant" in optim_list:
+                self.simulation_options["SWV_polynomial_capacitance"]=True
         if "Upper_lambda" in optim_list:
             self.simulation_options["Marcus_kinetics"]=True
         if self.simulation_options["Marcus_kinetics"]==True:
@@ -371,12 +374,22 @@ class single_electron:
         elif self.simulation_options["method"]=="square_wave":
             if self.simulation_options["square_wave_return"]=="composite":
                 return 2
+            else:
+                return 1
         else:
             return 1
     def n_parameters(self):
         return len(self.optim_list)
-    
+    def polynomial_cap(self,t):
         
+        if "SWV_cubed" in self.optim_list:
+            return self.dim_dict["SWV_cubed"]*np.power(t,3)+self.dim_dict["SWV_squared"]*np.power(t,2)+self.dim_dict["SWV_linear"]*t+self.dim_dict["SWV_constant"]
+        elif "SWV_squared" in self.optim_list:
+            return self.dim_dict["SWV_squared"]*np.power(t,2)+self.dim_dict["SWV_linear"]*t+self.dim_dict["SWV_constant"]
+        elif "SWV_linear" in self.optim_list:
+            return self.dim_dict["SWV_linear"]*t+self.dim_dict["SWV_constant"]
+        elif "SWV_constant" in self.optim_list:
+            return self.dim_dict["SWV_constant"]
     def define_voltages(self, **kwargs):
         if "transient" not in kwargs:
             transient=False
@@ -533,7 +546,13 @@ class single_electron:
             self.simulation_options["label"]=orig_label
             self.simulation_options["test"]=orig_test
             return current_range, gradient
-
+    def calc_DCV(self,):
+        if self.simulation_options["method"]!="ramped":
+            raise ValueError("Really you only want to do this when your method is rFTACV")
+        self.simulation_options["method"]="dcv"
+        dcv_volts=self.define_voltages(transient=False)
+        self.simulation_options["method"]="ramped"
+        return dcv_volts
     def get_input_freq(self, time, current):
         fft=np.fft.fft(current)
         abs_fft=np.abs(fft)
@@ -652,7 +671,7 @@ class single_electron:
             backwards=np.zeros(len(self.b_idx))
             forwards=np.array([current[x-1] for x in self.f_idx])
             backwards=np.array([current[int(x)-1] for x in self.b_idx])
-        return forwards, backwards, forwards-backwards, self.E_p
+        return forwards, backwards, backwards-forwards, self.E_p
 
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
@@ -746,7 +765,16 @@ class single_electron:
             para_func=self.fourier_wrapper
         with mp.Pool(processes=mp.cpu_count()) as P:
             P.map(para_func,param_enumerate_arg)
+            
         return globals()["ts_arr"]  
+    def exclude_Ramped_Faradaic(self, interval_dict, time, current):
+        time_series=np.zeros(len(current))
+        for key in interval_dict.keys():
+            min_t=interval_dict[key][0]
+            max_t=interval_dict[key][1]
+            time_idx=np.where((time>min_t) & (time<=max_t))
+            time_series[time_idx]=current[time_idx]
+        return time_series
     def normalisation(self, parameters):
         if self.simulation_options["label"]=="cmaes":
             normed_params=self.change_norm_group(parameters, "un_norm")
@@ -762,7 +790,8 @@ class single_electron:
             print(parameters)
             raise ValueError('Wrong number of parameters')
         normed_params=self.normalisation(parameters)
-        
+        print(parameters)
+        print(normed_params)
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.max_freq=0
             self.min_freq=1e9
@@ -846,6 +875,8 @@ class single_electron:
             print(len(time_series))
         elif self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
+        if isinstance(self.simulation_options["Ramped_Cdl_only"], dict)==True:
+            time_series=self.exclude_Ramped_Faradaic(self.simulation_options["Ramped_Cdl_only"], self.time_vec[self.time_idx], time_series)
 
         if self.simulation_options["psv_copying"]==True:
             if self.simulation_options["no_transient"]==False:
@@ -855,7 +886,7 @@ class single_electron:
             time_series=np.append(time_series, [time_series for x in range(0, multiply_num)])[:-1]
       
         if self.simulation_options["method"]=="square_wave":
-            forwards, backwards, net, _=self.SW_peak_extractor(time_series)
+            forwards, backwards, net, E_p=self.SW_peak_extractor(time_series)
             if self.simulation_options["square_wave_return"]=="net":
                 
                 time_series=net
@@ -865,6 +896,8 @@ class single_electron:
                 time_series=backwards
             elif self.simulation_options["square_wave_return"]=="composite":
                 time_series=np.column_stack((forwards, backwards))
+            if self.simulation_options["SWV_polynomial_capacitance"]==True:
+                time_series=np.add(time_series, self.polynomial_cap(E_p))
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
@@ -950,7 +983,11 @@ class single_electron:
         if "sample_times" not in simulation_options:
             simulation_options["sample_times"]=None
         if "downsample_mode" not in simulation_options:
-            simulation_options["downsample_mode"]="interpolation"
+            simulation_options["downsample_mode"]="interpolation"#
+        if  "SWV_polynomial_capacitance" not in simulation_options:
+            simulation_options["SWV_polynomial_capacitance"]=False
+        if "Ramped_Cdl_only" not in simulation_options:
+            simulation_options["Ramped_Cdl_only"]=False
         return simulation_options
     def param_checker(self, params):
         for key in ["freq_array", "amp_array", "phase_array"]:

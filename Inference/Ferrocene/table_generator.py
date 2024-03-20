@@ -1,5 +1,5 @@
 import numpy as np
-letter_list=list("abcdefgh")
+letter_list=list("abcdefghi")
 DC_val=0
 psv_vals=[0.2591910307724134, 0.0674086382052161, 177.04633092062943, 88.31972285297374, 0.000342081409583126, 0.02292512550909509, -0.0004999993064740369, 2.5653514370132974e-05, 6.037508022415195e-11, 9.015057685643711, 5.58768403688611, 4.964330246307874, 0.5999998004431891]
 psv_params=["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"]
@@ -127,7 +127,7 @@ with open("table.tex", "r") as read_file:
                                     edit_line[loc]="$\\mu$:%s, $\\sigma$:%s"%(format_vals(exp["params"]["E0_mean"]*1e3), format_vals(exp["params"]["E0_std"]*1e3))
                             elif letter=="e":
                                 if "k_0" in params.keys():
-                                     edit_line[loc]=format_vals(exp["params"]["k_0"])
+                                     edit_line[loc]=format_vals(exp["params"]["k_0"])+" s$^{-1}$"
                                 else:
                                     edit_line[loc]="$\\log(\\mu)$:%s, $\\log(\\sigma)$:%s"%(format_vals(exp["params"]["k0_scale"]), format_vals(exp["params"]["k0_shape"]))
                             elif letter=="f":
@@ -143,7 +143,9 @@ with open("table.tex", "r") as read_file:
 
                             elif letter=="h":
                                 edit_line[loc]=format_vals(exp["params"]["alpha"])
-                            if letter!="h":
+                            elif letter=="i":
+                                edit_line[loc]=format_vals(exp["params"]["Ru"])
+                            if letter!="i":
                                 edit_line[loc+1]+="&"
                             #print(edit_line)
                         #    split_line=

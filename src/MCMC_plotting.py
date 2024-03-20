@@ -46,7 +46,11 @@ class MCMC_plotting:
                         "cpe_alpha_faradaic" :"",
                         "cpe_alpha_cdl" :"",
                         "sigma":"",
-                        "dcv_sep":"V"
+                        "dcv_sep":"V",
+                        "SWV_constant":"",
+                        "SWV_linear":"",
+                        "SWV_squared":"",
+                        "SWV_cubed":"",
                         }
         self.fancy_names={
                         "E_0": '$E^0$',
@@ -82,7 +86,11 @@ class MCMC_plotting:
                         "cpe_alpha_faradaic" :"$\\psi$ $(\\Gamma)$",
                         "cpe_alpha_cdl" :"$\\psi$ $(C_{dl})$",
                         "sigma":"$\\sigma$",
-                        "dcv_sep":"Separation"
+                        "dcv_sep":"Separation",
+                        "SWV_constant":"$I_b$",
+                        "SWV_linear":"$I_b^1$",
+                        "SWV_squared":"$I_b^2$",
+                        "SWV_cubed":"$I_b^3$",
                         }
         self.dispersion_symbols={
                                 "mean":"$\\mu$", 
@@ -370,8 +378,11 @@ class MCMC_plotting:
             kwargs["log"]=False
         if "twinx" not in kwargs:
             kwargs["twinx"]=None
-        if "axis" not in kwargs:
+        
+        if "axes" not in kwargs:
             fig, ax=plt.subplots(n_param, n_param)
+        else:
+            ax=kwargs["axes"]
         if "alpha" not in kwargs:
             kwargs["alpha"]=1
         if "colour" not in kwargs:
@@ -441,7 +452,7 @@ class MCMC_plotting:
                         chain_j=[np.concatenate(chain_j)]
                     for z in range(0, len(chain_i)):
                         axes.scatter(chain_j[z], chain_i[z], s=0.5, alpha=kwargs["alpha"], color=kwargs["colour"])
-                    
+                        #print(axes.get_xlim(), labels[i], labels[j])
                 if kwargs["true_values"] is not None:
                     
                     if params[j] in kwargs["true_values"] and params[i] in kwargs["true_values"]:
@@ -472,7 +483,8 @@ class MCMC_plotting:
                     if np.mean(np.abs(chain_i))<1e-4:
                         ax[i, 0].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e'))
                     
-        #print("++", len(twinx))     
+        #print("++", len(twinx))   
+
         return ax, twinx
     def convert_idata_to_pints_array(self,idata):
         chains=idata.to_dict()

@@ -10,8 +10,8 @@ source_list=dir_list[:loc[0]+1] + ["src"]
 source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
-data_loc="/home/henryll/Documents/Experimental_data/Ella/SWV/SWV_exp/"
-file="CjAA10_ox.txt"
+data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMOComplete/"
+file="PGE+CfAA10_SWV_-0.3to0.3V.txt"
 data=np.loadtxt(data_loc+file)
 
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ scan_direction=1
 estep=2e-3
 param_list={
 "E_0":0.0,
-'E_start':  data[:,0][0], #(starting dc voltage - V)
+'E_start':  -0.3, #(starting dc voltage - V)
 'scan_increment': estep,   #(ac voltage amplitude - V) freq_range[j],#
 'area': 0.07, #(electrode surface area cm^2)
 'gamma': 1e-10,
@@ -93,7 +93,8 @@ f, b, subtract, E_p=SW.SW_peak_extractor(volts)
 plt.plot(volts, label="Full potential")
 plt.scatter(SW.f_idx[1:],f[1:], label="Forward samples")
 plt.scatter(SW.b_idx,E_p, label="Backward samples")
-plt.scatter(SW.b_idx,data[:-1,0], label="Potential data", s=15)
+print(len(data[:,0]), len(SW.b_idx))
+plt.scatter(SW.b_idx,data[:-2,0], label="Potential data", s=15)
 plt.xlabel("Dimensionless time")
 plt.ylabel("Potential (V)")
 plt.legend()
