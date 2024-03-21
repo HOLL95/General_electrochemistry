@@ -19,7 +19,7 @@ bigax=figure.merge_harmonics(2, 1)
 
 axes=figure.axes_dict
 loc="/home/henryll/Documents/Experimental_data/Nat/Dummypaper/Figure_1/"
-#loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_1/"
+loc="/home/userfs/h/hll537/Documents/Experimental_data/Nat/Figure_1/"
 file1="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_current"
 file2="FTacV_(MONASH)_0.1_mM_Fc_72.05_Hz_cv_voltage"
 harmonics_range=list(range(0, num_harms))
@@ -46,7 +46,7 @@ arg_list={"Real":np.real, "Abs":np.abs,"Imag":np.imag, }#
 plot_dict={"Imag_time_series":current, "plot_func":np.imag, "axes_list":imag_axis, "colour":colours[1], "legend":None, "one_sided":False}#"hanning(Imag)_time_series":hanning*current,
 one_sided_frequencies={}
 h_class.plot_harmonics(time, **plot_dict  )
-fourier_dict={"Two sided frequencies (Hz)":frequency, "Two sided absolute values log10":abs(Y)}
+fourier_dict={"Two sided frequencies (Hz)":np.fft.fftshift(frequency), "Two sided absolute values":np.fft.fftshift((abs(Y)))}
 for argkey,linestyle in zip(["Real", "Imag"], ["-","--"]):
     fourier_bits, freqs=h_class.generate_harmonics(time, current, hanning=False, return_fourier=True)
    
@@ -72,7 +72,11 @@ save_harm_dict={}
 for arg in ["Real","Abs"]:
     for i in range(0, len(harmonics_range)):
         key=arg+" Harmonic %d" % harmonics_range[i]
-        save_harm_dict[key]=arg_list[arg](save_harms[i,:])
+        if i==0:
+            func=np.real
+        else:
+            func=arg_list[arg]
+        save_harm_dict[key]=func(save_harms[i,:])
 for i in range(0, len(harmonics_range)):
         key="Hanning Abs Harmonic %d" % harmonics_range[i]
         save_harm_dict[key]=np.abs(hanning_save_harms[i,:])

@@ -103,6 +103,7 @@ class DCVTrumpet(single_electron):
                 ax.set_xlabel("Log scan rate")
                 ax.set_ylabel("Peak position (V)")
                 if kwargs["description"]==False:
+                    
                     if kwargs["cc"] is None:
                         if ax.collections:
                             pass
