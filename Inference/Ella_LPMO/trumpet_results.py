@@ -19,7 +19,8 @@ from pints.plot import trace
 files=["Cj", "Cf"]
 param_vals=[[0.03077898, 0.41083013, 0.58115891, 0.0500362 ]  ,
 [0.03465741, 0.23443141, 0.57578573, 0.02453627]]
-
+param_vals={"Cj":[0.03077898, 0.41083013, 0.58115891, 0.0500362 ],
+            "Cf":[0.03465741, 0.23443141, 0.57578573, 0.02453627]}
 Ru_vals=[50, 100, 150, 200]
 
 fig, ax=plt.subplots(1,2)
@@ -121,11 +122,16 @@ for i in range(0, len(files)):
         sim=trumpets.simulate(param_vals[i], in_volts, optimise_flag=True)
 
 
-
-
-        trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax[i], label="Data", colour_counter=0)
-        trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i], label="Sim",colour_counter=1)
-        plt.legend()
+        ax[i].set_title(files[i])
+        if i==1 and j==0:
+            
+            trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax[i], label="Data", colour_counter=0)
+            trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i], label="Sim",colour_counter=1)
+            plt.legend()
+        else:
+            trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax[i],  colour_counter=0)
+            trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i],colour_counter=1)
+        
 
         
         """#

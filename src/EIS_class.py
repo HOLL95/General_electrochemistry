@@ -385,6 +385,27 @@ class EIS:
         return (norm*(boundaries[1]-boundaries[0]))+boundaries[0]
     def RMSE(self, y, y_data):
         return np.mean(np.sqrt(np.square(np.subtract(y, y_data))), axis=0)
+    def normalise_spectra(self, spectra, **kwargs):
+        if "method" not in kwargs:
+            kwargs["method"]="minmax"
+        if "reference" not in kwargs:
+            kwargs["reference"]=spectra
+
+        for i in range(0, 2):
+            if kwargs["method"]=="minmax":
+                minimum=min(kwargs["reference"][:,i])
+                maximum=max(kwargs["reference"][:,i])
+                denom=maximum-minimum
+                spectra[:,i]=(spectra[:,i]-minimum)/denom
+            elif kwargs["method"]=="zscore":
+                mean=np.mean(kwargs["reference"][:,i])
+                std=np.std(kwargs["reference"][:,i])
+                spectra[:,i]=(spectra[:,i]-mean)/std
+            elif kwargs["method"]==None:
+                continue
+            else:
+                raise ValueError(kwargs["method"] +" not a valid method")
+        return spectra
     def n_outputs(self):
         if self.options["data_representation"]!="both":
 
@@ -486,6 +507,8 @@ class EIS:
             kwargs["alpha"]=1
         if "line" not in kwargs:
             kwargs["line"]=True
+        if "disable_negative" not in kwargs:
+            kwargs["disable_negative"]=False
         elif kwargs["line"]==False:
             if kwargs["scatter"]==False:
                 raise ValueError(r"Need one of 'line' or 'scatter' to not be False")
@@ -502,8 +525,11 @@ class EIS:
 
                 ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
             else:
-                warnings.warn("The imaginary portion of the data may be set to negative in your data!")
-                ax.plot(spectra[:,0], spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+                if kwargs["disable_negative"]==True:
+                    ax.plot(spectra[:,0], -spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
+                else:
+                    warnings.warn("The imaginary portion of the data may be set to negative in your data!")
+                    ax.plot(spectra[:,0], spectra[:,1], label=kwargs["label"], linestyle=kwargs["linestyle"], color=kwargs["colour"], lw=kwargs["lw"], alpha=kwargs["alpha"])
         if kwargs["xlabel"]!=False:
             ax.set_xlabel(kwargs["xlabel"])
         if kwargs["ylabel"]!=False:
@@ -516,8 +542,10 @@ class EIS:
             if imag_spectra_mean<0:
                 ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
             else:
-                ax.scatter(spectra[:,0][0::kwargs["scatter"]], spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
-
+                if kwargs["disable_negative"]==True:
+                    ax.scatter(spectra[:,0][0::kwargs["scatter"]], -spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
+                else:
+                    ax.scatter(spectra[:,0][0::kwargs["scatter"]], spectra[:,1][0::kwargs["scatter"]], marker=kwargs["marker"], color=kwargs["colour"], s=kwargs["markersize"])
     def bode(self, spectra,frequency, **kwargs):
         if "ax" not in kwargs:
             _,kwargs["ax"]=plt.subplots(1,1)

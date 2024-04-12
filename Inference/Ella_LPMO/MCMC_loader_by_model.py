@@ -20,7 +20,7 @@ for i in range(0, len(scan_names)):
     fig, axes=plt.subplots(len(core_list),len(core_list))
     for j in range(0, len(extra_terms)):
         
-        save_file="MCMC/%s_%s_MCMC_result"%(extra_terms[j], scan_names[i])
+        save_file="MCMC/Cj_%s_%s_MCMC_result"%(extra_terms[j], scan_names[i])
         chains=np.load(save_file, "r")
         current_axes=axes[:len(core_list), :len(core_list)]
         if j==0:
@@ -45,5 +45,5 @@ for i in range(0, len(scan_names)):
             if lcv2>=lcv1:
         #        print("Setting!", xlim, i,j)
                 ax[lcv2,lcv1].set_xbound(lower=xlim[0], upper=xlim[1])
-    mplot.axes_legend(["Linear", "Quadratic","Cubic"], ax[0, 5])
+    mplot.axes_legend(["Cubic", "Quadratic","Linear"], ax[0, 5])
     plt.show()

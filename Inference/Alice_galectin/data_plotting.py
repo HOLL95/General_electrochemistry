@@ -15,7 +15,7 @@ from EIS_optimiser import EIS_genetics
 import numpy as np
 import pints
 from pandas import read_csv
-data_loc="/home/henney/Documents/Oxford/Experimental_data/Alice/Galectin_31_7/"
+data_loc="/home/henryll/Documents/Experimental_data/Alice/Galectin_31_7/"
 files=os.listdir(data_loc)
 header=6
 footer=2

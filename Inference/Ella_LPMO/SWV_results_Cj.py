@@ -12,7 +12,8 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMOComplete/"
-files=["PGE+CfAA10_SWV_0.3to-0.3V.txt","PGE+CfAA10_SWV_-0.3to0.3V.txt"]
+data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMO_8_5/"
+files=["CjAA10_SWV_0.3to-0.3V_2mVamp_2Hz.txt","CjAA10_SWV_-0.3to0.3V_2mVamp_2Hz.txt"]
 file="CjAA10_red.txt"
 directions=[-1,1, -1, 1]
 labels=["Red", "Ox", "Blank1", "Blank2"]
@@ -22,20 +23,21 @@ ends=[-0.3, 0.3]
 skip=4
 from pints.plot import trace
 scan_names=["backwards", "forwards"]
-param_dict={"forwards":{"linear":[0.07740790481948955, 0.19599344448843442, 0.6999999999999991, 3.041175684290795e-10, 0.2320093864674817, 0.19210063249038178],
-                        "squared":[0.07749365275363175, 0.1669928872667265, 0.6999999999999948, 3.738295390192775e-10, 0.22507297421146255, 0.1861361260313643, 0.13797893860035515],
-                        "cubed":[0.061691930601106594, 0.39634748188535107, 0.6603488461739903, 1.308461374520607e-10, 0.24625889639791154, 0.4038259533524897, -0.14825983150715594, -3.441954195458189]},
-            "backwards":{"linear":[0.03589930232887069, 0.1921841369287885, 0.4593923029180595, 2.751332072342772e-10, -0.2285004471266312, -0.018874764595000926],
-                        "squared":[0.04153382483479503, 0.24670600284162866, 0.5217423500583651, 1.9782041599733974e-10, -0.23737654809077924, -0.021078996599616318, 0.17425745981856977],
-                        "cubed":[0.013830762050013984, 0.38330529447647255, 0.300000000000001, 1.1892213679139487e-10, -0.24735781361837716, -0.12535946702507772, 0.32493316073620804, 1.6064600267913463]
+param_dict={"forwards":{"linear":[0.037349696003567884, 0.4955722838974685, 0.566549769250069, 1.6586600634127136e-11, 0.1771725959995578, 0.06885308879259],
+                        "squared":[0.046043012957300816, 0.10641815739978748, 0.6802850395460577, 9.760029846916142e-11, 0.17060193414848257, 0.06546023683227631, 0.12450439893971676 ],
+                        "cubed":[0.05455146127793195, 0.09483553660267302, 0.6999999999998359, 1.1800456274176283e-10, 0.16943355306484342, 0.04911874483640233, 0.13944592221733743, 0.2588304799319463]},
+            "backwards":{"linear":[0.005979888177296702, 2.792012856619911, 0.5560189612510722, 2.0880372389247936e-12, -0.17280969112456646, 0.022236504323313255],
+                        "squared":[-0.0107329055214571, 0.10127238866305002, 0.30000000000000154, 7.31126734566571e-11, -0.16080077155481476, 0.021314859481760706, -0.25718684650254175],
+                        "cubed":[0.023030910952811595, 0.06167724275752923, 0.32282598809943897, 1.6125294795691284e-10, -0.15655126080289428, 0.06645781551964802, -0.3240832252460244, -0.7137871976372256]
                         }
                         }
+
 #filenames=["reverse","forwards"]
 fig, ax=plt.subplots(1,2)
 for i in range(0, len(files)):
     data_dict={}
     file=files[i]
-    if "Cf" in file:
+    if "Cj" in file:
         
         data=np.loadtxt(data_loc+file)
 
@@ -123,8 +125,8 @@ for i in range(0, len(files)):
     experimental_current=data[skip:,1]*1e9#/SW.nd_param.sw_class.c_I0
     data_dict["Experimental current (nA)"]=experimental_current
     ax[i].plot(E_p, experimental_current, label="Data")
-    ax[i].set_xlabel("Current (nA)")
-    ax[i].set_ylabel("Potential (V)")
+    ax[i].set_ylabel("Current (nA)")
+    ax[i].set_xlabel("Potential (V)")
     for j in range(0, len(extra_terms)):
         core_list+=[extra_terms[j]]
         
@@ -139,7 +141,7 @@ for i in range(0, len(files)):
         #plt.plot(E_p,experimental_current, label=labels[i])
         #plt.plot(E_p, sim_current)
         #plt.show()
-    DataFrame(data=data_dict).to_csv("Cf_SWV_%s_scan.csv"%scan_names[i])
+    DataFrame(data=data_dict).to_csv("Cj_SWV_%s_scan.csv"%scan_names[i])
 ax[0].legend(loc="lower left")
 plt.show()
 

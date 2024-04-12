@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import math
 import os
 import sys
-from pandas import DataFrame
 dir=os.getcwd()
 dir_list=dir.split("/")
 loc=[i for i in range(0, len(dir_list)) if dir_list[i]=="General_electrochemistry"]
@@ -12,7 +11,8 @@ source_loc=("/").join(source_list)
 sys.path.append(source_loc)
 print(sys.path)
 data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMOComplete/"
-files=["PGE+CfAA10_SWV_0.3to-0.3V.txt","PGE+CfAA10_SWV_-0.3to0.3V.txt"]
+data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMO_8_5/"
+files=["CjAA10_SWV_0.3to-0.3V_2mVamp_2Hz.txt","CjAA10_SWV_-0.3to0.3V_2mVamp_2Hz.txt"]
 file="CjAA10_red.txt"
 directions=[-1,1, -1, 1]
 labels=["Red", "Ox", "Blank1", "Blank2"]
@@ -22,20 +22,11 @@ ends=[-0.3, 0.3]
 skip=4
 from pints.plot import trace
 scan_names=["backwards", "forwards"]
-param_dict={"forwards":{"linear":[0.07740790481948955, 0.19599344448843442, 0.6999999999999991, 3.041175684290795e-10, 0.2320093864674817, 0.19210063249038178],
-                        "squared":[0.07749365275363175, 0.1669928872667265, 0.6999999999999948, 3.738295390192775e-10, 0.22507297421146255, 0.1861361260313643, 0.13797893860035515],
-                        "cubed":[0.061691930601106594, 0.39634748188535107, 0.6603488461739903, 1.308461374520607e-10, 0.24625889639791154, 0.4038259533524897, -0.14825983150715594, -3.441954195458189]},
-            "backwards":{"linear":[0.03589930232887069, 0.1921841369287885, 0.4593923029180595, 2.751332072342772e-10, -0.2285004471266312, -0.018874764595000926],
-                        "squared":[0.04153382483479503, 0.24670600284162866, 0.5217423500583651, 1.9782041599733974e-10, -0.23737654809077924, -0.021078996599616318, 0.17425745981856977],
-                        "cubed":[0.013830762050013984, 0.38330529447647255, 0.300000000000001, 1.1892213679139487e-10, -0.24735781361837716, -0.12535946702507772, 0.32493316073620804, 1.6064600267913463]
-                        }
-                        }
-#filenames=["reverse","forwards"]
-fig, ax=plt.subplots(1,2)
-for i in range(0, len(files)):
-    data_dict={}
+
+for i in range(1, len(files)):
+    fig,ax=plt.subplots()
     file=files[i]
-    if "Cf" in file:
+    if "Cj" in file:
         
         data=np.loadtxt(data_loc+file)
 
@@ -98,8 +89,8 @@ for i in range(0, len(files)):
         "bounds_val":200,
     }
     param_bounds={
-    "E_0":[0, 0.15],
-    "k_0":[0.1, 1.5],
+    "E_0":[-0.1, 0.15],
+    "k_0":[0.01, 5],
     "alpha":[0.3, 0.7], 
     "gamma":[1e-12, 5e-10],
     "SWV_constant":[-10, 10],
@@ -118,29 +109,68 @@ for i in range(0, len(files)):
     f, b, subtract, E_p=SW.SW_peak_extractor(volts)
     #plt.scatter(range(0, len(data[skip:,0])),data[skip:, 0])
     #plt.scatter(range(0, len(E_p)), E_p, s=15)
+    experimental_current=data[skip:,1]/SW.nd_param.sw_class.c_I0
     #plt.show()
-    data_dict["potential"]=E_p
-    experimental_current=data[skip:,1]*1e9#/SW.nd_param.sw_class.c_I0
-    data_dict["Experimental current (nA)"]=experimental_current
-    ax[i].plot(E_p, experimental_current, label="Data")
-    ax[i].set_xlabel("Current (nA)")
-    ax[i].set_ylabel("Potential (V)")
-    for j in range(0, len(extra_terms)):
+    #plt.plot(E_p,experimental_current, label=labels[i])
+
+    #plt.show()
+    
+    for j in range(0, 1):#len(extra_terms)
         core_list+=[extra_terms[j]]
         
         SW.def_optim_list(core_list)
-        first_key=scan_names[i]
-        second_key=extra_terms[j][extra_terms[j].index("_")+1:]
-        sim_params=param_dict[first_key][second_key]
+    
+        
+        #sim_current=SW.simulate([0.0, 2, 0.5, 1e-11, 0.4, 0.1, 0.5, 0], [])
+        
+       
 
-        sim_current=SW.simulate(sim_params, [])*SW.nd_param.sw_class.c_I0*1e9
-        data_dict["%s capacitance simulation (nA)"%second_key]=sim_current
-        ax[i].plot(E_p, sim_current, label=second_key, lw=2)
-        #plt.plot(E_p,experimental_current, label=labels[i])
+        print(SW.n_outputs())
+        cmaes_problem=pints.SingleOutputProblem(SW,np.linspace(0,1, len(experimental_current)),experimental_current)
+        score = pints.GaussianLogLikelihood(cmaes_problem)
+
+        SW.simulation_options["label"]="cmaes"
+        lower_bound=np.append(np.zeros(len(SW.optim_list)), [0]*SW.n_outputs())
+
+        upper_bound=np.append(np.ones(len(SW.optim_list)), [50]*SW.n_outputs())
+        CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
+        x0=list(np.random.rand(len(SW.optim_list)))+[5]*SW.n_outputs()
+        cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, SW.n_parameters()+SW.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
+        cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-6)
+
+        cmaes_fitting.set_parallel(True)
+        found_parameters, found_value=cmaes_fitting.run()   
+        real_params=SW.change_norm_group(found_parameters[:-SW.n_outputs()], "un_norm")
+        print(list(real_params))
+        sim_current=SW.simulate(found_parameters[:-SW.n_outputs()], [])
+        #plt.plot(E_p, experimental_current, label=labels[i])
         #plt.plot(E_p, sim_current)
         #plt.show()
-    DataFrame(data=data_dict).to_csv("Cf_SWV_%s_scan.csv"%scan_names[i])
-ax[0].legend(loc="lower left")
-plt.show()
+        SW.simulation_options["label"]="MCMC"
+        MCMC_problem=pints.SingleOutputProblem(SW,np.linspace(0,1, len(experimental_current)),experimental_current)
+        updated_lb=[param_bounds[x][0] for x in SW.optim_list]+([0]*SW.n_outputs())
+        updated_ub=[param_bounds[x][1] for x in SW.optim_list]+([found_parameters[-1]*10])
 
-      
+        updated_b=[updated_lb, updated_ub]
+        updated_b=np.sort(updated_b, axis=0)
+
+        log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
+        log_prior=pints.UniformLogPrior(updated_b[0], updated_b[1])
+        log_posterior=pints.LogPosterior(log_liklihood, log_prior)
+        mcmc_parameters=np.append(real_params, found_parameters[-1])
+        xs=[mcmc_parameters,
+        mcmc_parameters,
+        mcmc_parameters
+        ]
+
+
+        mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioACMC)#, transformation=MCMC_transform)
+        mcmc.set_log_to_screen(False)
+        mcmc.set_parallel(True)
+        mcmc.set_max_iterations(10000)
+        save_file="MCMC/Cj_%s_%s_MCMC_result"%(extra_terms[j], scan_names[i])
+        chains=mcmc.run()
+        f=open(save_file, "wb")
+        np.save(f, chains)
+
+        

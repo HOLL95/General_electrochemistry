@@ -16,7 +16,7 @@ scan_names=["backwards", "forwards"]
 extra_terms=np.flip(["SWV_squared"])
 core_list=["E_0", "k_0", "alpha","gamma", "SWV_constant", "SWV_linear", "SWV_squared"]
 fig, axes=plt.subplots(len(core_list),len(core_list))
-for i in range(0, len(scan_names)):
+for i in range(1, len(scan_names)):
     
     
     
