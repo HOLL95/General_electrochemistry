@@ -8,3 +8,4 @@ EIS/Symbolic-modified-nodal-analysis
 *.csv
 lib/pybind11
 Theory/Numerics/MCMC/
+Inference/Ella_LPMO/MCMC
