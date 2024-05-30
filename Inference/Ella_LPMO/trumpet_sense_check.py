@@ -21,7 +21,7 @@ param_vals=[[0.03077898, 0.41083013, 0.58115891, 0.0500362 ]  ,
 [0.03465741, 0.23443141, 0.57578573, 0.02453627]]
 #param_vals={"Cj":[0.03077898, 0.41083013, 0.58115891, 0.0500362 ],
 #            "Cf":[0.03465741, 0.23443141, 0.57578573, 0.02453627]}
-Ru_vals=[100, 1e3, 1e4, 1e5]
+Ru_vals=[100]
 
 fig, ax=plt.subplots(1,2)
 for i in range(0, len(files)):
@@ -79,6 +79,7 @@ for i in range(0, len(files)):
             "invert_imaginary":False,
             "Marcus_kinetics":False,
             "optim_list":[],
+            "record_exps":True,
             
         }
 
@@ -123,52 +124,15 @@ for i in range(0, len(files)):
 
 
         ax[i].set_title(files[i])
+        for m in [0,4, 10]:
+            ax[i].plot(trumpets.saved_sims["voltage"][m], trumpets.saved_sims["current"][m], label=in_volts[m]*1e3)
+
         
-        if j==0:
-            trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax[i], label="Data", colour_counter=0)
-        trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i], label="$R_u=%d \\Omega$"%Ru_vals[j],colour_counter=j+1, line=True)
-        plt.legend()
+        
         #else:
         #    trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i],colour_counter=j, line=True)
         
-
+ax[0].legend()
         
-        """#
-        #trumpets.simulation_options["label"]="MCMC"
-        #trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax, label="Data")
-        #trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax, label="Sim")
-        #plt.legend()
-        #plt.show()
-        MCMC_problem=pints.MultiOutputProblem(trumpets,in_volts,trumpet_positions)
-        updated_lb=[param_bounds[x][0] for x in trumpets.optim_list]+([0]*trumpets.n_outputs())
-        updated_ub=[param_bounds[x][1] for x in trumpets.optim_list]+([100]*trumpets.n_outputs())
-        updated_b=[updated_lb, updated_ub]
-        updated_b=np.sort(updated_b, axis=0)
-
-        log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
-        log_prior=pints.UniformLogPrior(updated_b[0], updated_b[1])
-        #log_prior=pints.MultivariateGaussianLogPrior(mean, np.multiply(std_vals, np.identity(len(std_vals))))
-        print(log_liklihood.n_parameters(), log_prior.n_parameters())
-        log_posterior=pints.LogPosterior(log_liklihood, log_prior)
-        real_param_dict=dict(zip(trumpets.optim_list, real_params))
-
-        mcmc_parameters=np.append([real_param_dict[x] for x in trumpets.optim_list], [found_parameters[-trumpets.n_outputs():]])#[trumpets.dim_dict[x] for x in trumpets.optim_list]+[error]
-        print(mcmc_parameters)
-        #mcmc_parameters=np.append(mcmc_parameters,error)
-        xs=[mcmc_parameters,
-            mcmc_parameters,
-            mcmc_parameters
-            ]
-
-
-        mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioACMC)#, transformation=MCMC_transform)
-        trumpets.simulation_options["test"]=False
-        mcmc.set_parallel(True)
-        mcmc.set_max_iterations(10000)
-        save_file="MCMC/Ella_set2_MCMC_%sOhms_%s"%(param_list["Ru"], files[i])
-        chains=mcmc.run()
-        f=open(save_file, "wb")
-        np.save(f, chains)
-        #trace(chains)
-        #plt.show()"""
+        
 plt.show()

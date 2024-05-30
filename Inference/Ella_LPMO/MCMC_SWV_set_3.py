@@ -14,6 +14,7 @@ print(sys.path)
 data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMOComplete/"
 data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMO_8_5/"
 data_loc="/home/henryll/Documents/Experimental_data/Ella/LPMOph5/"
+data_loc="/home/userfs/h/hll537/Documents/Experimental_data/Ella/ph5/"
 files=["CfAA10_SWV_0.3to-0.3.txt","CfAA10_SWV_-0.3to0.3.txt", "Cj_SWV_0.3to-0.3V.txt", "Cj_SWV_-0.3to0.3V.txt"]
 labels=["Cf reverse", "Cf forwards", "Cj forwards", "Cj backwards"]
 from MCMC_plotting import MCMC_plotting
@@ -149,7 +150,7 @@ with open("LPMO_ph5_results.txt", "w") as filehandle:
             CMAES_boundaries=pints.RectangularBoundaries(lower_bound, upper_bound)
             x0=list(np.random.rand(len(SW.optim_list)))+[5]*SW.n_outputs()
             cmaes_fitting=pints.OptimisationController(score, x0, sigma0=[0.075 for x in range(0, SW.n_parameters()+SW.n_outputs())], boundaries=CMAES_boundaries, method=pints.CMAES)
-            cmaes_fitting.set_max_unchanged_iterations(iterations=1, threshold=1)
+            cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-4)
 
             cmaes_fitting.set_parallel(True)
             found_parameters, found_value=cmaes_fitting.run()   
@@ -188,10 +189,11 @@ with open("LPMO_ph5_results.txt", "w") as filehandle:
             mcmc = pints.MCMCController(log_posterior, 3, xs,method=pints.HaarioACMC)#, transformation=MCMC_transform)
             mcmc.set_log_to_screen(False)
             mcmc.set_parallel(True)
-            mcmc.set_max_iterations(100)
+            mcmc.set_max_iterations(10000)
             save_file="MCMC/%s_%s_ph5_MCMC_result"%(extra_terms[j], scan_names[i])
             chains=mcmc.run()
             f=open(save_file, "wb")
             np.save(f, chains)
+            print("done")
         DataFrame(data=results_dict).to_csv("SWV_%s_.csv"%scan_names[i])
             

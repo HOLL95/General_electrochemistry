@@ -790,8 +790,8 @@ class single_electron:
             print(parameters)
             raise ValueError('Wrong number of parameters')
         normed_params=self.normalisation(parameters)
-        print(parameters)
-        print(normed_params)
+        #print(parameters)
+        #print(normed_params)
         if self.simulation_options["method"]=="sum_of_sinusoids":
             self.max_freq=0
             self.min_freq=1e9

@@ -3,6 +3,7 @@ import math
 import os
 import sys
 import re
+import copy
 dir=os.getcwd()
 dir_list=dir.split("/")
 loc=[i for i in range(0, len(dir_list)) if dir_list[i]=="General_electrochemistry"]
@@ -17,15 +18,15 @@ import numpy as np
 import pints
 from pints.plot import trace
 files=["Cj", "Cf"]
-param_vals=[[0.03077898, 0.41083013, 0.58115891, 0.0500362 ]  ,
-[0.03465741, 0.23443141, 0.57578573, 0.02453627]]
+param_vals=[[0.03077898, 0.41083013, 0.58115891, 0.0500362 ]  ,#0.094, 2.79
+[0.03465741, 0.23443141, 0.57578573, 0.02453627]]#0.166, 0.396
 #param_vals={"Cj":[0.03077898, 0.41083013, 0.58115891, 0.0500362 ],
 #            "Cf":[0.03465741, 0.23443141, 0.57578573, 0.02453627]}
-Ru_vals=[100, 1e3, 1e4, 1e5]
-
+k0_vals=[[0.094, 2.79],[0.166, 0.396]]
+colors=plt.rcParams['axes.prop_cycle'].by_key()['color']
 fig, ax=plt.subplots(1,2)
 for i in range(0, len(files)):
-    for j in range(0, len(Ru_vals)):
+    for j in range(0,len(k0_vals[i])):
         param_list={
             "E_0":0,
             'E_start': -0.2, #(starting dc voltage - V)
@@ -34,7 +35,7 @@ for i in range(0, len(files)):
             'd_E': 10*1e-3,   #(ac voltage amplitude - V) freq_range[j],#
             'area': 0.07, #(electrode surface area cm^2)
             "v":22.5e-3,
-            'Ru': Ru_vals[j],  #     (uncompensated resistance ohms)
+            'Ru': 100,  #     (uncompensated resistance ohms)
             'Cdl': 1e-5, #(capacitance parameters)
             'CdlE1': 0,#0.000653657774506,
             'CdlE2': 0,#0.000245772700637,
@@ -118,7 +119,9 @@ for i in range(0, len(files)):
         trumpets.def_optim_list(["E_0", "k_0", "alpha", "dcv_sep"])
         #init_vals=[0.014074675370828849, 2.8544294764333173, 0.7416888979810574, 0.04808605753340519]
         #init_vals1=[0.028806806661952566, 1.8910227708278882, 0.7983732003861854, 0.046146272162374935]
-        
+        param_vals[i][1]=k0_vals[i][j]
+        if j==1:
+            sim2=copy.deepcopy(sim)
         sim=trumpets.simulate(param_vals[i], in_volts, optimise_flag=True)
 
 
@@ -126,8 +129,11 @@ for i in range(0, len(files)):
         
         if j==0:
             trumpets.trumpet_plot(in_volts,trumpets.e_nondim(trumpet_positions),  ax=ax[i], label="Data", colour_counter=0)
-        trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i], label="$R_u=%d \\Omega$"%Ru_vals[j],colour_counter=j+1, line=True)
-        plt.legend()
+        trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i], label="$k_0=%.2f s^{-1}$"%k0_vals[i][j],colour_counter=1, line=True)
+        if j==1:
+            for m in range(0, 2):
+                ax[i].fill_between(np.log10(in_volts), trumpets.e_nondim(sim)[:,m], trumpets.e_nondim(sim2)[:,m], alpha=0.5, color=colors[0])
+        ax[i].legend()
         #else:
         #    trumpets.trumpet_plot( in_volts,trumpets.e_nondim(sim), ax=ax[i],colour_counter=j, line=True)
         

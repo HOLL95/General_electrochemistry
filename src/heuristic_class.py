@@ -71,54 +71,54 @@ class DCVTrumpet(single_electron):
             return 1
     def trumpet_plot(self, scan_rates, trumpets, **kwargs):
         if "colour_counter" not in kwargs:
-            kwargs["cc"]=None
+            kwargs["colour_counter"]=0
         else:
-            kwargs["cc"]=kwargs["colour_counter"]
-        if "ax" not in kwargs:
-            ax=None
+            kwargs["colour_counter"]=kwargs["colour_counter"]
+        if "ax" not in kwargs or kwargs["ax"]==None:
+            fig,ax=plt.subplots()
         else:
+
             ax=kwargs["ax"]
+            if kwargs["colour_counter"]==None:
+                raise ValueError("Need to define the colour_counter variable if you want multiple subplots")
         if "label" not in kwargs:
-            label=None
-        else:
-            label=kwargs["label"]
-        if "description" not in kwargs:
-            kwargs["description"]=False
-        else:
-            label=None
+            kwargs["label"]=None
+        
         if "log" not in kwargs:
             kwargs["log"]=np.log10
+        
         if len(trumpets.shape)!=2:
             raise ValueError("For plotting reductive and oxidative sweeps together")
         else:
             colors=plt.rcParams['axes.prop_cycle'].by_key()['color']
-            if ax==None:
-                plt.scatter(kwargs["log"](scan_rates),  trumpets[:, 0], label="Forward sim", color=colors[0])
-                plt.scatter(kwargs["log"](scan_rates),  trumpets[:, 1], label="Reverse sim", color=colors[0], facecolors='none')
-                plt.xlabel("Log scan rate")
-                plt.ylabel("Peak position (V)")
-                plt.legend()
-                plt.show()
-            else:
-                ax.set_xlabel("Log scan rate")
-                ax.set_ylabel("Peak position (V)")
-                if kwargs["description"]==False:
-                    
-                    if kwargs["cc"] is None:
-                        if ax.collections:
-                            pass
-                        else:
-                            self.color_counter=0
-                    else:
-                        self.color_counter=kwargs["cc"]
-                    ax.scatter(kwargs["log"](scan_rates),  trumpets[:, 0], label=label, color=colors[self.color_counter])
-                    ax.scatter(kwargs["log"](scan_rates),  trumpets[:, 1], color=colors[self.color_counter], facecolors='none')
-                    if kwargs["cc"] is None:
-                        self.color_counter+=1
-                    
-                else:
-                    ax.scatter(kwargs["log"](scan_rates),  trumpets[:, 0], label="$E_{p(ox)}-E^0$", color=colors[0])
-                    ax.scatter(kwargs["log"](scan_rates),  trumpets[:, 1], label="$E_{p(red)}-E^0$", color=colors[0], facecolors='none')
+            
+        if "line" not in kwargs:
+            plot_func=ax.scatter
+            plot_kwargs1={ "label":kwargs["label"], "color":colors[kwargs["colour_counter"]]}
+            plot_kwargs2={"facecolors":"none", "color":colors[kwargs["colour_counter"]]}
+        elif kwargs["line"]==True:
+            plot_func=ax.plot
+            plot_kwargs1={"label":kwargs["label"], "color":colors[kwargs["colour_counter"]]}
+            plot_kwargs2={"color":colors[kwargs["colour_counter"]]}
+        else:
+            plot_func=ax.scatter
+            plot_kwargs1={"label":kwargs["label"], "color":colors[kwargs["colour_counter"]]}
+            plot_kwargs2={"facecolors":"none", "color":colors[kwargs["colour_counter"]]}
+        if ax==None:
+
+            plot_func(kwargs["log"](scan_rates),  trumpets[:, 0], **plot_kwargs1)
+            plot_func(kwargs["log"](scan_rates),  trumpets[:, 1],  **plot_kwargs2)
+            ax.set_xlabel("Log scan rate")
+            ax.set_ylabel("Peak position (V)")
+            plt.legend()
+            plt.show()
+        else:
+            ax.set_xlabel("Log scan rate")
+            ax.set_ylabel("Peak position (V)")
+            plot_func(kwargs["log"](scan_rates),  trumpets[:, 0], **plot_kwargs1)
+            plot_func(kwargs["log"](scan_rates),  trumpets[:, 1],  **plot_kwargs2)
+                
+                
    
     def k0_interpoltation(self, scans, trumpet, **units):
         scan_rates=np.log(scans)
